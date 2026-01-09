@@ -6,14 +6,15 @@ interface VibrCoderProps {
   statusText?: string;
   reason?: string;
   pnl?: number;
+  height?: number;
 }
 
-export function VibrCoder({ state, className = '', statusText, reason, pnl }: VibrCoderProps) {
+export function VibrCoder({ state, className = '', statusText, reason, pnl, height }: VibrCoderProps) {
   const showPnl = (state === 'buying' || statusText === 'BULLISH' || statusText === 'BEARISH') && pnl !== undefined;
   const isBullish = statusText === 'BULLISH';
 
   return (
-    <div className={`vibr-coder-container ${className}`}>
+    <div className={`vibr-coder-container ${className}`} style={height ? { height } : undefined}>
       <video
         src="/videos/scene-1-idle.mp4"
         autoPlay
