@@ -35,7 +35,7 @@ export function usePumpTokensStream(
   const [isConnected, setIsConnected] = useState(false);
   const seenMintsRef = useRef<Set<string>>(new Set());
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const connect = useCallback(() => {
     if (!enabled) return;

@@ -36,7 +36,7 @@ export function usePriceTracking(options: UsePriceTrackingOptions): UsePriceTrac
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
 
   const loadingRef = useRef(false);
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const tokensRef = useRef(tokens);
   const lastMintHashRef = useRef<string>("");
 

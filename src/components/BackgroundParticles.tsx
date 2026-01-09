@@ -20,7 +20,7 @@ interface BackgroundParticlesProps {
 export function BackgroundParticles({ mood = "scanning", intensity = 0.5 }: BackgroundParticlesProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const canvas = canvasRef.current;
