@@ -86,8 +86,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
 }
 
 body {
@@ -102,8 +101,7 @@ body {
 }
 
 main {
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
 }
 
 /* ===== CRT SCANLINE EFFECT ===== */
@@ -129,13 +127,12 @@ main {
 .cockpit-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
   gap: 0;
   padding: 0;
   max-width: 100%;
   margin: 0 auto;
   background: var(--void-black);
-  overflow-y: auto;
 }
 
 /* ===== HERO SECTION: VIDEO + TERMINAL ===== */
@@ -327,7 +324,7 @@ main {
   }
 
   .hero-terminal .terminal-drawer.collapsed {
-    transform: translateX(calc(100% - 52px));
+    transform: translateX(calc(100% - 64px));
   }
 }
 
@@ -336,11 +333,9 @@ main {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
   margin-top: -60px !important;
   padding: 0 15% var(--space-6) 15% !important;
+  padding-bottom: var(--space-16) !important;
   position: relative;
   z-index: 10;
 }
@@ -912,7 +907,7 @@ main {
 }
 
 .terminal-drawer.collapsed {
-  transform: translateX(calc(100% - 52px));
+  transform: translateX(calc(100% - 64px));
 }
 
 /* Collapse button - sleek and prominent */
@@ -921,13 +916,13 @@ main {
   top: 50%;
   left: 0;
   transform: translate(-100%, -50%);
-  width: 52px;
-  height: 90px;
+  width: 64px;
+  height: 110px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   background: linear-gradient(
     135deg,
     rgba(0, 30, 15, 0.95) 0%,
@@ -950,22 +945,22 @@ main {
 
 /* Icon inside collapse button */
 .terminal-collapse-icon {
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   stroke: var(--matrix-green);
-  filter: drop-shadow(0 0 4px rgba(0, 255, 65, 0.5));
+  filter: drop-shadow(0 0 6px rgba(0, 255, 65, 0.6));
   transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Label text inside collapse button */
 .terminal-collapse-label {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--matrix-green);
-  text-shadow: 0 0 8px rgba(0, 255, 65, 0.6);
-  opacity: 0.8;
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.7);
+  opacity: 0.9;
 }
 
 .terminal-collapse-btn:hover {
@@ -999,8 +994,8 @@ main {
 .terminal-drawer.collapsed .terminal-collapse-btn {
   transform: translate(0, -50%);
   border-radius: var(--radius-lg);
-  width: 52px;
-  height: 90px;
+  width: 64px;
+  height: 110px;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.5),
     0 0 50px rgba(0, 255, 65, 0.12),

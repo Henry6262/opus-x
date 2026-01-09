@@ -82,7 +82,7 @@ export function Terminal() {
         >
           <polyline points={isCollapsed ? "15 18 9 12 15 6" : "9 18 15 12 9 6"} />
         </svg>
-        <span className="terminal-collapse-label">{isCollapsed ? 'OPEN' : 'HIDE'}</span>
+        <span className="terminal-collapse-label">{isCollapsed ? 'OPEN' : ''}</span>
       </button>
 
       <aside className="terminal terminal-glass">

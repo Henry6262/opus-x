@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { SectionHeader, StatusPill } from "@/components/design-system";
+import { Panel, SectionHeader, StatusPill } from "@/components/design-system";
 import { Button } from "@/components/ui";
 import { usePumpTokens } from "./hooks/usePumpTokens";
 import { usePumpTokensStream } from "./hooks/usePumpTokensStream";
