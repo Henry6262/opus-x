@@ -1,7 +1,9 @@
 'use client';
 
+export type AnimationState = 'idle' | 'analyzing' | 'rejecting' | 'buying' | 'incoming' | 'generating' | 'posting' | 'alert';
+
 interface VibrCoderProps {
-  state: 'idle' | 'analyzing' | 'rejecting' | 'buying' | 'incoming' | 'generating' | 'posting';
+  state: AnimationState;
   className?: string;
   statusText?: string;
   reason?: string;
@@ -16,7 +18,7 @@ export function VibrCoder({ state, className = '', statusText, reason, pnl, heig
   return (
     <div className={`vibr-coder-container ${className}`} style={height ? { height } : undefined}>
       <video
-        src="/videos/scene-1-idle.mp4"
+        src="/videos/0109.mp4"
         autoPlay
         loop
         muted
