@@ -10,6 +10,7 @@ import { useAiMood } from "@/hooks/useAiMood";
 import { usePumpTokens } from "@/features/pump-history/hooks/usePumpTokens";
 import { BackgroundParticles } from "@/components/BackgroundParticles";
 import { VibrCoder } from "@/components/VibrCoder";
+import { Bot, Twitter, Sparkles, TrendingUp } from "lucide-react";
 
 // Map AI mood to VibrCoder animation state
 function getVibrCoderState(
@@ -105,19 +106,21 @@ function DashboardContent() {
 
         {/* ===== BOTTOM SECTION: THE DASHBOARD ===== */}
         <div className="dashboard-panel">
-          {/* Glassmorphic Tab Switcher */}
+          {/* Epic Feature Toggle */}
           <div className="tab-switcher">
             <button
-              className={`tab-button ${activeView === "pump-history" ? "active" : ""}`}
+              className={`tab-button-epic ${activeView === "pump-history" ? "active" : ""}`}
               onClick={() => setActiveView("pump-history")}
             >
-              📈 AI TRADING BOT
+              <TrendingUp className="tab-icon-large" />
+              <span className="tab-button-title">AI TRADING BOT</span>
             </button>
             <button
-              className={`tab-button ${activeView === "simulation-twitter" ? "active" : ""}`}
+              className={`tab-button-epic ${activeView === "simulation-twitter" ? "active" : ""}`}
               onClick={() => setActiveView("simulation-twitter")}
             >
-              🎨 TWITTER QUOTE BOT
+              <Twitter className="tab-icon-large" />
+              <span className="tab-button-title">TWITTER QUOTE BOT</span>
             </button>
           </div>
 

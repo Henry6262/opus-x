@@ -71,7 +71,18 @@ export function Terminal() {
         onClick={() => setIsCollapsed(!isCollapsed)}
         aria-label={isCollapsed ? 'Expand terminal' : 'Collapse terminal'}
       >
-        {isCollapsed ? '◀' : '▶'}
+        <svg
+          className="terminal-collapse-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polyline points={isCollapsed ? "15 18 9 12 15 6" : "9 18 15 12 9 6"} />
+        </svg>
+        <span className="terminal-collapse-label">{isCollapsed ? 'OPEN' : 'HIDE'}</span>
       </button>
 
       <aside className="terminal terminal-glass">

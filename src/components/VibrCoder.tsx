@@ -14,9 +14,6 @@ interface VibrCoderProps {
 }
 
 export function VibrCoder({ state, className = '', statusText, reason, pnl, height, size, onAnimationComplete }: VibrCoderProps) {
-  const showPnl = (state === 'buying' || statusText === 'BULLISH' || statusText === 'BEARISH') && pnl !== undefined;
-  const isBullish = statusText === 'BULLISH';
-
   // Compute styles based on size or height
   const containerStyle: React.CSSProperties = {};
   if (size) {
@@ -36,13 +33,14 @@ export function VibrCoder({ state, className = '', statusText, reason, pnl, heig
         playsInline
         className="vibr-coder-video"
       />
+      {/* Gradient fade overlays for smooth visual transitions */}
+      <div className="vibr-coder-fade vibr-coder-fade-bottom" />
+      <div className="vibr-coder-fade vibr-coder-fade-left" />
+      <div className="vibr-coder-fade vibr-coder-fade-right" />
+      <div className="vibr-coder-fade vibr-coder-fade-top" />
+      <div className="vibr-coder-vignette" />
       <div className="vibr-coder-overlay">
         <div className="gradient-text font-bold text-2xl">VIBR CODER</div>
-        {showPnl && (
-          <div className={`text-lg font-bold mt-2 ${isBullish ? 'text-[var(--matrix-green)]' : 'text-[var(--alert-red)]'}`}>
-            {pnl > 0 ? '+' : ''}{pnl.toFixed(2)}%
-          </div>
-        )}
       </div>
     </div>
   );

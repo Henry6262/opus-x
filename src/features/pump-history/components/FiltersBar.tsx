@@ -24,14 +24,15 @@ interface FiltersBarProps {
 
 export function FiltersBar({ filters, onChange }: FiltersBarProps) {
   return (
-    <div className="grid gap-4 rounded-2xl border border-white/10 bg-black/30 p-4 md:grid-cols-[2fr_1fr_1fr]">
+    <div className="filters-bar">
       <Input
         placeholder="Search mint, symbol, or name"
         value={filters.search || ""}
         onChange={(event) => onChange({ search: event.target.value })}
+        className="filters-input"
       />
       <select
-        className="h-10 rounded-md border border-white/15 bg-black/40 px-3 text-sm text-white"
+        className="filters-select"
         value={filters.twitterLinkType || "all"}
         onChange={(event) =>
           onChange({ twitterLinkType: event.target.value as TwitterLinkType | "all" })
@@ -44,7 +45,7 @@ export function FiltersBar({ filters, onChange }: FiltersBarProps) {
         ))}
       </select>
       <select
-        className="h-10 rounded-md border border-white/15 bg-black/40 px-3 text-sm text-white"
+        className="filters-select"
         value={filters.labelStatus || "all"}
         onChange={(event) =>
           onChange({

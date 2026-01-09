@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Panel, SectionHeader, StatusPill } from "@/components/design-system";
+import { SectionHeader, StatusPill } from "@/components/design-system";
 import { Button } from "@/components/ui";
 import { usePumpTokens } from "./hooks/usePumpTokens";
 import { usePumpTokensStream } from "./hooks/usePumpTokensStream";
@@ -69,13 +69,13 @@ export function PumpHistorySection() {
 
   return (
     <section className="space-y-6">
-      <Panel className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="section-header-row">
         <SectionHeader
           eyebrow="Pump History"
           title="Migration Intelligence"
           description="Review migrated tokens, labels, and live pump signals in one feed."
         />
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="section-header-actions">
           <StatusPill tone={isConnected ? "live" : "warn"}>
             {isConnected ? "Live" : "Reconnecting"}
           </StatusPill>
@@ -97,7 +97,7 @@ export function PumpHistorySection() {
             {isPriceLoading ? "Updating..." : "Refresh Prices"}
           </Button>
         </div>
-      </Panel>
+      </div>
 
       {newTokenCount > 0 && (
         <Panel className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
