@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Panel, SectionHeader, StatusPill } from "@/components/design-system";
+import { Panel } from "@/components/design-system";
 import { Button } from "@/components/ui";
 import { useTerminal } from "@/features/terminal";
 import { useWebSocket } from "@/lib/useWebSocket";
@@ -278,39 +278,13 @@ export function SimulationTwitterSection() {
   const totalTweets = Object.values(feed).reduce((sum, list) => sum + list.length, 0);
 
   return (
-    <section className="space-y-6">
-      {/* Header Card */}
-      <div className="card-glass">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-solana-cyan font-semibold mb-2">
-              Tweet Scenario Engine
-            </p>
-            <h2 className="text-2xl font-display font-bold gradient-text mb-2">
-              Twitter Intelligence
-            </h2>
-            <p className="text-sm text-white/60">
-              Track curated accounts, capture media tweets, and queue assets for character generation.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className={`status-indicator ${isConnected ? 'status-executing' : 'status-scanning'}`}>
-              <div className="w-2 h-2 rounded-full bg-current"></div>
-              {isConnected ? "LIVE" : "RECONNECTING"}
-            </div>
-            <div className="status-indicator status-scanning">
-              <div className="w-2 h-2 rounded-full bg-current"></div>
-              {DEFAULT_TRACKED_HANDLES.length} ACCOUNTS
-            </div>
-            <div className="status-indicator status-scanning">
-              <div className="w-2 h-2 rounded-full bg-current"></div>
-              {totalTweets} TWEETS
-            </div>
-            <Button variant="outline" size="sm" onClick={reconnect} className="btn-ghost">
-              Reconnect
-            </Button>
-          </div>
-        </div>
+    <section className="section-content">
+      {/* Centered Header */}
+      <div className="section-header-centered">
+        <h2 className="section-title">Twitter Intelligence</h2>
+        <p className="section-description">
+          Track curated accounts, capture media tweets, and queue assets for character generation.
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(260px,320px)_1fr]">

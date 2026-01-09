@@ -63,6 +63,30 @@ function MatrixRain() {
 export function Terminal() {
   const { logs } = useTerminal();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [animationComplete, setAnimationComplete] = useState(false);
+  const terminalRef = useRef<HTMLElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Mark animation as complete after all logs have animated in
+  useEffect(() => {
+    if (logs.length > 0) {
+      const totalAnimationTime = logs.length * 80 + 400; // 80ms per log + 400ms buffer
+      const timer = setTimeout(() => {
+        setAnimationComplete(true);
+      }, totalAnimationTime);
+      return () => clearTimeout(timer);
+    }
+  }, [logs.length]);
+
+  // Auto-scroll to bottom when new logs arrive
+  useEffect(() => {
+    if (terminalRef.current) {
+      terminalRef.current.scrollTo({
+        top: terminalRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [logs]);
 
   return (
     <div className={`terminal-drawer ${isCollapsed ? 'collapsed' : ''}`}>
@@ -85,7 +109,10 @@ export function Terminal() {
         <span className="terminal-collapse-label">{isCollapsed ? 'OPEN' : ''}</span>
       </button>
 
-      <aside className="terminal terminal-glass">
+      <aside
+        ref={terminalRef}
+        className={`terminal terminal-glass ${animationComplete ? 'animation-complete' : ''}`}
+      >
         <MatrixRain />
         <div className="terminal-header">
           <div className="terminal-status-indicator">
@@ -120,6 +147,8 @@ export function Terminal() {
               <span className="terminal-cursor">█</span>
             </span>
           </div>
+          {/* Scroll anchor */}
+          <div ref={bottomRef} />
         </div>
       </aside>
     </div>

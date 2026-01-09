@@ -9,6 +9,9 @@ export interface TokenPrice {
   mint: string;
   usdPrice: number;
   priceChange24h: number | null;
+  marketCap: number | null;
+  fdv: number | null;
+  liquidity: number | null;
   source: 'jupiter' | 'dexscreener';
   timestamp: number;
 }
@@ -19,6 +22,9 @@ export interface TokenPnL {
   currentPrice: number;
   pnlPercent: number;
   priceChange24h: number | null;
+  currentMarketCap: number | null;
+  fdv: number | null;
+  liquidity: number | null;
   source: 'jupiter' | 'dexscreener';
 }
 
@@ -60,6 +66,9 @@ async function fetchJupiterPrices(mints: string[]): Promise<Map<string, TokenPri
         mint,
         usdPrice: priceData.usdPrice,
         priceChange24h: priceData.priceChange24h,
+        marketCap: null, // Jupiter doesn't provide market cap
+        fdv: null,
+        liquidity: null,
         source: 'jupiter',
         timestamp: Date.now(),
       });
@@ -109,6 +118,8 @@ async function fetchDexScreenerPrices(mints: string[]): Promise<Map<string, Toke
         liquidity?: {
           usd: number;
         };
+        marketCap?: number;
+        fdv?: number;
       }>;
     };
 
@@ -131,6 +142,9 @@ async function fetchDexScreenerPrices(mints: string[]): Promise<Map<string, Toke
         mint,
         usdPrice: parseFloat(pair.priceUsd),
         priceChange24h: pair.priceChange?.h24 || null,
+        marketCap: pair.marketCap || null,
+        fdv: pair.fdv || null,
+        liquidity: pair.liquidity?.usd || null,
         source: 'dexscreener',
         timestamp: Date.now(),
       });
@@ -146,7 +160,7 @@ async function fetchDexScreenerPrices(mints: string[]): Promise<Map<string, Toke
 
 /**
  * Fetch current prices for tokens (with caching)
- * Tries Jupiter first, falls back to DexScreener for missing tokens
+ * Prioritizes DexScreener as it provides market cap data, uses Jupiter as fallback
  */
 export async function fetchTokenPrices(mints: string[]): Promise<Map<string, TokenPrice>> {
   const now = Date.now();
@@ -170,21 +184,21 @@ export async function fetchTokenPrices(mints: string[]): Promise<Map<string, Tok
 
   console.log(`[PriceTracking] Fetching prices for ${uncachedMints.length} uncached tokens`);
 
-  // Try Jupiter first (primary source)
-  const jupiterPrices = await fetchJupiterPrices(uncachedMints);
+  // Try DexScreener first (primary source - provides market cap data)
+  const dexScreenerPrices = await fetchDexScreenerPrices(uncachedMints);
 
-  // Find tokens that Jupiter didn't have
-  const missingMints = uncachedMints.filter(mint => !jupiterPrices.has(mint));
+  // Find tokens that DexScreener didn't have
+  const missingMints = uncachedMints.filter(mint => !dexScreenerPrices.has(mint));
 
-  // Fallback to DexScreener for missing tokens
-  let dexScreenerPrices = new Map<string, TokenPrice>();
+  // Fallback to Jupiter for missing tokens
+  let jupiterPrices = new Map<string, TokenPrice>();
   if (missingMints.length > 0) {
-    console.log(`[PriceTracking] ${missingMints.length} tokens not found on Jupiter, trying DexScreener`);
-    dexScreenerPrices = await fetchDexScreenerPrices(missingMints);
+    console.log(`[PriceTracking] ${missingMints.length} tokens not found on DexScreener, trying Jupiter`);
+    jupiterPrices = await fetchJupiterPrices(missingMints);
   }
 
   // Combine results and cache
-  const allPrices = new Map([...jupiterPrices, ...dexScreenerPrices]);
+  const allPrices = new Map([...dexScreenerPrices, ...jupiterPrices]);
 
   for (const [mint, price] of allPrices) {
     results.set(mint, price);
@@ -195,59 +209,62 @@ export async function fetchTokenPrices(mints: string[]): Promise<Map<string, Tok
   }
 
   console.log(`[PriceTracking] Final results: ${results.size}/${mints.length} prices found`);
-  console.log(`[PriceTracking] Sources: ${jupiterPrices.size} Jupiter, ${dexScreenerPrices.size} DexScreener, ${mints.length - uncachedMints.length} cached`);
+  console.log(`[PriceTracking] Sources: ${dexScreenerPrices.size} DexScreener, ${jupiterPrices.size} Jupiter, ${mints.length - uncachedMints.length} cached`);
 
   return results;
 }
 
 /**
  * Calculate PnL for tokens based on initial market cap vs current price
+ * Also fetches current market cap data from DexScreener for display
  *
  * @param tokens - Array of tokens with mint and initial market_cap
- * @returns Map of mint -> PnL data
+ * @returns Map of mint -> PnL data (includes current market cap even without PnL)
  */
 export async function calculateTokenPnL(
   tokens: Array<{ mint: string; market_cap: number | null }>
 ): Promise<Map<string, TokenPnL>> {
   const results = new Map<string, TokenPnL>();
 
-  // Filter tokens that have initial market cap
-  const tokensWithMarketCap = tokens.filter(t => t.market_cap && t.market_cap > 0);
-
-  if (tokensWithMarketCap.length === 0) {
-    console.log('[PriceTracking] No tokens with market_cap data to calculate PnL');
+  if (tokens.length === 0) {
     return results;
   }
 
-  // Fetch current prices
-  const mints = tokensWithMarketCap.map(t => t.mint);
+  // Fetch current prices for ALL tokens (not just those with initial market cap)
+  const mints = tokens.map(t => t.mint);
   const currentPrices = await fetchTokenPrices(mints);
 
   // Calculate PnL for each token
-  for (const token of tokensWithMarketCap) {
+  for (const token of tokens) {
     const currentPriceData = currentPrices.get(token.mint);
 
-    if (!currentPriceData || !token.market_cap) {
+    if (!currentPriceData) {
       continue;
     }
 
-    const initialPrice = token.market_cap; // market_cap is in USD at detection time
+    const hasInitialMarketCap = token.market_cap && token.market_cap > 0;
+    const initialPrice = hasInitialMarketCap ? token.market_cap! : 0;
     const currentPrice = currentPriceData.usdPrice;
 
-    // Calculate percentage change
-    const pnlPercent = ((currentPrice - initialPrice) / initialPrice) * 100;
+    // Calculate percentage change only if we have initial market cap
+    const pnlPercent = hasInitialMarketCap
+      ? ((currentPrice - initialPrice) / initialPrice) * 100
+      : 0;
 
     results.set(token.mint, {
       mint: token.mint,
       initialPrice,
       currentPrice,
-      pnlPercent,
+      pnlPercent: hasInitialMarketCap ? pnlPercent : NaN, // NaN indicates no PnL data
       priceChange24h: currentPriceData.priceChange24h,
+      currentMarketCap: currentPriceData.marketCap,
+      fdv: currentPriceData.fdv,
+      liquidity: currentPriceData.liquidity,
       source: currentPriceData.source,
     });
   }
 
-  console.log(`[PriceTracking] Calculated PnL for ${results.size}/${tokens.length} tokens`);
+  console.log(`[PriceTracking] Fetched market data for ${results.size}/${tokens.length} tokens`);
 
   return results;
 }

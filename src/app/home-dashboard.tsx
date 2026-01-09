@@ -1,16 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { PONZINOMICS_API_URL } from "@/lib/config";
 import { PumpHistorySection } from "@/features/pump-history";
 import { SimulationTwitterSection } from "@/features/simulation-twitter";
 import { Terminal, TerminalProvider } from "@/features/terminal";
 import type { TerminalLogEntry } from "@/features/terminal";
 import { useAiMood } from "@/hooks/useAiMood";
 import { usePumpTokens } from "@/features/pump-history/hooks/usePumpTokens";
-import { BackgroundParticles } from "@/components/BackgroundParticles";
 import { VibrCoder } from "@/components/VibrCoder";
-import { Bot, Twitter, Sparkles, TrendingUp } from "lucide-react";
+import { Twitter, TrendingUp } from "lucide-react";
 
 // Map AI mood to VibrCoder animation state
 function getVibrCoderState(
@@ -87,10 +85,7 @@ function DashboardContent() {
 
   return (
     <>
-      {/* Background particles that react to AI mood */}
-      <BackgroundParticles mood={aiMood} intensity={intensity} />
-
-      <main className={`cockpit-layout crt-effect ai-mood ai-mood-${aiMood}`}>
+      <main className={`cockpit-layout ai-mood ai-mood-${aiMood}`}>
         {/* ===== TOP SECTION: VIBR CODER VIDEO + TERMINAL ===== */}
         <div className="hero-section">
           <VibrCoder

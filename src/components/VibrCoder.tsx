@@ -1,5 +1,7 @@
 'use client';
 
+import { PortfolioWallet } from "@/features/portfolio-wallet";
+
 export type AnimationState = 'idle' | 'analyzing' | 'rejecting' | 'buying' | 'incoming' | 'generating' | 'posting' | 'alert';
 
 interface VibrCoderProps {
@@ -39,6 +41,10 @@ export function VibrCoder({ state, className = '', statusText, reason, pnl, heig
       <div className="vibr-coder-fade vibr-coder-fade-right" />
       <div className="vibr-coder-fade vibr-coder-fade-top" />
       <div className="vibr-coder-vignette" />
+
+      {/* Portfolio Wallet Widget - Top Left */}
+      <PortfolioWallet />
+
       <div className="vibr-coder-overlay">
         <div className="gradient-text font-bold text-2xl">VIBR CODER</div>
       </div>

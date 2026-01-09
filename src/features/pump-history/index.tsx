@@ -1,13 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
-import { Panel, SectionHeader, StatusPill } from "@/components/design-system";
+import { Panel } from "@/components/design-system";
 import { Button } from "@/components/ui";
 import { usePumpTokens } from "./hooks/usePumpTokens";
 import { usePumpTokensStream } from "./hooks/usePumpTokensStream";
 import { usePriceTracking } from "./hooks/usePriceTracking";
+import { useAiTokenAnalysis } from "./hooks/useAiTokenAnalysis";
+import { useRetracementAnalysis } from "./hooks/useRetracementAnalysis";
+import { useAiEntryAnalysis } from "./hooks/useAiEntryAnalysis";
 import { FiltersBar } from "./components/FiltersBar";
-import { StatsStrip } from "./components/StatsStrip";
 import { TokensTable } from "./components/TokensTable";
 import type { LabelStatus } from "./types";
 
@@ -45,6 +47,43 @@ export function PumpHistorySection() {
     refreshIntervalMs: 5 * 60 * 1000, // Auto-refresh every 5 minutes
   });
 
+  // AI Token Analysis - runs when price data is available (legacy)
+  const {
+    analysisResults,
+    currentlyAnalyzing,
+    isAnalyzing,
+    analyzedCount,
+  } = useAiTokenAnalysis({
+    tokens: mergedTokens,
+    pnlData,
+    enabled: pnlData.size > 0, // Only start when we have price data
+    analysisIntervalMs: 2000, // 2 seconds between token analyses
+  });
+
+  // Retracement Analysis - tracks price journey for pullback entries
+  const {
+    analysisResults: retracementResults,
+    isPolling: isTrackingPrices,
+    strongBuys,
+    buys,
+  } = useRetracementAnalysis({
+    tokens: mergedTokens,
+    enabled: mergedTokens.length > 0,
+    pollIntervalMs: 30000, // Poll every 30 seconds
+  });
+
+  // AI Entry Analysis - generates natural language reasoning for BUY signals
+  const {
+    aiResults,
+    currentlyAnalyzing: aiAnalyzing,
+    isAnalyzing: isAiAnalyzing,
+  } = useAiEntryAnalysis({
+    retracementResults,
+    signalsToAnalyze: ['strong_buy', 'buy'],
+    enabled: retracementResults.size > 0,
+    batchDelayMs: 1000, // 1 second between AI requests
+  });
+
   const stats = useMemo(() => {
     const byStatus = {
       approved: 0,
@@ -68,37 +107,7 @@ export function PumpHistorySection() {
   }, [mergedTokens]);
 
   return (
-    <section className="space-y-6">
-      <div className="section-header-row">
-        <SectionHeader
-          eyebrow="Pump History"
-          title="Migration Intelligence"
-          description="Review migrated tokens, labels, and live pump signals in one feed."
-        />
-        <div className="section-header-actions">
-          <StatusPill tone={isConnected ? "live" : "warn"}>
-            {isConnected ? "Live" : "Reconnecting"}
-          </StatusPill>
-          <StatusPill tone="warn">Total {total}</StatusPill>
-          {lastUpdated && (
-            <StatusPill tone="neutral">
-              Prices: {new Date(lastUpdated).toLocaleTimeString()}
-            </StatusPill>
-          )}
-          <Button variant="outline" size="sm" onClick={refresh}>
-            Refresh Tokens
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={refreshPrices}
-            disabled={isPriceLoading}
-          >
-            {isPriceLoading ? "Updating..." : "Refresh Prices"}
-          </Button>
-        </div>
-      </div>
-
+    <section className="section-content">
       {newTokenCount > 0 && (
         <Panel className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -127,8 +136,6 @@ export function PumpHistorySection() {
         </Panel>
       )}
 
-      <StatsStrip stats={stats} isLoading={isLoading} />
-
       <FiltersBar filters={filters} onChange={updateFilters} />
 
       {error ? (
@@ -142,6 +149,11 @@ export function PumpHistorySection() {
         isLoading={isLoading}
         onRefresh={refresh}
         pnlData={pnlData}
+        analysisResults={analysisResults}
+        retracementResults={retracementResults}
+        aiEntryResults={aiResults}
+        currentlyAnalyzing={currentlyAnalyzing}
+        aiAnalyzing={aiAnalyzing}
       />
     </section>
   );

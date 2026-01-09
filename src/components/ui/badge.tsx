@@ -5,18 +5,19 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   tone?: "neutral" | "live" | "warn" | "hot";
 }
 
+// Solid, attention-grabbing colors - smaller and compact
 const toneStyles: Record<NonNullable<BadgeProps["tone"]>, string> = {
-  neutral: "bg-white/10 text-white/70 border border-white/10",
-  live: "bg-[rgba(125,255,143,0.16)] text-[var(--terminal-green)] border border-[rgba(125,255,143,0.3)]",
-  warn: "bg-[rgba(255,209,102,0.18)] text-[var(--terminal-yellow)] border border-[rgba(255,209,102,0.3)]",
-  hot: "bg-[rgba(255,90,95,0.2)] text-[var(--terminal-red)] border border-[rgba(255,90,95,0.35)]",
+  neutral: "bg-white/20 text-white/80",
+  live: "bg-[#00ff41] text-black", // Solid matrix green
+  warn: "bg-[#ffcc00] text-black", // Solid yellow - attention grabbing
+  hot: "bg-[#ff3366] text-white", // Solid red/pink
 };
 
 export function Badge({ className, tone = "neutral", ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em]",
+        "inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
         toneStyles[tone],
         className
       )}

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 /* ==========================================
    TRENCH ROYALE DESIGN SYSTEM
    SuperRouter AI Trading Dashboard
@@ -306,10 +308,9 @@ main {
     display: flex;
     position: absolute;
     right: var(--space-4);
-    top: 50%;
-    transform: translateY(-50%);
+    bottom: var(--space-6);
     width: 400px;
-    max-height: 300px;
+    max-height: 280px;
     z-index: 10;
   }
 
@@ -320,7 +321,7 @@ main {
 
   .hero-terminal .terminal {
     height: 100%;
-    max-height: 300px;
+    max-height: 280px;
   }
 
   .hero-terminal .terminal-drawer.collapsed {
@@ -502,6 +503,44 @@ main {
     width: 28px !important;
     height: 28px !important;
   }
+}
+
+/* ===== SECTION CONTENT (Full Width) ===== */
+.section-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+/* ===== CENTERED SECTION HEADER ===== */
+.section-header-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-6);
+  margin-bottom: var(--space-4);
+}
+
+.section-title {
+  font-family: var(--font-mono);
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: var(--font-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--matrix-green);
+  text-shadow: 0 0 30px rgba(0, 255, 65, 0.4);
+  margin: 0;
+}
+
+.section-description {
+  font-size: var(--text-sm);
+  color: rgba(255, 255, 255, 0.6);
+  max-width: 600px;
+  line-height: 1.6;
+  margin: 0;
 }
 
 /* ===== SECTION HEADER ROW (No Container) ===== */
@@ -716,34 +755,60 @@ main {
   background: var(--void-900);
   border: none;
   border-radius: var(--radius-lg);
-  padding: var(--space-4);
+  padding: 0;
   font-family: var(--font-mono);
-  font-size: var(--text-mono);
+  font-size: 11px;
   color: var(--matrix-green);
   overflow-y: auto;
-  max-height: 500px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 255, 65, 0.1);
+  min-height: 200px;
+  max-height: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  transition: box-shadow 800ms ease;
+}
+
+/* Enhanced shadow after animation completes */
+.terminal.animation-complete {
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.9),
+    0 40px 100px rgba(0, 0, 0, 0.6) !important;
 }
 
 /* ===== EPIC GLASSMORPHIC TERMINAL ===== */
 .terminal.terminal-glass {
   position: relative;
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(
     135deg,
     rgba(0, 20, 10, 0.9) 0%,
     rgba(0, 10, 5, 0.95) 50%,
     rgba(0, 15, 8, 0.9) 100%
   ) !important;
-  border: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: var(--radius-lg);
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.6),
-    0 0 80px rgba(0, 255, 65, 0.06),
-    inset 0 1px 0 rgba(0, 255, 65, 0.08),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4) !important;
-  overflow: hidden;
+    0 20px 60px rgba(0, 0, 0, 0.85),
+    0 40px 100px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: box-shadow 800ms ease, border-color 800ms ease;
+}
+
+/* Enhanced shadow after animation completes - MASSIVE black shadow */
+.terminal.terminal-glass.animation-complete {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  box-shadow:
+    0 40px 80px rgba(0, 0, 0, 1),
+    0 60px 120px rgba(0, 0, 0, 1),
+    0 80px 160px rgba(0, 0, 0, 0.9),
+    0 100px 200px rgba(0, 0, 0, 0.7),
+    0 120px 240px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6) !important;
 }
 
 /* Subtle inner glow instead of border */
@@ -807,23 +872,22 @@ main {
 }
 
 .terminal.terminal-glass .terminal-header {
-  position: relative;
-  z-index: 2;
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: var(--space-3);
   background: linear-gradient(
-    90deg,
-    rgba(0, 255, 65, 0.08) 0%,
-    rgba(0, 255, 65, 0.02) 30%,
-    transparent 50%,
-    rgba(0, 255, 65, 0.02) 70%,
-    rgba(0, 255, 65, 0.08) 100%
+    180deg,
+    rgba(0, 20, 10, 0.98) 0%,
+    rgba(0, 15, 8, 0.95) 100%
   );
-  margin: calc(var(--space-4) * -1);
-  margin-bottom: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid rgba(0, 255, 65, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 /* Status indicator in header */
@@ -928,7 +992,8 @@ main {
     rgba(0, 30, 15, 0.95) 0%,
     rgba(0, 15, 8, 0.98) 100%
   );
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: none;
   border-radius: var(--radius-lg) 0 0 var(--radius-lg);
   color: var(--matrix-green);
   cursor: pointer;
@@ -938,9 +1003,8 @@ main {
   z-index: 20;
   box-shadow:
     -6px 0 24px rgba(0, 0, 0, 0.5),
-    0 0 40px rgba(0, 255, 65, 0.08),
-    inset 0 1px 0 rgba(0, 255, 65, 0.2),
-    inset -1px 0 0 rgba(0, 255, 65, 0.15);
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset -1px 0 0 rgba(255, 255, 255, 0.03);
 }
 
 /* Icon inside collapse button */
@@ -969,11 +1033,11 @@ main {
     rgba(0, 50, 25, 0.95) 0%,
     rgba(0, 35, 18, 0.98) 100%
   );
+  border-color: rgba(255, 255, 255, 0.2);
   box-shadow:
-    -8px 0 32px rgba(0, 255, 65, 0.15),
-    0 0 50px rgba(0, 255, 65, 0.15),
-    inset 0 1px 0 rgba(0, 255, 65, 0.3),
-    inset -1px 0 0 rgba(0, 255, 65, 0.25);
+    -8px 0 32px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset -1px 0 0 rgba(255, 255, 255, 0.05);
 }
 
 .terminal-collapse-btn:hover .terminal-collapse-icon {
@@ -990,18 +1054,31 @@ main {
   transform: translate(-100%, -50%) scale(0.97);
 }
 
-/* Collapsed state button styling */
+/* Collapsed state button styling - MORE PROMINENT */
 .terminal-drawer.collapsed .terminal-collapse-btn {
   transform: translate(0, -50%);
   border-radius: var(--radius-lg);
-  width: 64px;
-  height: 110px;
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  width: 72px;
+  height: 120px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 40, 20, 0.98) 0%,
+    rgba(0, 25, 12, 0.99) 100%
+  );
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    0 0 50px rgba(0, 255, 65, 0.12),
-    inset 0 1px 0 rgba(0, 255, 65, 0.2),
-    inset 1px 0 0 rgba(0, 255, 65, 0.15);
-  animation: pulse-glow-subtle 2s ease-in-out infinite;
+    0 12px 40px rgba(0, 0, 0, 0.8),
+    0 0 30px rgba(0, 255, 65, 0.15),
+    inset 0 1px 0 rgba(0, 255, 65, 0.15);
+  animation: pulse-collapsed-btn 2s ease-in-out infinite;
+}
+
+.terminal-drawer.collapsed .terminal-collapse-btn:hover {
+  border-color: rgba(0, 255, 65, 0.5);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.8),
+    0 0 50px rgba(0, 255, 65, 0.25),
+    inset 0 1px 0 rgba(0, 255, 65, 0.2);
 }
 
 .terminal-drawer.collapsed .terminal-collapse-btn:hover .terminal-collapse-icon {
@@ -1012,20 +1089,36 @@ main {
   transform: translate(0, -50%) scale(0.97);
 }
 
-@keyframes pulse-glow-subtle {
+@keyframes pulse-collapsed-btn {
   0%, 100% {
+    border-color: rgba(0, 255, 65, 0.3);
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.5),
-      0 0 50px rgba(0, 255, 65, 0.12),
-      inset 0 1px 0 rgba(0, 255, 65, 0.2),
-      inset 1px 0 0 rgba(0, 255, 65, 0.15);
+      0 12px 40px rgba(0, 0, 0, 0.8),
+      0 0 30px rgba(0, 255, 65, 0.15),
+      inset 0 1px 0 rgba(0, 255, 65, 0.15);
   }
   50% {
+    border-color: rgba(0, 255, 65, 0.5);
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.5),
-      0 0 60px rgba(0, 255, 65, 0.2),
-      inset 0 1px 0 rgba(0, 255, 65, 0.3),
-      inset 1px 0 0 rgba(0, 255, 65, 0.25);
+      0 12px 40px rgba(0, 0, 0, 0.8),
+      0 0 50px rgba(0, 255, 65, 0.25),
+      inset 0 1px 0 rgba(0, 255, 65, 0.2);
+  }
+}
+
+/* Keep legacy animation name for backwards compat */
+@keyframes pulse-border-subtle {
+  0%, 100% {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  50% {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -1089,7 +1182,28 @@ main {
 .terminal-content {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 3px;
+  flex: 1;
+  padding: var(--space-3);
+  padding-top: var(--space-2);
+}
+
+/* Scrollbar styles for terminal (on parent .terminal-glass) */
+.terminal.terminal-glass::-webkit-scrollbar {
+  width: 4px;
+}
+
+.terminal.terminal-glass::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal.terminal-glass::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 65, 0.3);
+  border-radius: 2px;
+}
+
+.terminal.terminal-glass::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 65, 0.5);
 }
 
 .terminal-line {
@@ -1101,6 +1215,8 @@ main {
   padding-left: var(--space-1);
   border-left: 2px solid transparent;
   transition: border-color 200ms ease, background 200ms ease;
+  font-size: 10px;
+  line-height: 1.4;
 }
 
 .terminal-line:hover {
@@ -1605,4 +1721,956 @@ button:focus-visible {
 
 .mood-intensity-low .terminal {
   animation-duration: 3s;
+}
+
+/* ==========================================
+   TOKEN CARD STYLES
+   ========================================== */
+
+.token-card {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 9999px;
+  padding: var(--space-3) var(--space-5);
+  transition: all 300ms ease;
+  overflow: hidden;
+}
+
+.token-card:hover {
+  border-color: rgba(104, 172, 110, 0.3);
+  background: linear-gradient(
+    135deg,
+    rgba(104, 172, 110, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(104, 172, 110, 0.1);
+}
+
+/* Token Image */
+.token-image-wrapper {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--void-800);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.token-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.token-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    rgba(104, 172, 110, 0.15) 0%,
+    rgba(104, 172, 110, 0.05) 100%
+  );
+}
+
+/* PnL Badge on Image - smaller, solid colors */
+.token-pnl-badge {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.token-pnl-badge.positive {
+  background: #00ff41;
+  color: black;
+  box-shadow: 0 1px 4px rgba(0, 255, 65, 0.5);
+}
+
+.token-pnl-badge.negative {
+  background: #ff3366;
+  color: white;
+  box-shadow: 0 1px 4px rgba(255, 51, 102, 0.5);
+}
+
+/* Token Stats */
+.token-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.token-stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 500;
+}
+
+.token-stat-value {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: white;
+}
+
+/* Action Buttons - Connected pill shape */
+.token-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 200ms ease;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Chart button - rounded top-right corner */
+.token-action-btn.primary {
+  background: linear-gradient(
+    135deg,
+    var(--brand-primary) 0%,
+    var(--brand-primary-dark) 100%
+  );
+  color: var(--void-black);
+  border: none;
+  box-shadow: 0 4px 12px rgba(104, 172, 110, 0.3);
+  border-radius: 0 9999px 0 0;
+}
+
+.token-action-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(104, 172, 110, 0.5);
+}
+
+/* Tweet button - rounded bottom-right corner */
+.token-action-btn.secondary {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0 0 9999px 0;
+}
+
+.token-action-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+/* Slide-in animation for new tokens */
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .token-card {
+    padding: var(--space-3);
+  }
+
+  .token-card > .flex {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .token-image-wrapper {
+    width: 72px;
+    height: 72px;
+  }
+
+  .token-action-btn {
+    flex: 1;
+  }
+}
+
+/* ==========================================
+   PORTFOLIO WALLET WIDGET
+   ========================================== */
+
+.portfolio-wallet {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  z-index: 15;
+  font-family: var(--font-mono);
+  transform-origin: top left;
+}
+
+/* Collapsed State - Compact Pill */
+.portfolio-wallet.collapsed {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 20, 10, 0.85) 0%,
+    rgba(0, 10, 5, 0.9) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.6),
+    0 0 30px rgba(0, 255, 65, 0.1);
+  animation: wallet-collapse 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Epic expand/collapse keyframes */
+@keyframes wallet-expand {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(-10px);
+    border-radius: 9999px;
+  }
+  50% {
+    opacity: 1;
+    border-radius: var(--radius-lg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    border-radius: var(--radius-lg);
+  }
+}
+
+@keyframes wallet-collapse {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Expanded content fade-in */
+@keyframes wallet-content-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.portfolio-wallet-collapsed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: white;
+  transition: all 200ms ease;
+}
+
+.portfolio-wallet-collapsed:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: scale(1.02);
+}
+
+.portfolio-wallet.collapsed:hover {
+  box-shadow:
+    0 6px 25px rgba(0, 0, 0, 0.7),
+    0 0 40px rgba(0, 255, 65, 0.2);
+  border-color: rgba(0, 255, 65, 0.3);
+}
+
+.portfolio-wallet.collapsed:active {
+  transform: scale(0.98);
+}
+
+.portfolio-wallet-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(0, 255, 65, 0.15);
+  border-radius: 50%;
+  color: var(--matrix-green);
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.3);
+}
+
+.portfolio-wallet-pnl {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.portfolio-wallet-pnl.positive {
+  color: var(--matrix-green);
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+}
+
+.portfolio-wallet-pnl.negative {
+  color: #ff3366;
+  text-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
+}
+
+.portfolio-wallet-value {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  padding-left: var(--space-2);
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Expanded State - Full Panel */
+.portfolio-wallet.expanded {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 20, 10, 0.95) 0%,
+    rgba(0, 10, 5, 0.98) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.8),
+    0 0 40px rgba(0, 255, 65, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  width: 320px;
+  padding: var(--space-4);
+  animation: wallet-expand 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.portfolio-wallet-expanded {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Staggered content animation */
+.portfolio-wallet-expanded > * {
+  animation: wallet-content-appear 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+.portfolio-wallet-expanded > *:nth-child(1) { animation-delay: 0.1s; }
+.portfolio-wallet-expanded > *:nth-child(2) { animation-delay: 0.15s; }
+.portfolio-wallet-expanded > *:nth-child(3) { animation-delay: 0.2s; }
+.portfolio-wallet-expanded > *:nth-child(4) { animation-delay: 0.25s; }
+.portfolio-wallet-expanded > *:nth-child(5) { animation-delay: 0.3s; }
+
+.portfolio-wallet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.portfolio-wallet-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--matrix-green);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.portfolio-wallet-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.portfolio-wallet-close:hover {
+  background: rgba(255, 51, 102, 0.2);
+  color: #ff3366;
+  border-color: rgba(255, 51, 102, 0.4);
+  transform: rotate(90deg);
+}
+
+.portfolio-wallet-close:active {
+  transform: rotate(90deg) scale(0.9);
+}
+
+.portfolio-wallet-total {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.portfolio-wallet-total-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: -0.02em;
+}
+
+.portfolio-wallet-total-pnl {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.portfolio-wallet-total-pnl.positive {
+  color: var(--matrix-green);
+}
+
+.portfolio-wallet-total-pnl.negative {
+  color: #ff3366;
+}
+
+.portfolio-wallet-period {
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+}
+
+/* Time Filters */
+.portfolio-wallet-filters {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+}
+
+.portfolio-wallet-filter {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.portfolio-wallet-filter:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.portfolio-wallet-filter.active {
+  color: var(--matrix-green);
+  background: rgba(0, 255, 65, 0.1);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+}
+
+/* Chart Area */
+.portfolio-wallet-chart {
+  height: 100px;
+  margin: var(--space-2) 0;
+}
+
+.portfolio-wallet-chart-placeholder {
+  width: 100%;
+  height: 100%;
+  opacity: 0.9;
+}
+
+/* View Tabs */
+.portfolio-wallet-tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+}
+
+.portfolio-wallet-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.portfolio-wallet-tab:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.portfolio-wallet-tab.active {
+  background: rgba(0, 255, 65, 0.15);
+  color: var(--matrix-green);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.1);
+}
+
+.portfolio-wallet-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.portfolio-wallet-tab.active .portfolio-wallet-tab-count {
+  background: rgba(0, 255, 65, 0.3);
+  color: var(--matrix-green);
+}
+
+/* Stats Grid */
+.portfolio-wallet-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.portfolio-wallet-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.portfolio-wallet-stat-label {
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.portfolio-wallet-stat-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+}
+
+/* Color utilities */
+.text-matrix-green {
+  color: var(--matrix-green) !important;
+}
+
+.text-terminal-red {
+  color: #ff3366 !important;
+}
+
+/* ===== POSITIONS VIEW ===== */
+.portfolio-wallet-positions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.portfolio-wallet-positions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: var(--space-1);
+}
+
+.portfolio-wallet-positions-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.portfolio-wallet-positions-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.portfolio-wallet-positions-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 65, 0.3);
+  border-radius: 2px;
+}
+
+.portfolio-wallet-position {
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+  transition: all 200ms ease;
+}
+
+.portfolio-wallet-position:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.portfolio-wallet-position-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.portfolio-wallet-position-symbol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.portfolio-wallet-position-ticker {
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+}
+
+.portfolio-wallet-position-name {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.portfolio-wallet-position-pnl {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.portfolio-wallet-position-pnl.positive {
+  color: var(--matrix-green);
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
+}
+
+.portfolio-wallet-position-pnl.negative {
+  color: #ff3366;
+  text-shadow: 0 0 8px rgba(255, 51, 102, 0.4);
+}
+
+.portfolio-wallet-position-details {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.portfolio-wallet-position-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.portfolio-wallet-position-detail .label {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.portfolio-wallet-position-detail .value {
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+}
+
+/* ===== HISTORY VIEW ===== */
+.portfolio-wallet-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.portfolio-wallet-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: var(--space-1);
+}
+
+.portfolio-wallet-history-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.portfolio-wallet-history-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.portfolio-wallet-history-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 65, 0.3);
+  border-radius: 2px;
+}
+
+.portfolio-wallet-transaction {
+  padding: var(--space-2) var(--space-3);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  transition: all 200ms ease;
+}
+
+.portfolio-wallet-transaction:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.portfolio-wallet-transaction-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.portfolio-wallet-transaction-type {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.portfolio-wallet-transaction-type.buy {
+  background: rgba(0, 255, 65, 0.2);
+  color: var(--matrix-green);
+}
+
+.portfolio-wallet-transaction-type.sell {
+  background: rgba(255, 51, 102, 0.2);
+  color: #ff3366;
+}
+
+.portfolio-wallet-transaction-symbol {
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+}
+
+.portfolio-wallet-transaction-time {
+  margin-left: auto;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.portfolio-wallet-transaction-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.portfolio-wallet-transaction-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+}
+
+.portfolio-wallet-transaction-pnl {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.portfolio-wallet-transaction-pnl.positive {
+  color: var(--matrix-green);
+}
+
+.portfolio-wallet-transaction-pnl.negative {
+  color: #ff3366;
+}
+
+.portfolio-wallet-transaction-hash {
+  margin-top: var(--space-1);
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Empty State */
+.portfolio-wallet-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-4);
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .portfolio-wallet {
+    top: var(--space-2);
+    left: var(--space-2);
+  }
+
+  .portfolio-wallet.expanded {
+    width: calc(100vw - var(--space-4));
+    max-width: 300px;
+  }
+
+  .portfolio-wallet-total-value {
+    font-size: 24px;
+  }
+
+  .portfolio-wallet-positions-list,
+  .portfolio-wallet-history-list {
+    max-height: 220px;
+  }
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
