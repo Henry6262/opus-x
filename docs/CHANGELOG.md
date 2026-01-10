@@ -2,6 +2,9 @@
 
 All notable changes to Opus-X are documented here.
 
+## 2026-01-10
+- Updated Smart Trading dashboard with a compact trader profile card combining character art and key metrics.
+
 ## 2026-01-08
 - Added initial Next.js shell and layout.
 - Introduced design system primitives (Panel, SectionHeader, StatusPill).

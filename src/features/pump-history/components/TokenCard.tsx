@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
+import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { Badge } from "@/components/ui";
 import type { PumpTokenWithTweet } from "../types";
 import type { TokenPnL } from "@/lib/priceTracking";
@@ -89,6 +90,19 @@ export function TokenCard({ token, isNew = false, pnl, retracement, aiEntry, isB
 
   const padreUrl = buildPadreChartUrl(token.mint);
 
+  // Prepare sparkline data from journey snapshots
+  const sparklineData = useMemo(() => {
+    const snapshots = retracement?.journey?.snapshots;
+    if (!snapshots || snapshots.length < 2) return null;
+    return snapshots.map(s => ({ value: s.marketCap }));
+  }, [retracement?.journey?.snapshots]);
+
+  // Determine trend (green if up, red if down)
+  const isSparklinePositive = useMemo(() => {
+    if (!sparklineData || sparklineData.length < 2) return true;
+    return sparklineData[sparklineData.length - 1].value >= sparklineData[0].value;
+  }, [sparklineData]);
+
   const handleCopy = () => {
     navigator.clipboard.writeText(token.mint);
     setCopied(true);
@@ -141,188 +155,208 @@ export function TokenCard({ token, isNew = false, pnl, retracement, aiEntry, isB
 
         {/* Token Info */}
         <div className="flex-1 min-w-0">
-          {/* Header row: Symbol, contract, time */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="text-lg font-bold font-display text-brand-primary">
-                  {token.symbol}
-                </h4>
-                {/* Contract address inline */}
-                <button
-                  onClick={handleCopy}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-void-900/60 border border-white/10 text-[10px] font-mono text-white/50 hover:text-white/80 hover:border-white/20 transition-all"
-                  title={`Copy: ${token.mint}`}
-                >
-                  <span>{shortenMint(token.mint)}</span>
-                  {copied ? (
-                    <svg className="w-3 h-3 text-matrix-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  )}
-                </button>
-                {/* Entry Signal Badge - Retracement Strategy */}
-                {entryBadge ? (
-                  <Badge
-                    tone={entryBadge.tone}
-                    className={`text-[10px] ${entryBadge.glow ? 'shadow-[0_0_8px_rgba(0,255,136,0.5)]' : ''}`}
-                  >
-                    {entryBadge.label}
-                    {retracement?.analysis.score && ` · ${retracement.analysis.score}`}
-                  </Badge>
-                ) : isBeingAnalyzed ? (
-                  <Badge tone="neutral" className="text-[10px] animate-pulse">
-                    <span className="inline-flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-solana-cyan rounded-full animate-ping" />
-                      TRACKING
-                    </span>
-                  </Badge>
-                ) : (
-                  <Badge tone="neutral" className="text-[10px]">
-                    pending
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {/* Time ago */}
-            <span className="text-xs text-white/40 font-mono whitespace-nowrap flex-shrink-0">
-              {formatTimeAgo(token.detected_at)}
-            </span>
+          {/* Header row: Symbol, copy icon, badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="text-lg font-bold font-display text-brand-primary">
+              {token.symbol}
+            </h4>
+            {/* Copy contract icon only - bigger */}
+            <button
+              onClick={handleCopy}
+              className="p-1.5 rounded-full hover:bg-white/10 text-white/50 hover:text-white/80 transition-all"
+              title={`Copy: ${token.mint}`}
+            >
+              {copied ? (
+                <svg className="w-4 h-4 text-matrix-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              )}
+            </button>
+            {/* Entry Signal Badge - Retracement Strategy */}
+            {entryBadge ? (
+              <Badge
+                tone={entryBadge.tone}
+                className={`text-[10px] ${entryBadge.glow ? 'shadow-[0_0_8px_rgba(0,255,136,0.5)]' : ''}`}
+              >
+                {entryBadge.label}
+                {retracement?.analysis.score && ` · ${retracement.analysis.score}`}
+              </Badge>
+            ) : isBeingAnalyzed ? (
+              <Badge tone="neutral" className="text-[10px] animate-pulse">
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-solana-cyan rounded-full animate-ping" />
+                  TRACKING
+                </span>
+              </Badge>
+            ) : (
+              <Badge tone="neutral" className="text-[10px]">
+                pending
+              </Badge>
+            )}
           </div>
 
-          {/* Stats row: ATH + MCap + Action buttons */}
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center gap-4">
-              {/* ATH */}
-              {journey?.athMcap && (
-                <div className="token-stat">
-                  <span className="token-stat-label">ATH</span>
-                  <span className="token-stat-value text-solana-cyan">
-                    {formatMarketCap(journey.athMcap)}
-                  </span>
-                </div>
-              )}
+          {/* Stats row: Time + ATH + MCap */}
+          <div className="flex items-center gap-4 mt-2">
+            {/* Time ago - same display format as stats */}
+            <div className="token-stat">
+              <span className="token-stat-label">Detected</span>
+              <span className="token-stat-value text-white/60">
+                {formatTimeAgo(token.detected_at)}
+              </span>
+            </div>
 
-              {/* Current MCap */}
+            {/* ATH */}
+            {journey?.athMcap && (
               <div className="token-stat">
-                <span className="token-stat-label">MCap{hasLivePriceData && <span className="text-matrix-green text-[8px] ml-1">●</span>}</span>
+                <span className="token-stat-label">ATH</span>
                 <span className="token-stat-value text-solana-cyan">
-                  {formatMarketCap(journey?.currentMcap || currentMarketCap)}
+                  {formatMarketCap(journey.athMcap)}
                 </span>
               </div>
-            </div>
+            )}
 
-            {/* Action Buttons - moved inline */}
-            <div className="flex items-center gap-2">
-              <a
-                href={padreUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="token-action-btn-inline primary"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                </svg>
-                <span>Chart</span>
-              </a>
-              {token.twitter_url && (
-                <a
-                  href={token.twitter_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="token-action-btn-inline secondary"
-                >
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                  </svg>
-                  <span>X</span>
-                </a>
-              )}
+            {/* Current MCap */}
+            <div className="token-stat">
+              <span className="token-stat-label">MCap{hasLivePriceData && <span className="text-matrix-green text-[8px] ml-1">●</span>}</span>
+              <span className="token-stat-value text-solana-cyan">
+                {formatMarketCap(journey?.currentMcap || currentMarketCap)}
+              </span>
             </div>
           </div>
+        </div>
 
-          {/* AI Reasoning - Compact single line with expand */}
-          {entrySignal && entrySignal !== 'no_data' ? (
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className={`ai-log-row ${entrySignal === 'strong_buy' || entrySignal === 'buy' ? 'buy' : entrySignal === 'watch' ? 'watch' : 'avoid'}`}
+        {/* Mini Sparkline Chart */}
+        {sparklineData && sparklineData.length >= 2 && (
+          <div className="token-sparkline">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={sparklineData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+                <defs>
+                  <linearGradient id={`spark-${token.mint.slice(0,8)}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={isSparklinePositive ? "#00ff6a" : "#ff3366"} stopOpacity={0.4} />
+                    <stop offset="100%" stopColor={isSparklinePositive ? "#00ff6a" : "#ff3366"} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke={isSparklinePositive ? "#00ff6a" : "#ff3366"}
+                  strokeWidth={1.5}
+                  fill={`url(#spark-${token.mint.slice(0,8)})`}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Action Buttons - stacked vertically with rounded corners */}
+        <div className="token-action-stack">
+          <a
+            href={padreUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="token-action-stack-btn top"
+            title="View Chart"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+            </svg>
+          </a>
+          {token.twitter_url && (
+            <a
+              href={token.twitter_url}
+              target="_blank"
+              rel="noreferrer"
+              className="token-action-stack-btn bottom"
+              title="View on X"
             >
-              <span className="ai-log-indicator" />
-              <span className="ai-log-text">
-                {aiEntry?.reasoning
-                  ? aiEntry.reasoning.slice(0, 80) + (aiEntry.reasoning.length > 80 ? '...' : '')
-                  : retracement?.analysis?.reasons?.[0] || 'Analyzing...'}
-              </span>
-              <svg
-                className={`ai-log-expand ${isExpanded ? 'expanded' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
-            </button>
-          ) : isBeingAnalyzed || isAiAnalyzing ? (
-            <div className="ai-log-row pending">
-              <span className="ai-log-indicator pulsing" />
-              <span className="ai-log-text">Tracking price history...</span>
-            </div>
-          ) : null}
-
-          {/* Expanded AI Thinking History */}
-          {isExpanded && entrySignal && entrySignal !== 'no_data' && (
-            <div className={`ai-expanded-panel ${entrySignal === 'strong_buy' || entrySignal === 'buy' ? 'buy' : entrySignal === 'watch' ? 'watch' : 'avoid'}`}>
-              <div className="ai-expanded-header">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <span>VIBR THINKING LOG</span>
-              </div>
-
-              {/* Full reasoning */}
-              {aiEntry && (entrySignal === 'strong_buy' || entrySignal === 'buy') ? (
-                <div className="ai-expanded-content">
-                  <div className="ai-log-entry">
-                    <span className="ai-log-time">[ANALYSIS]</span>
-                    <span>{aiEntry.reasoning}</span>
-                  </div>
-                  <div className="ai-log-entry warning">
-                    <span className="ai-log-time">[RISK]</span>
-                    <span>{aiEntry.risk}</span>
-                  </div>
-                  {aiEntry.strategy && (
-                    <div className="ai-log-entry strategy">
-                      <span className="ai-log-time">[STRATEGY]</span>
-                      <span>{aiEntry.strategy}</span>
-                    </div>
-                  )}
-                </div>
-              ) : retracement?.analysis ? (
-                <div className="ai-expanded-content">
-                  {retracement.analysis.reasons.map((reason, idx) => (
-                    <div key={idx} className="ai-log-entry">
-                      <span className="ai-log-time">[{String(idx + 1).padStart(2, '0')}]</span>
-                      <span>{reason}</span>
-                    </div>
-                  ))}
-                  {retracement.analysis.warnings.map((warning, idx) => (
-                    <div key={`w-${idx}`} className="ai-log-entry warning">
-                      <span className="ai-log-time">[WARN]</span>
-                      <span>{warning}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+            </a>
           )}
-
         </div>
       </div>
+
+      {/* AI Reasoning - Compact single line with expand */}
+      {entrySignal && entrySignal !== 'no_data' ? (
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className={`ai-log-row ${entrySignal === 'strong_buy' || entrySignal === 'buy' ? 'buy' : entrySignal === 'watch' ? 'watch' : 'avoid'}`}
+        >
+          <span className="ai-log-indicator" />
+          <span className="ai-log-text">
+            {aiEntry?.reasoning
+              ? aiEntry.reasoning.slice(0, 80) + (aiEntry.reasoning.length > 80 ? '...' : '')
+              : retracement?.analysis?.reasons?.[0] || 'Analyzing...'}
+          </span>
+          <svg
+            className={`ai-log-expand ${isExpanded ? 'expanded' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      ) : isBeingAnalyzed || isAiAnalyzing ? (
+        <div className="ai-log-row pending">
+          <span className="ai-log-indicator pulsing" />
+          <span className="ai-log-text">Tracking price history...</span>
+        </div>
+      ) : null}
+
+      {/* Expanded AI Thinking History */}
+      {isExpanded && entrySignal && entrySignal !== 'no_data' && (
+        <div className={`ai-expanded-panel ${entrySignal === 'strong_buy' || entrySignal === 'buy' ? 'buy' : entrySignal === 'watch' ? 'watch' : 'avoid'}`}>
+          <div className="ai-expanded-header">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span>VIBR THINKING LOG</span>
+          </div>
+
+          {/* Full reasoning */}
+          {aiEntry && (entrySignal === 'strong_buy' || entrySignal === 'buy') ? (
+            <div className="ai-expanded-content">
+              <div className="ai-log-entry">
+                <span className="ai-log-time">[ANALYSIS]</span>
+                <span>{aiEntry.reasoning}</span>
+              </div>
+              <div className="ai-log-entry warning">
+                <span className="ai-log-time">[RISK]</span>
+                <span>{aiEntry.risk}</span>
+              </div>
+              {aiEntry.strategy && (
+                <div className="ai-log-entry strategy">
+                  <span className="ai-log-time">[STRATEGY]</span>
+                  <span>{aiEntry.strategy}</span>
+                </div>
+              )}
+            </div>
+          ) : retracement?.analysis ? (
+            <div className="ai-expanded-content">
+              {retracement.analysis.reasons.map((reason, idx) => (
+                <div key={idx} className="ai-log-entry">
+                  <span className="ai-log-time">[{String(idx + 1).padStart(2, '0')}]</span>
+                  <span>{reason}</span>
+                </div>
+              ))}
+              {retracement.analysis.warnings.map((warning, idx) => (
+                <div key={`w-${idx}`} className="ai-log-entry warning">
+                  <span className="ai-log-time">[WARN]</span>
+                  <span>{warning}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* Glow effect on hover */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-xl">

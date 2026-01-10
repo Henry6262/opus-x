@@ -10,3 +10,4 @@
 - `docs/features/pump-history.md`
 - `docs/features/simulation-twitter.md`
 - `docs/features/opus-3d.md`
+- `docs/features/smart-trading.md`

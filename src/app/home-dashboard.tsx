@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { PumpHistorySection } from "@/features/pump-history";
 import { SimulationTwitterSection } from "@/features/simulation-twitter";
+import { SmartTradingSection } from "@/features/smart-trading";
 import { Terminal, TerminalProvider } from "@/features/terminal";
 import type { TerminalLogEntry } from "@/features/terminal";
 import { useAiMood } from "@/hooks/useAiMood";
 import { usePumpTokens } from "@/features/pump-history/hooks/usePumpTokens";
 import { VibrCoder } from "@/components/VibrCoder";
 import { Twitter, TrendingUp } from "lucide-react";
+import { SmartMoneyAnimation } from "@/components/animations";
 
 // Map AI mood to VibrCoder animation state
 function getVibrCoderState(
@@ -56,7 +58,7 @@ const terminalEvents: TerminalLogEntry[] = [
   },
 ];
 
-type ActiveView = "pump-history" | "simulation-twitter";
+type ActiveView = "pump-history" | "simulation-twitter" | "smart-trading";
 
 export function HomeDashboard() {
   return (
@@ -67,7 +69,7 @@ export function HomeDashboard() {
 }
 
 function DashboardContent() {
-  const [activeView, setActiveView] = useState<ActiveView>("pump-history");
+  const [activeView, setActiveView] = useState<ActiveView>("smart-trading");
 
   // Fetch real token data for mood calculation
   const { tokens } = usePumpTokens({
@@ -104,6 +106,13 @@ function DashboardContent() {
           {/* Epic Feature Toggle */}
           <div className="tab-switcher">
             <button
+              className={`tab-button-epic ${activeView === "smart-trading" ? "active" : ""}`}
+              onClick={() => setActiveView("smart-trading")}
+            >
+              <SmartMoneyAnimation className="tab-icon-large" size={56} />
+              <span className="tab-button-title">SMART MONEY</span>
+            </button>
+            <button
               className={`tab-button-epic ${activeView === "pump-history" ? "active" : ""}`}
               onClick={() => setActiveView("pump-history")}
             >
@@ -120,6 +129,11 @@ function DashboardContent() {
           </div>
 
           {/* Feature Content */}
+          {activeView === "smart-trading" && (
+            <div className="space-y-4">
+              <SmartTradingSection />
+            </div>
+          )}
           {activeView === "pump-history" && (
             <div className="space-y-4">
               <PumpHistorySection />

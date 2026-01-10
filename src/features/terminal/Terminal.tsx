@@ -66,8 +66,10 @@ export function Terminal() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
+  const [isFirstRender, setIsFirstRender] = useState(true);
   const terminalRef = useRef<HTMLElement>(null);
   const prevLogsLengthRef = useRef(logs.length);
+  const initialLogCountRef = useRef(logs.length);
 
   // Check if at bottom helper
   const checkIsAtBottom = useCallback(() => {
@@ -77,14 +79,14 @@ export function Terminal() {
     return scrollHeight - scrollTop - clientHeight < 50;
   }, []);
 
-  // Scroll to the actual bottom of content (not beyond)
+  // Scroll to the actual bottom of content with smooth behavior
   const scrollToBottom = useCallback((force = false) => {
     if (!terminalRef.current) return;
     if (force || !userScrolledUp) {
-      const terminal = terminalRef.current;
-      // Calculate exact bottom position
-      const maxScroll = terminal.scrollHeight - terminal.clientHeight;
-      terminal.scrollTop = maxScroll;
+      terminalRef.current.scrollTo({
+        top: terminalRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
       if (force) {
         setUserScrolledUp(false);
       }
@@ -106,50 +108,87 @@ export function Terminal() {
   // Auto-scroll when new logs arrive
   useEffect(() => {
     if (logs.length > prevLogsLengthRef.current) {
-      // New logs added, scroll to bottom after animation delay
-      const delay = 100; // Small delay to let the DOM update
+      // New logs added - wait for animation to complete before scrolling
+      // Initial load uses staggered animation, new items use fast animation (200ms)
+      const delay = isFirstRender ? 100 : 250;
       const timer = setTimeout(scrollToBottom, delay);
       prevLogsLengthRef.current = logs.length;
       return () => clearTimeout(timer);
     }
     prevLogsLengthRef.current = logs.length;
-  }, [logs.length, scrollToBottom]);
+  }, [logs.length, scrollToBottom, isFirstRender]);
 
   // Initial scroll to bottom
   useEffect(() => {
     scrollToBottom();
   }, [scrollToBottom]);
 
-  // Mark animation as complete after all logs have animated in
+  // Mark animation as complete and first render done after initial logs animate
   useEffect(() => {
     if (logs.length > 0) {
-      const totalAnimationTime = logs.length * 80 + 400; // 80ms per log + 400ms buffer
+      const totalAnimationTime = initialLogCountRef.current * 80 + 400;
       const timer = setTimeout(() => {
         setAnimationComplete(true);
+        setIsFirstRender(false);
       }, totalAnimationTime);
       return () => clearTimeout(timer);
     }
-  }, [logs.length]);
+  }, []); // Only run once on mount
 
   return (
     <div className={`terminal-drawer ${isCollapsed ? 'collapsed' : ''}`}>
-      <button
-        className="terminal-collapse-btn"
+<button
+        className={`terminal-collapse-btn ${isCollapsed ? 'terminal-collapse-btn--epic' : ''}`}
         onClick={() => setIsCollapsed(!isCollapsed)}
-        aria-label={isCollapsed ? 'Expand terminal' : 'Collapse terminal'}
+        aria-label={isCollapsed ? 'Open AI Terminal' : 'Collapse terminal'}
+        type="button"
       >
-        <svg
-          className="terminal-collapse-icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points={isCollapsed ? "15 18 9 12 15 6" : "9 18 15 12 9 6"} />
-        </svg>
-        <span className="terminal-collapse-label">{isCollapsed ? 'OPEN' : ''}</span>
+        {isCollapsed && (
+          <>
+            {/* Animated gradient background */}
+            <span className="terminal-open-btn__gradient" />
+            {/* Floating particles */}
+            <span className="terminal-open-btn__particles">
+              {[...Array(5)].map((_, i) => (
+                <span
+                  key={i}
+                  className="terminal-open-btn__particle"
+                  style={{ animationDelay: `${i * 0.2}s` }}
+                />
+              ))}
+            </span>
+          </>
+        )}
+
+        {/* Icon container with glass effect when collapsed */}
+        <span className={`terminal-collapse-btn__icon-wrap ${isCollapsed ? 'terminal-collapse-btn__icon-wrap--glass' : ''}`}>
+          <svg
+            className="terminal-collapse-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {isCollapsed ? (
+              <>
+                <polyline points="4 17 10 11 4 5" />
+                <line x1="12" y1="19" x2="20" y2="19" />
+              </>
+            ) : (
+              <polyline points="9 18 15 12 9 6" />
+            )}
+          </svg>
+        </span>
+
+        {/* Two-line label - only when collapsed */}
+        {isCollapsed && (
+          <span className="terminal-open-btn__label">
+            <span className="terminal-open-btn__label-text">OPEN</span>
+            <span className="terminal-open-btn__label-text terminal-open-btn__label-text--sub">AI TERMINAL</span>
+          </span>
+        )}
       </button>
 
       <aside
@@ -171,19 +210,40 @@ export function Terminal() {
           </div>
         </div>
         <div className="terminal-content">
-          {logs.map((event, index) => (
-            <div
-              key={event.id}
-              className="terminal-line"
-              style={{
-                animationDelay: `${index * 80}ms`,
-                color: event.color,
-              }}
-            >
-              <span className="terminal-time">[{event.time}]</span>
-              <span className="terminal-text">{event.text}</span>
-            </div>
-          ))}
+          {logs.map((event, index) => {
+            // Stagger animation only for initial items, new items animate immediately
+            const isInitialItem = index < initialLogCountRef.current;
+            const animationDelay = isFirstRender && isInitialItem
+              ? `${index * 80}ms`
+              : '0ms';
+
+            // Build class names based on log type and timing
+            const isThinkingStep = event.type === 'thinking-step';
+            let lineClass = isFirstRender && isInitialItem
+              ? 'terminal-line'
+              : 'terminal-line terminal-line-new';
+            if (isThinkingStep) {
+              lineClass += ' thinking-step';
+            }
+
+            return (
+              <div
+                key={event.id}
+                className={lineClass}
+                style={{
+                  animationDelay,
+                  color: event.color,
+                }}
+              >
+                {isThinkingStep && <span className="thinking-indicator">&gt;</span>}
+                <span className="terminal-time">[{event.time}]</span>
+                <span className="terminal-text">
+                  {event.text}
+                  {event.isStreaming && <span className="streaming-cursor">|</span>}
+                </span>
+              </div>
+            );
+          })}
           <div className="terminal-line terminal-cursor-line">
             <span className="terminal-time">[LIVE]</span>
             <span>

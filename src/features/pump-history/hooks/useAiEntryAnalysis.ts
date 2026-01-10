@@ -49,7 +49,16 @@ const COLORS = {
   RISK: "var(--warning-amber)",
   ERROR: "var(--terminal-red)",
   MUTED: "var(--white-60)",
+  THINKING: "var(--solana-cyan)",
 };
+
+// Thinking steps to show during analysis
+const THINKING_STEPS = [
+  "Parsing journey data",
+  "Evaluating pump metrics",
+  "Analyzing drawdown depth",
+  "Generating entry thesis",
+];
 
 // ============================================
 // HOOK
@@ -61,7 +70,7 @@ export function useAiEntryAnalysis({
   batchDelayMs = 1000,
   enabled = true,
 }: UseAiEntryAnalysisOptions): UseAiEntryAnalysisReturn {
-  const { log } = useTerminal();
+  const { log, startThinking, stopThinking } = useTerminal();
   const [aiResults, setAiResults] = useState<Map<string, AiEntryAnalysis>>(new Map());
   const [currentlyAnalyzing, setCurrentlyAnalyzing] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -78,8 +87,26 @@ export function useAiEntryAnalysis({
 
     setCurrentlyAnalyzing(mint);
     setIsAnalyzing(true);
+    startThinking(result.journey.symbol);
+
+    // Log initial analysis message
+    log({
+      text: `[AI] Analyzing ${result.journey.symbol}...`,
+      color: COLORS.AI,
+    });
 
     try {
+      // Show thinking steps with delays for visual effect
+      const stepDelay = 200;
+      for (let i = 0; i < THINKING_STEPS.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, stepDelay));
+        log({
+          text: `   ${THINKING_STEPS[i]}...`,
+          type: 'thinking-step',
+          color: COLORS.THINKING,
+        });
+      }
+
       const response = await fetch('/api/ai-entry-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -105,9 +132,9 @@ export function useAiEntryAnalysis({
 
       analyzedTokensRef.current.add(mint);
 
-      // Log to terminal
+      // Log final results
       log({
-        text: `[AI] ${result.journey.symbol} analysis complete`,
+        text: `[AI] ${result.journey.symbol} → ${result.analysis.signal.toUpperCase()}`,
         color: COLORS.AI,
       });
       log({
@@ -130,8 +157,9 @@ export function useAiEntryAnalysis({
     } finally {
       setCurrentlyAnalyzing(null);
       setIsAnalyzing(false);
+      stopThinking();
     }
-  }, [retracementResults, log]);
+  }, [retracementResults, log, startThinking, stopThinking]);
 
   // Process the analysis queue
   const processQueue = useCallback(async () => {

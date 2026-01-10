@@ -1,11 +1,16 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import type { TerminalLogEntry } from "./types";
+import type { TerminalLogEntry, ThinkingState } from "./types";
 
 interface TerminalContextValue {
   logs: TerminalLogEntry[];
-  log: (entry: Omit<TerminalLogEntry, "id" | "time"> & { time?: string }) => void;
+  log: (entry: Omit<TerminalLogEntry, "id" | "time"> & { time?: string }) => string;
+  updateLog: (id: string, updates: Partial<Pick<TerminalLogEntry, 'text' | 'color' | 'isStreaming'>>) => void;
+  thinkingState: ThinkingState;
+  startThinking: (tokenSymbol: string) => void;
+  stopThinking: () => void;
+  setThinkingStep: (step: string) => void;
 }
 
 const TerminalContext = createContext<TerminalContextValue | null>(null);
@@ -33,27 +38,68 @@ export function TerminalProvider({
   maxLogs?: number;
 }) {
   const [logs, setLogs] = useState<TerminalLogEntry[]>(initialLogs);
+  const [thinkingState, setThinkingState] = useState<ThinkingState>({ isActive: false });
 
   const log = useCallback(
-    (entry: Omit<TerminalLogEntry, "id" | "time"> & { time?: string }) => {
+    (entry: Omit<TerminalLogEntry, "id" | "time"> & { time?: string }): string => {
+      const id = createLogId();
       const time = entry.time || formatTime(new Date());
       setLogs((prev) => {
         const next = [
           ...prev,
           {
-            id: createLogId(),
+            id,
             time,
             text: entry.text,
             color: entry.color,
+            type: entry.type,
+            isStreaming: entry.isStreaming,
           },
         ];
         return next.slice(-maxLogs);
       });
+      return id;
     },
     [maxLogs]
   );
 
-  const value = useMemo(() => ({ logs, log }), [logs, log]);
+  const updateLog = useCallback((id: string, updates: Partial<Pick<TerminalLogEntry, 'text' | 'color' | 'isStreaming'>>) => {
+    setLogs((prev) => {
+      const index = prev.findIndex((log) => log.id === id);
+      if (index === -1) return prev;
+
+      const existing = prev[index];
+      // Only update if something actually changed
+      if (
+        updates.text === existing.text &&
+        updates.color === existing.color &&
+        updates.isStreaming === existing.isStreaming
+      ) {
+        return prev;
+      }
+
+      const updated = [...prev];
+      updated[index] = { ...existing, ...updates };
+      return updated;
+    });
+  }, []);
+
+  const startThinking = useCallback((tokenSymbol: string) => {
+    setThinkingState({ isActive: true, tokenSymbol });
+  }, []);
+
+  const stopThinking = useCallback(() => {
+    setThinkingState({ isActive: false });
+  }, []);
+
+  const setThinkingStep = useCallback((step: string) => {
+    setThinkingState((prev) => ({ ...prev, currentStep: step }));
+  }, []);
+
+  const value = useMemo(
+    () => ({ logs, log, updateLog, thinkingState, startThinking, stopThinking, setThinkingStep }),
+    [logs, log, updateLog, thinkingState, startThinking, stopThinking, setThinkingStep]
+  );
 
   return <TerminalContext.Provider value={value}>{children}</TerminalContext.Provider>;
 }

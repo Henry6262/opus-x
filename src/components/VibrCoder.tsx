@@ -35,12 +35,9 @@ export function VibrCoder({ state, className = '', statusText, reason, pnl, heig
         playsInline
         className="vibr-coder-video"
       />
-      {/* Gradient fade overlays for smooth visual transitions */}
-      <div className="vibr-coder-fade vibr-coder-fade-bottom" />
-      <div className="vibr-coder-fade vibr-coder-fade-left" />
-      <div className="vibr-coder-fade vibr-coder-fade-right" />
-      <div className="vibr-coder-fade vibr-coder-fade-top" />
-      <div className="vibr-coder-vignette" />
+
+      {/* Bottom fade overlay for smooth section transition */}
+      <div className="vibr-coder-fade-bottom" />
 
       {/* Portfolio Wallet Widget - Top Left */}
       <PortfolioWallet />
