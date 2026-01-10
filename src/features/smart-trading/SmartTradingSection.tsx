@@ -6,10 +6,6 @@ import { Button } from "@/components/ui";
 import { useSmartTrading } from "./hooks/useSmartTrading";
 import type { Position, TradingSignal, TrackedWallet } from "./types";
 import {
-  Activity,
-  Wallet,
-  TrendingUp,
-  TrendingDown,
   AlertCircle,
   RefreshCw,
   Power,
@@ -18,6 +14,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import { TraderProfileCard } from "./components/TraderProfileCard";
 
 // Format SOL amount
 function formatSol(amount: number | undefined | null): string {
@@ -71,34 +68,6 @@ function StatusBadge({ status }: { status: string }) {
     >
       {status.replace("_", " ")}
     </span>
-  );
-}
-
-// Stats card component
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  subValue,
-  color = "text-white",
-}: {
-  icon: typeof Activity;
-  label: string;
-  value: string;
-  subValue?: string;
-  color?: string;
-}) {
-  return (
-    <div className="flex items-center gap-2.5 p-3 rounded-lg bg-white/5 border border-white/10">
-      <div className={`p-1.5 rounded-lg bg-white/5 ${color}`}>
-        <Icon className="w-4 h-4" />
-      </div>
-      <div>
-        <p className="text-xs text-white/50 uppercase tracking-wide">{label}</p>
-        <p className={`text-base font-mono font-semibold ${color}`}>{value}</p>
-        {subValue && <p className="text-[11px] text-white/40">{subValue}</p>}
-      </div>
-    </div>
   );
 }
 
@@ -249,9 +218,11 @@ export function SmartTradingSection() {
   const {
     config,
     stats,
+    dashboardStats,
     wallets,
     signals,
     positions,
+    history,
     isLoading,
     error,
     lastUpdated,
@@ -349,62 +320,13 @@ export function SmartTradingSection() {
         </div>
       </Panel>
 
-      {/* Trader profile + compact metrics */}
-      <Panel className="flex flex-col gap-4 md:flex-row md:items-stretch">
-        <div className="md:w-1/3 flex items-center justify-center">
-          <img
-            src="/character/super-router.png"
-            alt="SuperRouter trader profile"
-            className="w-40 h-40 rounded-2xl object-cover border border-white/10 shadow-lg shadow-cyan-500/20"
-          />
-        </div>
-        <div className="flex-1 flex flex-col gap-4">
-          <div>
-            <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
-              Smart Money Profile
-            </p>
-            <h2 className="mt-1 text-xl font-semibold text-white flex items-center gap-2">
-              SuperRouter Trader
-              {config?.tradingEnabled && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/15 text-green-300 border border-green-500/40">
-                  Live
-                </span>
-              )}
-            </h2>
-            <p className="mt-1 text-sm text-white/50">
-              Copying high-conviction wallets across Solana in real time.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <StatCard
-              icon={Wallet}
-              label="Balance"
-              value={formatSol(stats?.walletBalance)}
-              color="text-cyan-400"
-            />
-            <StatCard
-              icon={stats?.totalPnL && stats.totalPnL >= 0 ? TrendingUp : TrendingDown}
-              label="Total P&L"
-              value={formatSol(stats?.totalPnL)}
-              color={stats?.totalPnL && stats.totalPnL >= 0 ? "text-green-400" : "text-red-400"}
-            />
-            <StatCard
-              icon={Activity}
-              label="Open Positions"
-              value={stats?.openPositions?.toString() || "0"}
-              subValue={`of ${config?.maxOpenPositions || 5} max`}
-              color="text-yellow-400"
-            />
-            <StatCard
-              icon={Zap}
-              label="Position Size"
-              value={formatSol(stats?.recommendedPositionSize)}
-              subValue={`${config?.maxPositionPercent || 7}% of wallet`}
-              color="text-purple-400"
-            />
-          </div>
-        </div>
-      </Panel>
+      {/* Trader Profile Card */}
+      <TraderProfileCard
+        stats={dashboardStats}
+        config={config}
+        positions={positions}
+        history={history}
+      />
 
       {/* Two columns: Wallets + Signals | Positions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

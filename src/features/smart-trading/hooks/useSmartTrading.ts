@@ -8,6 +8,7 @@ import type {
   TrackedWallet,
   TradingSignal,
   Position,
+  PortfolioSnapshot,
 } from "../types";
 
 interface UseSmartTradingOptions {
@@ -22,11 +23,13 @@ interface SmartTradingState {
   signals: TradingSignal[];
   positions: Position[];
   history: Position[];
+  chartHistory: PortfolioSnapshot[];
 }
 
 interface TradingStats {
   tradingEnabled: boolean;
   walletBalance: number;
+  realWalletBalance: number;
   openPositions: number;
   maxOpenPositions: number;
   dailyPnL: number;
@@ -34,6 +37,7 @@ interface TradingStats {
   winRate: number;
   recommendedPositionSize: number;
 }
+
 
 export function useSmartTrading(options: UseSmartTradingOptions = {}) {
   const { refreshIntervalMs = 10000, enabled = true } = options;
@@ -45,6 +49,7 @@ export function useSmartTrading(options: UseSmartTradingOptions = {}) {
     signals: [],
     positions: [],
     history: [],
+    chartHistory: [],
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +60,7 @@ export function useSmartTrading(options: UseSmartTradingOptions = {}) {
 
     try {
       // Fetch all data in parallel
-      const [dashboardStats, config, wallets, signalsResponse, positionsResponse, historyResponse] =
+      const [dashboardStats, config, wallets, signalsResponse, positionsResponse, historyResponse, chartHistory] =
         await Promise.all([
           smartTradingService.getDashboardStats(),
           smartTradingService.getConfig(),
@@ -63,6 +68,7 @@ export function useSmartTrading(options: UseSmartTradingOptions = {}) {
           smartTradingService.getSignals({ limit: 20 }),
           smartTradingService.getPositions({ status: "OPEN", limit: 50 }),
           smartTradingService.getPositions({ status: "CLOSED", limit: 50 }),
+          smartTradingService.getHistory(288), // 24 hoursish (5m intervals)
         ]);
 
       setState({
@@ -72,6 +78,7 @@ export function useSmartTrading(options: UseSmartTradingOptions = {}) {
         signals: signalsResponse.items,
         positions: positionsResponse.items,
         history: historyResponse.items,
+        chartHistory,
       });
       setError(null);
       setLastUpdated(new Date());
@@ -144,6 +151,7 @@ export function useSmartTrading(options: UseSmartTradingOptions = {}) {
     ? {
       tradingEnabled: state.dashboardStats.trading.tradingEnabled,
       walletBalance: state.dashboardStats.trading.walletBalance,
+      realWalletBalance: state.dashboardStats.trading.realWalletBalance,
       openPositions: state.dashboardStats.trading.openPositions,
       maxOpenPositions: state.dashboardStats.trading.maxOpenPositions,
       dailyPnL: state.dashboardStats.trading.dailyPnL,
@@ -161,6 +169,7 @@ export function useSmartTrading(options: UseSmartTradingOptions = {}) {
     signals: state.signals,
     positions: state.positions,
     history: state.history,
+    chartHistory: state.chartHistory,
 
     // Raw dashboard stats for advanced usage
     dashboardStats: state.dashboardStats,

@@ -114,6 +114,7 @@ export interface DashboardStatsResponse {
   trading: {
     tradingEnabled: boolean;
     walletBalance: number;
+    realWalletBalance: number;
     openPositions: number;
     maxOpenPositions: number;
     dailyPnL: number;
@@ -169,4 +170,13 @@ export interface SmartTradingData {
   wallets: TrackedWallet[];
   signals: TradingSignal[];
   positions: Position[];
+}
+
+export interface PortfolioSnapshot {
+  id: string;
+  timestamp: string;
+  totalValueSol: number;
+  walletBalanceSol: number;
+  unrealizedPnLSol: number;
+  openPositions: number;
 }

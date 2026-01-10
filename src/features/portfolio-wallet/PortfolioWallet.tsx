@@ -53,14 +53,15 @@ function formatTimeAgo(dateInput: string | Date): string {
 }
 
 export function PortfolioWallet({ className }: PortfolioWalletProps) {
-  const { stats, positions, history, dashboardStats } = useSmartTrading({ refreshIntervalMs: 5000 });
+  const { stats, positions, history, dashboardStats, chartHistory } = useSmartTrading({ refreshIntervalMs: 5000 });
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeView, setActiveView] = useState<WalletView>("overview");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("24H");
 
   // Calculate real values
-  const walletBalance = stats?.walletBalance || 0;
+  // Use realWalletBalance if available (even in simulation mode), otherwise fall back to reported balance
+  const walletBalance = stats?.realWalletBalance ?? stats?.walletBalance ?? 0;
   const totalExposure = dashboardStats?.trading.totalExposure || 0;
   const unrealizedPnL = dashboardStats?.trading.unrealizedPnL || 0;
   // Total Value = Liquid SOL + Cost Basis of Open Positions + Unrealized PnL
@@ -150,7 +151,29 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   }));
 
   const isProfitable = pnlPercent >= 0;
-  const chartData = useMemo(() => generateChartData(timeFilter, isProfitable), [timeFilter, isProfitable]);
+  const chartData = useMemo(() => {
+    if (chartHistory && chartHistory.length > 0) {
+      let filteredHistory = chartHistory;
+      const now = new Date().getTime();
+      const oneHour = 60 * 60 * 1000;
+      const oneDay = 24 * 60 * 60 * 1000;
+
+      if (timeFilter === "1H") {
+        filteredHistory = chartHistory.filter(s => now - new Date(s.timestamp).getTime() < oneHour);
+      } else if (timeFilter === "24H") {
+        filteredHistory = chartHistory.filter(s => now - new Date(s.timestamp).getTime() < oneDay);
+      }
+      // For 1W, 1M, we might not have data yet, but logic is fine.
+
+      if (filteredHistory.length > 0) {
+        return filteredHistory.map(s => ({
+          time: new Date(s.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          value: s.totalValueSol * 150 // Approximate USD conversion
+        }));
+      }
+    }
+    return generateChartData(timeFilter, isProfitable);
+  }, [timeFilter, isProfitable, chartHistory]);
 
   const chartConfig: ChartConfig = {
     value: {

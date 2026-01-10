@@ -109,6 +109,10 @@ export const smartTradingService = {
       method: "POST",
     });
   },
+
+  async getHistory(limit?: number): Promise<import("./types").PortfolioSnapshot[]> {
+    return fetchApi(`/smart-trading/stats/chart${limit ? `?limit=${limit}` : ""}`);
+  },
 };
 
 export default smartTradingService;
