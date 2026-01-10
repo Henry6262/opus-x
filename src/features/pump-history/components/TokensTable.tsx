@@ -1,27 +1,9 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui";
-import type { PumpTokenWithTweet, LabelStatus } from "../types";
+import type { PumpTokenWithTweet } from "../types";
 import type { TokenPnL } from "@/lib/priceTracking";
 import { TokenCard } from "./TokenCard";
 import type { RetracementAnalysisResult } from "../hooks/useRetracementAnalysis";
 import type { AiEntryAnalysis } from "../hooks/useAiEntryAnalysis";
-
-// Legacy analysis result type (for backwards compatibility)
-export interface TokenAnalysisResult {
-  mint: string;
-  symbol: string;
-  score: number;
-  decision: LabelStatus;
-  confidence: number;
-  reasons: string[];
-  signals: {
-    marketCap: "bullish" | "bearish" | "neutral";
-    priceAction: "bullish" | "bearish" | "neutral";
-    liquidity: "bullish" | "bearish" | "neutral";
-    metadata: "bullish" | "bearish" | "neutral";
-    engagement: "bullish" | "bearish" | "neutral";
-  };
-}
 
 // Re-export for convenience
 export type { RetracementAnalysisResult };
@@ -31,14 +13,13 @@ interface TokensTableProps {
   isLoading: boolean;
   onRefresh: () => void;
   pnlData?: Map<string, TokenPnL>;
-  analysisResults?: Map<string, TokenAnalysisResult>;
   retracementResults?: Map<string, RetracementAnalysisResult>;
   aiEntryResults?: Map<string, AiEntryAnalysis>;
   currentlyAnalyzing?: string | null;
   aiAnalyzing?: string | null;
 }
 
-export function TokensTable({ tokens, isLoading, onRefresh, pnlData, analysisResults, retracementResults, aiEntryResults, currentlyAnalyzing, aiAnalyzing }: TokensTableProps) {
+export function TokensTable({ tokens, isLoading, onRefresh, pnlData, retracementResults, aiEntryResults, currentlyAnalyzing, aiAnalyzing }: TokensTableProps) {
   const [newTokenIds, setNewTokenIds] = useState<Set<string>>(new Set());
 
   // Track new tokens for animation
@@ -67,25 +48,23 @@ export function TokensTable({ tokens, isLoading, onRefresh, pnlData, analysisRes
   }, [tokens]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Minimal header with count and refresh */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-mono text-white/50">
-            {tokens.length} token{tokens.length !== 1 ? "s" : ""} detected
+      <div className="flex items-center justify-between py-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono text-white/40">
+            {tokens.length} tokens
           </span>
           {isLoading && (
-            <div className="w-4 h-4 border-2 border-brand-primary/30 border-t-brand-primary rounded-full animate-spin" />
+            <div className="w-3 h-3 border border-brand-primary/30 border-t-brand-primary rounded-full animate-spin" />
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
           onClick={onRefresh}
-          className="text-xs"
+          className="text-[10px] font-mono text-white/40 hover:text-matrix-green transition-colors px-2 py-1"
         >
           Refresh
-        </Button>
+        </button>
       </div>
 
       {/* Loading state */}
@@ -111,14 +90,13 @@ export function TokensTable({ tokens, isLoading, onRefresh, pnlData, analysisRes
         </div>
       ) : (
         /* Token cards grid */
-        <div className="space-y-3">
+        <div className="space-y-2">
           {tokens.map((token) => (
             <TokenCard
               key={token.mint}
               token={token}
               isNew={newTokenIds.has(token.mint)}
               pnl={pnlData?.get(token.mint)}
-              analysis={analysisResults?.get(token.mint)}
               retracement={retracementResults?.get(token.mint)}
               aiEntry={aiEntryResults?.get(token.mint)}
               isBeingAnalyzed={currentlyAnalyzing === token.mint}

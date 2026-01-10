@@ -180,28 +180,31 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   };
 
   return (
-    <div className={`portfolio-wallet ${isExpanded ? "expanded" : "collapsed"} ${className || ""}`}>
-      {/* Collapsed State */}
+    <>
+      {/* Collapsed State - PUMP.FUN PILL Style */}
       {!isExpanded && (
-        <button
-          onClick={() => setIsExpanded(true)}
-          className="portfolio-wallet-collapsed"
-        >
-          <div className="portfolio-wallet-icon">
-            <Wallet className="w-4 h-4" />
-          </div>
-          <div className={`portfolio-wallet-pnl ${isProfitable ? "positive" : "negative"}`}>
-            {isProfitable ? "+" : ""}{stats.totalPnLPercent.toFixed(1)}%
-          </div>
-          <div className="portfolio-wallet-value">
-            {formatValue(stats.totalValue)}
-          </div>
-        </button>
+        <div className={`portfolio-wallet collapsed variant-pump ${className || ""}`}>
+          <button
+            onClick={() => setIsExpanded(true)}
+            className="portfolio-wallet-collapsed"
+          >
+            <div className="portfolio-wallet-icon">
+              <Wallet className="w-5 h-5" />
+            </div>
+            <div className={`portfolio-wallet-pnl ${isProfitable ? "positive" : "negative"}`}>
+              {isProfitable ? "+" : ""}{stats.totalPnLPercent.toFixed(1)}%
+            </div>
+            <div className="portfolio-wallet-value">
+              {formatValue(stats.totalValue)}
+            </div>
+          </button>
+        </div>
       )}
 
       {/* Expanded State */}
       {isExpanded && (
-        <div className="portfolio-wallet-expanded">
+        <div className={`portfolio-wallet expanded ${className || ""}`}>
+          <div className="portfolio-wallet-expanded">
           {/* Header */}
           <div className="portfolio-wallet-header">
             <div className="portfolio-wallet-title">
@@ -421,8 +424,9 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
               )}
             </div>
           )}
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

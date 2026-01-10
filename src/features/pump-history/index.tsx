@@ -149,7 +149,6 @@ export function PumpHistorySection() {
         isLoading={isLoading}
         onRefresh={refresh}
         pnlData={pnlData}
-        analysisResults={analysisResults}
         retracementResults={retracementResults}
         aiEntryResults={aiResults}
         currentlyAnalyzing={currentlyAnalyzing}

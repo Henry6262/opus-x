@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { ChevronDown } from "lucide-react";
 import { useTerminal } from "./TerminalProvider";
 
 function MatrixRain() {
@@ -64,8 +65,60 @@ export function Terminal() {
   const { logs } = useTerminal();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
+  const [userScrolledUp, setUserScrolledUp] = useState(false);
   const terminalRef = useRef<HTMLElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const prevLogsLengthRef = useRef(logs.length);
+
+  // Check if at bottom helper
+  const checkIsAtBottom = useCallback(() => {
+    if (!terminalRef.current) return true;
+    const { scrollTop, scrollHeight, clientHeight } = terminalRef.current;
+    // Consider "at bottom" if within 50px of the bottom
+    return scrollHeight - scrollTop - clientHeight < 50;
+  }, []);
+
+  // Scroll to the actual bottom of content (not beyond)
+  const scrollToBottom = useCallback((force = false) => {
+    if (!terminalRef.current) return;
+    if (force || !userScrolledUp) {
+      const terminal = terminalRef.current;
+      // Calculate exact bottom position
+      const maxScroll = terminal.scrollHeight - terminal.clientHeight;
+      terminal.scrollTop = maxScroll;
+      if (force) {
+        setUserScrolledUp(false);
+      }
+    }
+  }, [userScrolledUp]);
+
+  // Handle manual scroll to bottom button click
+  const handleScrollToBottomClick = useCallback(() => {
+    scrollToBottom(true);
+  }, [scrollToBottom]);
+
+  // Handle user scroll - detect if user scrolled up
+  const handleScroll = useCallback(() => {
+    if (!terminalRef.current) return;
+    const atBottom = checkIsAtBottom();
+    setUserScrolledUp(!atBottom);
+  }, [checkIsAtBottom]);
+
+  // Auto-scroll when new logs arrive
+  useEffect(() => {
+    if (logs.length > prevLogsLengthRef.current) {
+      // New logs added, scroll to bottom after animation delay
+      const delay = 100; // Small delay to let the DOM update
+      const timer = setTimeout(scrollToBottom, delay);
+      prevLogsLengthRef.current = logs.length;
+      return () => clearTimeout(timer);
+    }
+    prevLogsLengthRef.current = logs.length;
+  }, [logs.length, scrollToBottom]);
+
+  // Initial scroll to bottom
+  useEffect(() => {
+    scrollToBottom();
+  }, [scrollToBottom]);
 
   // Mark animation as complete after all logs have animated in
   useEffect(() => {
@@ -77,16 +130,6 @@ export function Terminal() {
       return () => clearTimeout(timer);
     }
   }, [logs.length]);
-
-  // Auto-scroll to bottom when new logs arrive
-  useEffect(() => {
-    if (terminalRef.current) {
-      terminalRef.current.scrollTo({
-        top: terminalRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
-    }
-  }, [logs]);
 
   return (
     <div className={`terminal-drawer ${isCollapsed ? 'collapsed' : ''}`}>
@@ -112,6 +155,7 @@ export function Terminal() {
       <aside
         ref={terminalRef}
         className={`terminal terminal-glass ${animationComplete ? 'animation-complete' : ''}`}
+        onScroll={handleScroll}
       >
         <MatrixRain />
         <div className="terminal-header">
@@ -147,9 +191,18 @@ export function Terminal() {
               <span className="terminal-cursor">█</span>
             </span>
           </div>
-          {/* Scroll anchor */}
-          <div ref={bottomRef} />
         </div>
+
+        {/* Scroll to bottom button - only shows when scrolled up */}
+        {userScrolledUp && (
+          <button
+            className="terminal-scroll-bottom-btn"
+            onClick={handleScrollToBottomClick}
+            aria-label="Scroll to bottom"
+          >
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        )}
       </aside>
     </div>
   );
