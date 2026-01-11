@@ -3,9 +3,12 @@
 import { useState } from "react";
 import { PumpHistorySection } from "@/features/pump-history";
 import { SimulationTwitterSection } from "@/features/simulation-twitter";
-import { SmartTradingSection } from "@/features/smart-trading";
+import {
+  SmartTradingSection,
+  SmartTradingProvider,
+  useSmartTradingContext,
+} from "@/features/smart-trading";
 import { TraderProfileCard } from "@/features/smart-trading/components/TraderProfileCard";
-import { useSmartTrading } from "@/features/smart-trading/hooks/useSmartTrading";
 import { Terminal, TerminalProvider } from "@/features/terminal";
 import type { TerminalLogEntry } from "@/features/terminal";
 import { useAiMood } from "@/hooks/useAiMood";
@@ -65,7 +68,12 @@ type ActiveView = "pump-history" | "simulation-twitter" | "smart-trading";
 export function HomeDashboard() {
   return (
     <TerminalProvider initialLogs={terminalEvents}>
-      <DashboardContent />
+      <SmartTradingProvider
+        refreshIntervalMs={10000}
+        migrationRefreshIntervalMs={5000}
+      >
+        <DashboardContent />
+      </SmartTradingProvider>
     </TerminalProvider>
   );
 }
@@ -80,15 +88,13 @@ function DashboardContent() {
     sortOrder: "desc",
   });
 
-  // Smart Trading data for TraderProfileCard
+  // Smart Trading data for TraderProfileCard (from shared context - no duplicate fetching!)
   const {
     config,
     dashboardStats,
     positions,
     history,
-  } = useSmartTrading({
-    refreshIntervalMs: 10000,
-  });
+  } = useSmartTradingContext();
 
   // AI Mood System - dynamically calculates mood based on market data
   const { mood: aiMood, pnl, reason, intensity } = useAiMood({
@@ -116,7 +122,7 @@ function DashboardContent() {
         {/* ===== BOTTOM SECTION: THE DASHBOARD ===== */}
         <div className="dashboard-panel">
           {/* Trader Profile Card - Always Visible */}
-          <div className="mb-6">
+          <div className="mb-2">
             <TraderProfileCard
               stats={dashboardStats}
               config={config}

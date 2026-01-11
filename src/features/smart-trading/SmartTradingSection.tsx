@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Panel } from "@/components/design-system";
 import { Button } from "@/components/ui";
-import { useSmartTrading } from "./hooks/useSmartTrading";
+import { useSmartTradingContext } from "./context";
 import { MigrationFeedPanel } from "./components/MigrationFeedPanel";
 import type { Position, TradingSignal, TrackedWallet } from "./types";
 import {
@@ -216,9 +216,9 @@ function PositionRow({
 }
 
 export function SmartTradingSection() {
+  // Use shared context instead of separate hook (prevents duplicate API calls!)
   const {
     config,
-    stats,
     dashboardStats,
     wallets,
     signals,
@@ -230,9 +230,7 @@ export function SmartTradingSection() {
     refresh,
     toggleTrading,
     closePosition,
-  } = useSmartTrading({
-    refreshIntervalMs: 10000,
-  });
+  } = useSmartTradingContext();
 
   const [isToggling, setIsToggling] = useState(false);
 
@@ -256,7 +254,7 @@ export function SmartTradingSection() {
     }
   };
 
-  if (isLoading && !stats) {
+  if (isLoading && !dashboardStats) {
     return (
       <section className="section-content">
         <Panel className="flex items-center justify-center py-12">

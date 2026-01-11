@@ -17,13 +17,13 @@ import {
 } from "lucide-react";
 import { StatusPill } from "@/components/design-system";
 import { MigrationTokenCard } from "./MigrationTokenCard";
-import { useMigrationFeed } from "../hooks/useMigrationFeed";
+import { useMigrationFeedContext } from "../context";
 import type { MigrationFeedStats } from "../types";
 
 interface MigrationFeedPanelProps {
-  /** Maximum number of migrations to display */
+  /** Maximum number of migrations to display (for UI filtering only) */
   limit?: number;
-  /** Polling interval in milliseconds */
+  /** @deprecated - refreshIntervalMs is now managed by SmartTradingProvider */
   refreshIntervalMs?: number;
   /** Whether to show the manual track input */
   showTrackInput?: boolean;
@@ -31,11 +31,12 @@ interface MigrationFeedPanelProps {
 
 export function MigrationFeedPanel({
   limit = 20,
-  refreshIntervalMs = 5000,
+  // refreshIntervalMs is now managed by SmartTradingProvider
   showTrackInput = true,
 }: MigrationFeedPanelProps) {
+  // Use shared context instead of separate hook (prevents duplicate API calls!)
   const {
-    rankedMigrations,
+    rankedMigrations: allMigrations,
     stats,
     isLoading,
     error,
@@ -44,7 +45,10 @@ export function MigrationFeedPanel({
     trackMigration,
     analyzeMigration,
     refreshMigrationData,
-  } = useMigrationFeed({ limit, refreshIntervalMs });
+  } = useMigrationFeedContext();
+
+  // Apply limit filtering on the client side if needed
+  const rankedMigrations = limit ? allMigrations.slice(0, limit) : allMigrations;
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showTrackForm, setShowTrackForm] = useState(false);
