@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { StatusPill } from "@/components/design-system";
 import { CountUp } from "@/components/animations/CountUp";
@@ -18,6 +18,73 @@ import {
 } from "lucide-react";
 import type { RankedMigration, AiDecision } from "../types";
 import { WalletSignalStack } from "./WalletSignalBadge";
+
+// ============================================
+// Price Flash Hook - Tracks value changes
+// ============================================
+
+type FlashDirection = "up" | "down" | null;
+
+function usePriceFlash(value: number, threshold = 0.001): FlashDirection {
+  const prevValue = useRef<number>(value);
+  const [flash, setFlash] = useState<FlashDirection>(null);
+
+  useEffect(() => {
+    const diff = value - prevValue.current;
+    const percentChange = prevValue.current !== 0 ? Math.abs(diff / prevValue.current) : 0;
+
+    // Only flash if change is significant (above threshold)
+    if (percentChange > threshold) {
+      const direction: FlashDirection = diff > 0 ? "up" : "down";
+      setFlash(direction);
+
+      // Clear flash after animation
+      const timeout = setTimeout(() => {
+        setFlash(null);
+      }, 600);
+
+      return () => clearTimeout(timeout);
+    }
+
+    prevValue.current = value;
+  }, [value, threshold]);
+
+  // Update ref even when not flashing
+  useEffect(() => {
+    prevValue.current = value;
+  }, [value]);
+
+  return flash;
+}
+
+// ============================================
+// Flash Animation Component
+// ============================================
+
+interface FlashValueProps {
+  value: React.ReactNode;
+  flash: FlashDirection;
+  className?: string;
+}
+
+function FlashValue({ value, flash, className = "" }: FlashValueProps) {
+  return (
+    <motion.span
+      className={`inline-block ${className}`}
+      animate={
+        flash === "up"
+          ? { backgroundColor: ["rgba(74, 222, 128, 0.4)", "rgba(74, 222, 128, 0)"] }
+          : flash === "down"
+            ? { backgroundColor: ["rgba(248, 113, 113, 0.4)", "rgba(248, 113, 113, 0)"] }
+            : {}
+      }
+      transition={{ duration: 0.6 }}
+      style={{ borderRadius: "4px", padding: "0 2px" }}
+    >
+      {value}
+    </motion.span>
+  );
+}
 
 interface MigrationTokenCardProps {
   ranked: RankedMigration;
@@ -59,6 +126,12 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
   const marketCap = migration.lastMarketCap ?? 0;
   const liquidity = migration.lastLiquidity ?? 0;
   const volume = migration.lastVolume24h ?? 0;
+
+  // Flash animations for live updates
+  const priceFlash = usePriceFlash(priceChange, 0.5); // Flash on 0.5% change
+  const marketCapFlash = usePriceFlash(marketCap, 0.02); // Flash on 2% change
+  const liquidityFlash = usePriceFlash(liquidity, 0.02);
+  const scoreFlash = usePriceFlash(score, 0.05);
 
   const handleAnalyze = async () => {
     if (!onAnalyze || isAnalyzing) return;
@@ -155,9 +228,11 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
               ) : (
                 <TrendingDown className="w-3.5 h-3.5" />
               )}
-              <span className="font-mono font-medium">
-                {priceChange >= 0 ? "+" : ""}{priceChange.toFixed(1)}%
-              </span>
+              <FlashValue
+                value={`${priceChange >= 0 ? "+" : ""}${priceChange.toFixed(1)}%`}
+                flash={priceFlash}
+                className="font-mono font-medium"
+              />
             </div>
           </div>
 
@@ -166,9 +241,11 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
             <span className="text-[10px] text-white/40 uppercase tracking-wider">MCap</span>
             <div className="flex items-center gap-1 text-white">
               <BarChart3 className="w-3.5 h-3.5 text-white/40" />
-              <span className="font-mono font-medium text-sm">
-                {formatCompactNumber(marketCap)}
-              </span>
+              <FlashValue
+                value={formatCompactNumber(marketCap)}
+                flash={marketCapFlash}
+                className="font-mono font-medium text-sm"
+              />
             </div>
           </div>
 
@@ -177,9 +254,11 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
             <span className="text-[10px] text-white/40 uppercase tracking-wider">Liq</span>
             <div className="flex items-center gap-1 text-white">
               <Droplets className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="font-mono font-medium text-sm">
-                {formatCompactNumber(liquidity)}
-              </span>
+              <FlashValue
+                value={formatCompactNumber(liquidity)}
+                flash={liquidityFlash}
+                className="font-mono font-medium text-sm"
+              />
             </div>
           </div>
 
@@ -188,9 +267,11 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
             <span className="text-[10px] text-white/40 uppercase tracking-wider">Score</span>
             <div className="flex items-center gap-1">
               <Zap className="w-3.5 h-3.5 text-[#c4f70e]" />
-              <span className="font-mono font-bold text-[#c4f70e]">
-                <CountUp to={score} duration={0.5} decimals={0} />
-              </span>
+              <FlashValue
+                value={<CountUp to={score} duration={0.5} decimals={0} />}
+                flash={scoreFlash}
+                className="font-mono font-bold text-[#c4f70e]"
+              />
             </div>
           </div>
         </div>

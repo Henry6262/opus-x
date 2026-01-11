@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { PumpTokenWithTweet } from "@/features/pump-history/types";
-import { useTerminal } from "@/features/terminal";
 
 export type AiMood = "idle" | "scanning" | "executing" | "bullish" | "bearish" | "sleeping";
 
@@ -36,7 +35,6 @@ export function useAiMood({ tokens = [], isActive = true, isExecuting = false }:
   const [reason, setReason] = useState<string>("Initializing...");
   const [intensity, setIntensity] = useState<number>(0.5);
   const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
-  const terminal = useTerminal();
   const prevTokenCountRef = useRef(0);
 
   useEffect(() => {
@@ -121,57 +119,24 @@ export function useAiMood({ tokens = [], isActive = true, isExecuting = false }:
       const engagementNote = hasHighEngagement ? " • High engagement" : "";
       const newReason = `Market momentum +${calculatedPnL.toFixed(1)}%${engagementNote}`;
 
-      if (mood !== "bullish") {
-        terminal.log({
-          text: `[AI] BULLISH signal detected • PnL: +${calculatedPnL.toFixed(1)}%`,
-          color: "var(--matrix-green)",
-        });
-      }
-
       setMood("bullish");
       setReason(newReason);
       // Intensity increases with higher PnL and engagement
       const baseIntensity = Math.min(0.5 + (calculatedPnL / 20), 0.9);
       setIntensity(hasHighEngagement ? Math.min(baseIntensity + 0.1, 1) : baseIntensity);
-
-      // Log analysis details
-      terminal.log({
-        text: `[ANALYSIS] ${recentTokens.length} tokens analyzed • Avg MC: ${(tokenMetrics.reduce((sum, m) => sum + m.marketCap, 0) / recentTokens.length / 1000).toFixed(0)}K`,
-        color: "var(--solana-cyan)",
-      });
     } else if (calculatedPnL < -5) {
       const engagementNote = hasHighEngagement ? " • Volume declining" : " • Low liquidity";
       const newReason = `Market momentum ${calculatedPnL.toFixed(1)}%${engagementNote}`;
-
-      if (mood !== "bearish") {
-        terminal.log({
-          text: `[AI] BEARISH signal detected • PnL: ${calculatedPnL.toFixed(1)}%`,
-          color: "var(--alert-red)",
-        });
-      }
 
       setMood("bearish");
       setReason(newReason);
       // Intensity increases with larger losses
       setIntensity(Math.min(0.5 + (Math.abs(calculatedPnL) / 20), 0.9));
-
-      // Log warning
-      terminal.log({
-        text: `[WARNING] Market conditions unfavorable • Consider position sizing`,
-        color: "var(--warning-amber)",
-      });
     } else {
       const tokenCount = recentTokens.length;
       const avgMarketCap = tokenMetrics.reduce((sum, m) => sum + m.marketCap, 0) / tokenCount;
       const capFormatted = avgMarketCap > 1000 ? `${(avgMarketCap / 1000).toFixed(0)}K` : avgMarketCap.toFixed(0);
       const newReason = `${tokenCount} tokens • Avg ${capFormatted} MC`;
-
-      if (mood !== "scanning") {
-        terminal.log({
-          text: `[AI] Neutral conditions • PnL: ${calculatedPnL.toFixed(1)}% • Scanning for signals`,
-          color: "var(--solana-cyan)",
-        });
-      }
 
       setMood("scanning");
       setReason(newReason);

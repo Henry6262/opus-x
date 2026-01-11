@@ -5,14 +5,13 @@ import { Panel } from "@/components/design-system";
 import { Button } from "@/components/ui";
 import { useSmartTradingContext } from "./context";
 import { MigrationFeedPanel } from "./components/MigrationFeedPanel";
-import type { Position, TradingSignal, TrackedWallet } from "./types";
+import { TrackedWalletsPanel } from "./components/TrackedWalletsPanel";
+import type { Position, TradingSignal } from "./types";
 import {
   AlertCircle,
   RefreshCw,
   Power,
-  Eye,
   Target,
-  Users,
   Zap,
   Activity,
 } from "lucide-react";
@@ -69,66 +68,6 @@ function StatusBadge({ status }: { status: string }) {
     >
       {status.replace("_", " ")}
     </span>
-  );
-}
-
-// Wallet row component
-function WalletRow({ wallet }: { wallet: TrackedWallet }) {
-  return (
-    <div className="flex items-center justify-between p-3 rounded bg-white/5 border border-white/10">
-      <div className="flex items-center gap-3">
-        {wallet.twitterAvatar ? (
-          <img
-            src={wallet.twitterAvatar}
-            alt={wallet.label}
-            className="w-10 h-10 rounded-full border border-gray-700 object-cover"
-          />
-        ) : (
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${wallet.active ? "bg-green-500/20 text-green-400" : "bg-gray-500/20 text-gray-400"
-            }`}>
-            {wallet.label.slice(0, 2).toUpperCase()}
-          </div>
-        )}
-
-        <div>
-          <div className="flex items-center gap-1.5">
-            <p className="font-medium text-white text-sm">
-              {wallet.twitterName || wallet.label}
-            </p>
-            {wallet.twitterVerified && (
-              <span className="text-blue-400" title="Verified">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                  <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .495.083.965.238 1.4-1.272.65-2.147 2.02-2.147 3.6 0 1.435.716 2.69 1.782 3.407-.123.498-.192 1.02-.192 1.553 0 2.98 2.42 5.4 5.4 5.4.61 0 1.19-.11 1.734-.312.637.586 1.48.947 2.412.947 1.836 0 3.325-1.39 3.522-3.218.42-.03.835-.115 1.235-.247 1.91.95 4.263-.44 4.263-2.583 0-.53-.07-1.05-.192-1.553 1.066-.717 1.782-1.972 1.782-3.407zM10.153 15.65c-.244.25-.64.25-.884 0l-3.004-3.04c-.243-.246-.243-.646 0-.892.244-.245.64-.245.884 0l2.56 2.592 5.37-5.434c.244-.246.64-.246.883 0 .244.246.244.646 0 .892l-5.81 5.88z" />
-                </svg>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {wallet.twitterUsername && (
-              <a
-                href={`https://twitter.com/${wallet.twitterUsername}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
-              >
-                @{wallet.twitterUsername}
-              </a>
-            )}
-            <span className="text-xs text-white/30 font-mono">
-              {shortenAddress(wallet.address)}
-            </span>
-          </div>
-        </div>
-      </div>
-      <a
-        href={`https://solscan.io/account/${wallet.address}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 opacity-50 hover:opacity-100 transition-opacity"
-      >
-        <Eye className="w-3 h-3" />
-      </a>
-    </div>
   );
 }
 
@@ -220,10 +159,8 @@ export function SmartTradingSection() {
   const {
     config,
     dashboardStats,
-    wallets,
     signals,
     positions,
-    history,
     isLoading,
     error,
     lastUpdated,
@@ -323,22 +260,8 @@ export function SmartTradingSection() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left column: Tracked Wallets + Recent Signals */}
         <div className="space-y-4">
-          {/* Tracked Wallets */}
-          <Panel>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Tracked Wallets ({wallets.length})
-              </h3>
-            </div>
-            <div className="space-y-2 max-h-[200px] overflow-y-auto">
-              {wallets.length === 0 ? (
-                <p className="text-sm text-white/50 text-center py-4">No wallets tracked</p>
-              ) : (
-                wallets.map((wallet) => <WalletRow key={wallet.id} wallet={wallet} />)
-              )}
-            </div>
-          </Panel>
+          {/* Tracked Wallets - New clickable panel with modal */}
+          <TrackedWalletsPanel />
 
           {/* Recent Signals */}
           <Panel>

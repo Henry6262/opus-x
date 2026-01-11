@@ -4,17 +4,19 @@ import { useState } from "react";
 import { PumpHistorySection } from "@/features/pump-history";
 import { SimulationTwitterSection } from "@/features/simulation-twitter";
 import {
-  SmartTradingSection,
-  SmartTradingProvider,
-  useSmartTradingContext,
+  SmartTradingDashboard,
+  RealTimeSmartTradingProvider,
+  useRealTimeConfig,
+  useRealTimeDashboardStats,
+  useRealTimePositions,
+  useRealTimeMigrationFeed,
+  useRealTimeWalletSignals,
 } from "@/features/smart-trading";
 import { TraderProfileCard } from "@/features/smart-trading/components/TraderProfileCard";
-import { Terminal, TerminalProvider } from "@/features/terminal";
-import type { TerminalLogEntry } from "@/features/terminal";
+import { Terminal, TerminalProvider, useTerminalNarrator } from "@/features/terminal";
 import { useAiMood } from "@/hooks/useAiMood";
 import { usePumpTokens } from "@/features/pump-history/hooks/usePumpTokens";
 import { VibrCoder } from "@/components/VibrCoder";
-// Icons no longer needed here - tabs are integrated into TraderProfileCard
 
 // Map AI mood to VibrCoder animation state
 function getVibrCoderState(
@@ -29,50 +31,14 @@ function getVibrCoderState(
   }
 }
 
-const terminalEvents: TerminalLogEntry[] = [
-  {
-    id: "boot",
-    time: "01:12:24",
-    text: "[BOOT] SuperRouter nodes synchronized",
-    color: "var(--matrix-green)",
-  },
-  {
-    id: "track",
-    time: "01:12:28",
-    text: "[TWITTER] Tracking 12 curated accounts",
-    color: "var(--solana-cyan)",
-  },
-  {
-    id: "pump",
-    time: "01:12:31",
-    text: "[PUMP] Migration feed connected · 124 tokens queued",
-    color: "var(--warning-amber)",
-  },
-  {
-    id: "ai",
-    time: "01:12:40",
-    text: "[AI] Scoring pipeline warmed · Golden examples loaded",
-    color: "var(--matrix-green)",
-  },
-  {
-    id: "wallet",
-    time: "01:12:52",
-    text: "[SOLANA] Wallet ready · Trading system LIVE",
-    color: "var(--matrix-green)",
-  },
-];
-
 type ActiveView = "pump-history" | "simulation-twitter" | "smart-trading";
 
 export function HomeDashboard() {
   return (
-    <TerminalProvider initialLogs={terminalEvents}>
-      <SmartTradingProvider
-        refreshIntervalMs={10000}
-        migrationRefreshIntervalMs={5000}
-      >
+    <TerminalProvider>
+      <RealTimeSmartTradingProvider>
         <DashboardContent />
-      </SmartTradingProvider>
+      </RealTimeSmartTradingProvider>
     </TerminalProvider>
   );
 }
@@ -87,19 +53,32 @@ function DashboardContent() {
     sortOrder: "desc",
   });
 
-  // Smart Trading data for TraderProfileCard (from shared context - no duplicate fetching!)
-  const {
-    config,
-    dashboardStats,
-    positions,
-    history,
-  } = useSmartTradingContext();
+  // Smart Trading data from real-time WebSocket context (live updates!)
+  const { config } = useRealTimeConfig();
+  const { dashboardStats } = useRealTimeDashboardStats();
+  const { positions, history } = useRealTimePositions();
+  const { rankedMigrations } = useRealTimeMigrationFeed();
+  const { signals } = useRealTimeWalletSignals();
+
+  // AI Terminal Narrator - generates AI reasoning messages based on trading events
+  useTerminalNarrator({
+    state: {
+      positions,
+      history,
+      rankedMigrations,
+      signals,
+      tradingEnabled: config?.tradingEnabled,
+    },
+    throttleMs: 5000,
+    idleIntervalMs: 20000,
+    enabled: true,
+  });
 
   // AI Mood System - dynamically calculates mood based on market data
-  const { mood: aiMood, pnl, reason, intensity } = useAiMood({
+  const { mood: aiMood, pnl, reason } = useAiMood({
     tokens,
     isActive: true,
-    isExecuting: false, // TODO: Wire to real trading execution state
+    isExecuting: false,
   });
 
   return (
@@ -135,7 +114,7 @@ function DashboardContent() {
           {/* Feature Content */}
           {activeView === "smart-trading" && (
             <div className="space-y-4">
-              <SmartTradingSection />
+              <SmartTradingDashboard />
             </div>
           )}
           {activeView === "pump-history" && (

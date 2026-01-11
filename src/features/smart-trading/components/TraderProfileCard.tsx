@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { motion } from "motion/react";
 import { CountUp } from "@/components/animations/CountUp";
-import { Zap, TrendingUp, Twitter } from "lucide-react";
+import { Zap, TrendingUp } from "lucide-react";
 import { SmartMoneyAnimation } from "@/components/animations";
 import { cn } from "@/lib/utils";
 import type { DashboardStatsResponse, Position, TradingConfig } from "../types";
@@ -56,14 +56,22 @@ function calculateStreak(history: Position[]): { current: number; best: number; 
   return { current: currentStreak, best: bestStreak, type: firstTradeWin ? "win" : "loss" };
 }
 
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
 function TabIcon({ type, className }: { type: "smart-money" | "trending" | "twitter"; className?: string }) {
   if (type === "smart-money") {
-    return <SmartMoneyAnimation className={className} size={16} />;
+    return <SmartMoneyAnimation className={className} size={24} />;
   }
   if (type === "trending") {
-    return <TrendingUp className={cn("w-4 h-4", className)} />;
+    return <TrendingUp className={cn("w-6 h-6", className)} />;
   }
-  return <Twitter className={cn("w-4 h-4", className)} />;
+  return <XIcon className={cn("w-6 h-6", className)} />;
 }
 
 export function TraderProfileCard({
@@ -84,7 +92,7 @@ export function TraderProfileCard({
   const isOnStreak = streak.current >= 2 && streak.type === "win";
 
   return (
-    <div className="relative pb-8">
+    <div className="relative pb-12">
       {/* SUPER ROUTER floating title - above avatar */}
       <motion.div
         className="absolute -top-6 left-4 z-30"
@@ -191,7 +199,7 @@ export function TraderProfileCard({
 
       {/* Tabs - attached below, offset from avatar */}
       <motion.div
-        className="absolute -bottom-2 left-[136px] right-4 z-10 flex items-center justify-center gap-8"
+        className="absolute -bottom-6 left-[136px] right-4 z-10 flex items-center justify-center gap-8"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4, duration: 0.4 }}
@@ -200,19 +208,19 @@ export function TraderProfileCard({
           <motion.button
             key={tab.id}
             onClick={() => onViewChange(tab.id)}
-            className="relative flex flex-col items-center gap-1.5 py-2 group"
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.98 }}
+            className="relative flex flex-col items-center gap-2 py-3 px-4 group"
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.97 }}
           >
             {/* Icon + Label */}
             <div className={cn(
-              "flex items-center gap-2 transition-colors duration-200",
+              "flex items-center gap-3 transition-colors duration-200",
               activeView === tab.id
                 ? "text-[#c4f70e]"
                 : "text-white/40 group-hover:text-white/70"
             )}>
-              <TabIcon type={tab.iconType} className="w-4 h-4" />
-              <span className="text-[11px] font-semibold uppercase tracking-wide">{tab.label}</span>
+              <TabIcon type={tab.iconType} />
+              <span className="text-sm font-semibold uppercase tracking-wide">{tab.label}</span>
             </div>
 
             {/* Underline indicator */}

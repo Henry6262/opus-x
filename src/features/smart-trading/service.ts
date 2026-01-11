@@ -79,6 +79,12 @@ export const smartTradingService = {
     });
   },
 
+  async syncWalletTwitterProfile(address: string): Promise<TrackedWallet> {
+    return fetchApi<TrackedWallet>(`/smart-trading/wallets/${address}/sync-twitter`, {
+      method: "POST",
+    });
+  },
+
   // Trading signals - returns paginated response
   async getSignals(params?: {
     status?: string;

@@ -55,6 +55,7 @@ interface SmartTradingContextValue extends SmartTradingState {
   trackMigration: (tokenMint: string, options?: { skipVerification?: boolean }) => Promise<void>;
   analyzeMigration: (tokenMint: string) => Promise<void>;
   refreshMigrationData: (tokenMint: string) => Promise<void>;
+  syncWalletTwitterProfile: (address: string) => Promise<void>;
 }
 
 const SmartTradingContext = createContext<SmartTradingContextValue | null>(null);
@@ -247,6 +248,16 @@ export function SmartTradingProvider({
     }
   }, [fetchMigrations]);
 
+  const syncWalletTwitterProfile = useCallback(async (address: string) => {
+    try {
+      await smartTradingService.syncWalletTwitterProfile(address);
+      await fetchDashboard();
+    } catch (err) {
+      console.error("Failed to sync wallet Twitter profile:", err);
+      throw err;
+    }
+  }, [fetchDashboard]);
+
   // Memoize context value to prevent unnecessary re-renders
   const value = useMemo<SmartTradingContextValue>(
     () => ({
@@ -258,8 +269,9 @@ export function SmartTradingProvider({
       trackMigration,
       analyzeMigration,
       refreshMigrationData,
+      syncWalletTwitterProfile,
     }),
-    [state, fetchDashboard, fetchMigrations, toggleTrading, closePosition, trackMigration, analyzeMigration, refreshMigrationData]
+    [state, fetchDashboard, fetchMigrations, toggleTrading, closePosition, trackMigration, analyzeMigration, refreshMigrationData, syncWalletTwitterProfile]
   );
 
   return (

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
 import { useTerminal } from "./TerminalProvider";
+import type { TerminalLogEntry } from "./types";
 
 function MatrixRain() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -60,6 +61,142 @@ function MatrixRain() {
     />
   );
 }
+
+// ============================================
+// Typewriter Effect Component
+// ============================================
+
+interface TypewriterTextProps {
+  text: string;
+  isStreaming?: boolean;
+  onComplete?: () => void;
+  baseSpeed?: number;
+}
+
+function TypewriterText({
+  text,
+  isStreaming,
+  onComplete,
+  baseSpeed = 28,
+}: TypewriterTextProps) {
+  const [displayedText, setDisplayedText] = useState("");
+  const [isComplete, setIsComplete] = useState(false);
+  const indexRef = useRef(0);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Reset when text changes
+    setDisplayedText("");
+    setIsComplete(false);
+    indexRef.current = 0;
+
+    if (!isStreaming) {
+      // If not streaming, show full text immediately
+      setDisplayedText(text);
+      setIsComplete(true);
+      onComplete?.();
+      return;
+    }
+
+    const typeNextChar = () => {
+      if (indexRef.current >= text.length) {
+        setIsComplete(true);
+        onComplete?.();
+        return;
+      }
+
+      const char = text[indexRef.current];
+      indexRef.current++;
+      setDisplayedText(text.slice(0, indexRef.current));
+
+      // Calculate delay for next character
+      let delay = baseSpeed;
+
+      // Pause longer on punctuation
+      if (char === "." || char === "!" || char === "?") {
+        delay = baseSpeed * 8; // 224ms pause
+      } else if (char === ",") {
+        delay = baseSpeed * 4; // 112ms pause
+      } else if (char === "…" || char === ":") {
+        delay = baseSpeed * 6; // 168ms pause
+      }
+
+      // Small random variance for natural feel
+      delay += Math.random() * 10 - 5;
+
+      timeoutRef.current = setTimeout(typeNextChar, delay);
+    };
+
+    // Start typing after small initial delay
+    timeoutRef.current = setTimeout(typeNextChar, 50);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [text, isStreaming, baseSpeed, onComplete]);
+
+  return (
+    <>
+      {displayedText}
+      {isStreaming && !isComplete && <span className="streaming-cursor">|</span>}
+    </>
+  );
+}
+
+// ============================================
+// Terminal Line Component
+// ============================================
+
+interface TerminalLineProps {
+  event: TerminalLogEntry;
+  isInitialItem: boolean;
+  isFirstRender: boolean;
+  animationDelay: string;
+}
+
+function TerminalLine({
+  event,
+  isInitialItem,
+  isFirstRender,
+  animationDelay,
+}: TerminalLineProps) {
+  const isThinkingStep = event.type === "thinking-step";
+
+  const lineClass = useMemo(() => {
+    let cls = isFirstRender && isInitialItem
+      ? "terminal-line"
+      : "terminal-line terminal-line-new";
+    if (isThinkingStep) {
+      cls += " thinking-step";
+    }
+    return cls;
+  }, [isFirstRender, isInitialItem, isThinkingStep]);
+
+  return (
+    <div
+      className={lineClass}
+      style={{
+        animationDelay,
+        color: event.color,
+      }}
+    >
+      {isThinkingStep && <span className="thinking-indicator">&gt;</span>}
+      <span className="terminal-time">[{event.time}]</span>
+      <span className="terminal-text">
+        <TypewriterText
+          text={event.text}
+          isStreaming={event.isStreaming}
+        />
+      </span>
+    </div>
+  );
+}
+
+// ============================================
+// Main Terminal Component
+// ============================================
 
 export function Terminal() {
   const { logs } = useTerminal();
@@ -217,37 +354,19 @@ export function Terminal() {
         </div>
         <div className="terminal-content">
           {logs.map((event, index) => {
-            // Stagger animation only for initial items, new items animate immediately
             const isInitialItem = index < initialLogCountRef.current;
             const animationDelay = isFirstRender && isInitialItem
               ? `${index * 80}ms`
-              : '0ms';
-
-            // Build class names based on log type and timing
-            const isThinkingStep = event.type === 'thinking-step';
-            let lineClass = isFirstRender && isInitialItem
-              ? 'terminal-line'
-              : 'terminal-line terminal-line-new';
-            if (isThinkingStep) {
-              lineClass += ' thinking-step';
-            }
+              : "0ms";
 
             return (
-              <div
+              <TerminalLine
                 key={event.id}
-                className={lineClass}
-                style={{
-                  animationDelay,
-                  color: event.color,
-                }}
-              >
-                {isThinkingStep && <span className="thinking-indicator">&gt;</span>}
-                <span className="terminal-time">[{event.time}]</span>
-                <span className="terminal-text">
-                  {event.text}
-                  {event.isStreaming && <span className="streaming-cursor">|</span>}
-                </span>
-              </div>
+                event={event}
+                isInitialItem={isInitialItem}
+                isFirstRender={isFirstRender}
+                animationDelay={animationDelay}
+              />
             );
           })}
           <div className="terminal-line terminal-cursor-line">

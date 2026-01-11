@@ -7,7 +7,7 @@ import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { CountUp } from "@/components/animations";
 import type { PortfolioWalletProps, TimeFilter, PortfolioStats, WalletView, Position as UiPosition, Transaction } from "./types";
-import { useSmartTradingContext } from "@/features/smart-trading/context";
+import { useRealTimeDashboardStats, useRealTimePositions } from "@/features/smart-trading";
 
 // Generate mock chart data (placeholder until we have historical data API)
 function generateChartData(timeFilter: TimeFilter, isProfitable: boolean) {
@@ -53,8 +53,10 @@ function formatTimeAgo(dateInput: string | Date): string {
 }
 
 export function PortfolioWallet({ className }: PortfolioWalletProps) {
-  // Use shared context instead of separate hook (prevents duplicate API calls!)
-  const { dashboardStats, positions, history, chartHistory } = useSmartTradingContext();
+  // Use real-time WebSocket context (live updates!)
+  const { dashboardStats } = useRealTimeDashboardStats();
+  const { positions, history } = useRealTimePositions();
+  const chartHistory: unknown[] = []; // TODO: Add chartHistory to real-time context
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeView, setActiveView] = useState<WalletView>("overview");
@@ -196,13 +198,18 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
               <Image
                 src="/assets/wallet.png"
                 alt="Wallet"
-                width={20}
-                height={20}
+                width={28}
+                height={28}
                 className="portfolio-wallet-icon-img"
               />
             </div>
             <div className="portfolio-wallet-sol-balance">
-              {walletBalance.toFixed(2)}
+              <CountUp
+                from={0}
+                to={walletBalance}
+                duration={1.5}
+                decimals={2}
+              />
               <Image
                 src="/logos/solana.png"
                 alt="SOL"

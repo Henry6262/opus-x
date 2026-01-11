@@ -4416,3 +4416,37 @@ button:focus-visible {
   transform: translateX(-50%);
   z-index: 5;
 }
+
+/* ===== SHINY TEXT ANIMATION ===== */
+@keyframes shine {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.shiny-text {
+  background: linear-gradient(
+    90deg,
+    #c4f70e 0%,
+    #c4f70e 40%,
+    #ffffff 50%,
+    #c4f70e 60%,
+    #c4f70e 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine var(--shine-speed, 3s) linear infinite;
+}
+
+.shiny-disabled {
+  animation: none;
+  background: #c4f70e;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
