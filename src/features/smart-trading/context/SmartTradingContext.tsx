@@ -7,6 +7,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import { smartTradingService } from "../service";
@@ -101,6 +102,9 @@ export function SmartTradingProvider({
     lastUpdated: null,
   });
 
+  // Prevent double-fetch in StrictMode
+  const hasFetchedRef = useRef(false);
+
   // Fetch main dashboard data (7 requests in parallel)
   const fetchDashboard = useCallback(async () => {
     if (!enabled) return;
@@ -164,8 +168,11 @@ export function SmartTradingProvider({
     }
   }, [enabled, migrationLimit]);
 
-  // Initial fetch
+  // Initial fetch (with StrictMode protection)
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     fetchDashboard();
     fetchMigrations();
   }, [fetchDashboard, fetchMigrations]);
