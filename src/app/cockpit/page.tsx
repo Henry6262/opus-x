@@ -97,7 +97,7 @@ export default function CockpitPage() {
             <span className="text-xl">🤖 VIBR CODER</span>
           </div>
           <div className="flex justify-center">
-            <VibrCoder state={vibrState} height={300} />
+            <VibrCoder state={vibrState} height={300} showWallet={false} />
           </div>
           <div className="text-center mt-2 text-sm opacity-75">
             STATE: {vibrState.toUpperCase()}

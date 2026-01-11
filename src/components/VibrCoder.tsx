@@ -12,10 +12,11 @@ interface VibrCoderProps {
   pnl?: number;
   height?: number;
   size?: number;
+  showWallet?: boolean;
   onAnimationComplete?: () => void;
 }
 
-export function VibrCoder({ state, className = '', statusText, reason, pnl, height, size, onAnimationComplete }: VibrCoderProps) {
+export function VibrCoder({ state, className = '', statusText, reason, pnl, height, size, showWallet = true, onAnimationComplete }: VibrCoderProps) {
   // Compute styles based on size or height
   const containerStyle: React.CSSProperties = {};
   if (size) {
@@ -40,7 +41,7 @@ export function VibrCoder({ state, className = '', statusText, reason, pnl, heig
       <div className="vibr-coder-fade-bottom" />
 
       {/* Portfolio Wallet Widget - Top Left */}
-      <PortfolioWallet />
+      {showWallet && <PortfolioWallet />}
 
       <div className="vibr-coder-overlay">
         <div className="gradient-text font-bold text-2xl">VIBR CODER</div>
