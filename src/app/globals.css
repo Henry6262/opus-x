@@ -275,21 +275,19 @@ main {
   display: none;
 }
 
-/* Mobile: side by side layout */
+/* Mobile: video full width, terminal as floating overlay */
 @media (max-width: 768px) {
   .hero-section {
-    flex-direction: row;
-    gap: var(--space-2);
+    flex-direction: column;
   }
 
   .vibr-coder-container {
-    flex: 1;
-    min-width: 0;
+    width: 100%;
   }
 
   .vibr-coder-video {
     width: 100%;
-    height: 100%;
+    height: auto;
     min-height: 200px;
     object-fit: contain;
   }
@@ -303,16 +301,264 @@ main {
     font-size: var(--text-lg);
   }
 
+  /* Terminal as floating overlay on mobile */
   .hero-terminal {
     display: flex;
-    flex: 1;
-    min-width: 0;
-    min-height: 200px;
+    position: fixed;
+    bottom: var(--space-4);
+    right: var(--space-4);
+    z-index: 1000;
+    width: auto;
+    height: auto;
   }
 
-  .hero-terminal .terminal {
+  /* Mobile terminal drawer - collapsed = FAB, expanded = bottom sheet */
+  .hero-terminal .terminal-drawer {
+    width: auto;
+    height: auto;
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hero-terminal .terminal-drawer.collapsed {
+    transform: none;
+  }
+
+  /* FAB style when collapsed - EPIC BRANDED VERSION */
+  .hero-terminal .terminal-drawer.collapsed .terminal-collapse-btn {
+    position: relative;
+    left: auto;
+    right: auto;
+    top: auto;
+    transform: none;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    padding: 0;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    border: 2px solid rgba(0, 255, 65, 0.5);
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(0, 255, 65, 0.15) 0%, transparent 50%),
+      linear-gradient(135deg, rgba(0, 20, 10, 0.98) 0%, rgba(0, 40, 20, 0.95) 50%, rgba(0, 15, 8, 0.98) 100%);
+    box-shadow:
+      0 6px 24px rgba(0, 0, 0, 0.6),
+      0 0 30px rgba(0, 255, 65, 0.25),
+      0 0 60px rgba(0, 255, 65, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      inset 0 -2px 10px rgba(0, 255, 65, 0.1);
+    animation: mobile-fab-epic 4s ease-in-out infinite;
+    overflow: hidden;
+  }
+
+  /* Rotating border gradient effect */
+  .hero-terminal .terminal-drawer.collapsed .terminal-collapse-btn::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0%,
+      rgba(0, 255, 65, 0.6) 10%,
+      transparent 20%,
+      transparent 50%,
+      rgba(34, 211, 238, 0.4) 60%,
+      transparent 70%,
+      transparent 100%
+    );
+    animation: mobile-fab-rotate 6s linear infinite;
+    z-index: -1;
+  }
+
+  /* Inner glow ring */
+  .hero-terminal .terminal-drawer.collapsed .terminal-collapse-btn::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 255, 65, 0.2);
+    background: transparent;
+    pointer-events: none;
+  }
+
+  @keyframes mobile-fab-epic {
+    0%, 100% {
+      box-shadow:
+        0 6px 24px rgba(0, 0, 0, 0.6),
+        0 0 25px rgba(0, 255, 65, 0.2),
+        0 0 50px rgba(0, 255, 65, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      transform: scale(1);
+    }
+    50% {
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.7),
+        0 0 40px rgba(0, 255, 65, 0.35),
+        0 0 80px rgba(0, 255, 65, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      transform: scale(1.02);
+    }
+  }
+
+  @keyframes mobile-fab-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .hero-terminal .terminal-drawer.collapsed .terminal-collapse-btn .terminal-collapse-icon {
+    width: 22px;
+    height: 22px;
+    filter: drop-shadow(0 0 8px rgba(0, 255, 65, 0.8));
+  }
+
+  /* Show "AI" text below icon */
+  .hero-terminal .terminal-drawer.collapsed .terminal-collapse-btn .terminal-collapse-btn__icon-wrap::after {
+    content: 'AI';
+    display: block;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    color: var(--matrix-green);
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
+    margin-top: 2px;
+  }
+
+  /* Hide default label elements */
+  .hero-terminal .terminal-drawer.collapsed .terminal-open-btn__label,
+  .hero-terminal .terminal-drawer.collapsed .terminal-open-btn__gradient,
+  .hero-terminal .terminal-drawer.collapsed .terminal-open-btn__particles {
+    display: none;
+  }
+
+  /* Hover state for FAB */
+  .hero-terminal .terminal-drawer.collapsed .terminal-collapse-btn:hover {
+    border-color: rgba(0, 255, 65, 0.8);
+    transform: scale(1.08);
+  }
+
+  .hero-terminal .terminal-drawer.collapsed .terminal-collapse-btn:hover::before {
+    animation-duration: 3s;
+  }
+
+  .hero-terminal .terminal-drawer.collapsed .terminal-collapse-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* Expanded terminal = bottom sheet overlay */
+  .hero-terminal .terminal-drawer:not(.collapsed) {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100vw;
+    height: 70vh;
+    max-height: 70vh;
+    background: rgba(0, 0, 0, 0.95);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.6);
+    animation: mobile-terminal-slide-up 400ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes mobile-terminal-slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  /* Hide the external collapse button on mobile expanded view */
+  .hero-terminal .terminal-drawer:not(.collapsed) .terminal-collapse-btn {
+    display: none;
+  }
+
+  /* Terminal content in expanded mobile view */
+  .hero-terminal .terminal-drawer:not(.collapsed) .terminal {
+    width: 100%;
     height: 100%;
     max-height: none;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Close button inside terminal header - replace the dots */
+  .hero-terminal .terminal-drawer:not(.collapsed) .terminal-dots {
+    display: flex;
+    cursor: pointer;
+  }
+
+  .hero-terminal .terminal-drawer:not(.collapsed) .terminal-dots .terminal-dot {
+    display: none;
+  }
+
+  .hero-terminal .terminal-drawer:not(.collapsed) .terminal-dots::after {
+    content: '✕';
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    transition: all 200ms ease;
+  }
+
+  .hero-terminal .terminal-drawer:not(.collapsed) .terminal-dots:hover::after {
+    background: rgba(255, 70, 70, 0.3);
+    color: #ff6b6b;
+  }
+
+  /* Hide terminal when collapsed in mobile (only show FAB) */
+  .hero-terminal .terminal-drawer.collapsed .terminal {
+    display: none;
+  }
+
+  /* Overlay backdrop when terminal is open - smooth animation */
+  .hero-terminal .terminal-drawer:not(.collapsed)::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 70vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: -1;
+    animation: mobile-backdrop-fade 300ms ease-out;
+  }
+
+  @keyframes mobile-backdrop-fade {
+    from {
+      opacity: 0;
+      backdrop-filter: blur(0);
+      -webkit-backdrop-filter: blur(0);
+    }
+    to {
+      opacity: 1;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+  }
+
+  /* Mobile TraderProfileCard adjustments */
+  .dashboard-panel {
+    padding-top: var(--space-8) !important;
+    margin-top: 24px !important;
+  }
+
+  /* Smaller trader card on mobile */
+  .dashboard-panel > div:first-child {
+    transform: scale(0.85);
+    transform-origin: top center;
+    margin-bottom: -20px;
   }
 }
 
@@ -1192,8 +1438,8 @@ main {
   border-radius: var(--radius-lg);
   border: 1px solid rgba(0, 255, 65, 0.3);
   width: auto;
-  height: 72px;
-  padding: 0 16px 0 0;
+  height: auto;
+  padding: 12px 16px 12px 14px;
   flex-direction: row;
   gap: 0;
   background: transparent;
@@ -2814,34 +3060,35 @@ button:focus-visible {
   top: var(--space-4);
   left: var(--space-4);
   z-index: 15;
-  /* TWO-TONE CAPSULE: Darker gray-teal to lighter neutral */
+  /* TWO-TONE CAPSULE: Black to green gradient */
   background: linear-gradient(
     135deg,
-    /* Dark side - more neutral, less green */
-    #1a3535 0%,
-    #1f4040 20%,
-    #2a4a48 40%,
-    /* Transition to light side - more gray/white */
-    #5a7a78 55%,
-    #a0b5b3 70%,
-    #d0dddb 85%,
-    #f0f4f3 100%
+    /* Dark side - pure black */
+    #0a0a0a 0%,
+    #101010 15%,
+    #151515 30%,
+    /* Transition to green side */
+    #1a3020 45%,
+    #2a5040 60%,
+    #4a8060 75%,
+    #6aaa80 90%,
+    #8acc9a 100%
   );
-  /* Dark outline like the reference */
-  border: 2px solid #1a3a30;
+  /* Dark outline */
+  border: 2px solid #0a1510;
   border-radius: 9999px;
   backdrop-filter: none;
   /* COMPACT PILL */
   width: fit-content;
   padding: 8px 16px !important;
   min-height: auto;
-  /* 3D depth with dark shadow */
+  /* 3D depth with green glow */
   box-shadow:
-    /* Outer glow - teal tinted */
-    0 0 20px rgba(80, 200, 160, 0.3),
-    0 0 40px rgba(60, 180, 140, 0.15),
+    /* Outer glow - green tinted */
+    0 0 20px rgba(100, 180, 120, 0.3),
+    0 0 40px rgba(80, 160, 100, 0.15),
     /* 3D depth shadow */
-    0 4px 0 #0f2a22,
+    0 4px 0 #050a08,
     0 6px 16px rgba(0, 0, 0, 0.5),
     /* Inner depth */
     inset 0 2px 4px rgba(255, 255, 255, 0.15),
@@ -2855,22 +3102,22 @@ button:focus-visible {
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Glow animation - teal themed */
+/* Glow animation - green themed */
 @keyframes pump-pill-glow {
   0%, 100% {
     box-shadow:
-      0 0 20px rgba(80, 200, 160, 0.3),
-      0 0 40px rgba(60, 180, 140, 0.15),
-      0 4px 0 #0f2a22,
+      0 0 20px rgba(100, 180, 120, 0.3),
+      0 0 40px rgba(80, 160, 100, 0.15),
+      0 4px 0 #050a08,
       0 6px 16px rgba(0, 0, 0, 0.5),
       inset 0 2px 4px rgba(255, 255, 255, 0.15),
       inset 0 -2px 4px rgba(0, 0, 0, 0.2);
   }
   50% {
     box-shadow:
-      0 0 30px rgba(80, 200, 160, 0.45),
-      0 0 60px rgba(60, 180, 140, 0.25),
-      0 4px 0 #0f2a22,
+      0 0 30px rgba(100, 180, 120, 0.45),
+      0 0 60px rgba(80, 160, 100, 0.25),
+      0 4px 0 #050a08,
       0 6px 16px rgba(0, 0, 0, 0.5),
       inset 0 2px 4px rgba(255, 255, 255, 0.2),
       inset 0 -2px 4px rgba(0, 0, 0, 0.2);
@@ -2879,11 +3126,11 @@ button:focus-visible {
 
 .portfolio-wallet.collapsed.variant-pump:hover {
   transform: scale(1.05) translateY(-2px);
-  border-color: #2a5a4a;
+  border-color: #1a3525;
   box-shadow:
-    0 0 35px rgba(80, 200, 160, 0.5),
-    0 0 70px rgba(60, 180, 140, 0.3),
-    0 6px 0 #0f2a22,
+    0 0 35px rgba(100, 180, 120, 0.5),
+    0 0 70px rgba(80, 160, 100, 0.3),
+    0 6px 0 #050a08,
     0 10px 24px rgba(0, 0, 0, 0.6),
     inset 0 2px 4px rgba(255, 255, 255, 0.2),
     inset 0 -2px 4px rgba(0, 0, 0, 0.2);
@@ -2892,9 +3139,9 @@ button:focus-visible {
 .portfolio-wallet.collapsed.variant-pump:active {
   transform: scale(1.02) translateY(1px);
   box-shadow:
-    0 0 15px rgba(80, 200, 160, 0.35),
-    0 0 30px rgba(60, 180, 140, 0.2),
-    0 2px 0 #0f2a22,
+    0 0 15px rgba(100, 180, 120, 0.35),
+    0 0 30px rgba(80, 160, 100, 0.2),
+    0 2px 0 #050a08,
     0 3px 8px rgba(0, 0, 0, 0.4),
     inset 0 2px 4px rgba(255, 255, 255, 0.1),
     inset 0 -2px 4px rgba(0, 0, 0, 0.25);
@@ -3149,7 +3396,7 @@ button:focus-visible {
   z-index: 1;
 }
 
-/* Subtle inner glow at bottom - teal themed */
+/* Subtle inner glow at bottom - green themed */
 .portfolio-wallet.collapsed.variant-pump::after {
   content: '';
   position: absolute;
@@ -3159,7 +3406,7 @@ button:focus-visible {
   height: 30%;
   background: radial-gradient(
     ellipse at center bottom,
-    rgba(80, 200, 160, 0.1) 0%,
+    rgba(100, 180, 120, 0.1) 0%,
     transparent 70%
   );
   pointer-events: none;

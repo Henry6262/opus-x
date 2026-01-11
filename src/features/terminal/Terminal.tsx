@@ -203,7 +203,13 @@ export function Terminal() {
             <span className="terminal-status-text">LIVE</span>
           </div>
           <div className="terminal-title">AI REASONING TERMINAL</div>
-          <div className="terminal-dots">
+          <div
+            className="terminal-dots"
+            onClick={() => setIsCollapsed(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && setIsCollapsed(true)}
+          >
             <div className="terminal-dot active" />
             <div className="terminal-dot" />
             <div className="terminal-dot" />

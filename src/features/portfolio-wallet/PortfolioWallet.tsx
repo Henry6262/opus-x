@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
-import { Wallet, X, TrendingUp, TrendingDown, BarChart3, Clock, Layers, ChevronUp, ChevronDown } from "lucide-react";
+import { X, TrendingUp, TrendingDown, BarChart3, Clock, Layers, ChevronUp, ChevronDown } from "lucide-react";
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { CountUp } from "@/components/animations";
@@ -193,7 +193,13 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
             className="portfolio-wallet-collapsed"
           >
             <div className="portfolio-wallet-icon">
-              <Wallet className="w-5 h-5" />
+              <Image
+                src="/assets/wallet.png"
+                alt="Wallet"
+                width={20}
+                height={20}
+                className="portfolio-wallet-icon-img"
+              />
             </div>
             <div className="portfolio-wallet-sol-balance">
               {walletBalance.toFixed(2)}
@@ -240,7 +246,12 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
             {/* Header */}
             <div className="portfolio-wallet-header">
               <div className="portfolio-wallet-title">
-                <Wallet className="w-4 h-4" />
+                <Image
+                  src="/assets/wallet.png"
+                  alt="Wallet"
+                  width={16}
+                  height={16}
+                />
                 <span>VIBR WALLET</span>
               </div>
               <button

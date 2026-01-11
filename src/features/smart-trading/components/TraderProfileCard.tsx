@@ -58,12 +58,12 @@ function calculateStreak(history: Position[]): { current: number; best: number; 
 
 function TabIcon({ type, className }: { type: "smart-money" | "trending" | "twitter"; className?: string }) {
   if (type === "smart-money") {
-    return <SmartMoneyAnimation className={className} size={14} />;
+    return <SmartMoneyAnimation className={className} size={16} />;
   }
   if (type === "trending") {
-    return <TrendingUp className={cn("w-3.5 h-3.5", className)} />;
+    return <TrendingUp className={cn("w-4 h-4", className)} />;
   }
-  return <Twitter className={cn("w-3.5 h-3.5", className)} />;
+  return <Twitter className={cn("w-4 h-4", className)} />;
 }
 
 export function TraderProfileCard({
@@ -189,48 +189,53 @@ export function TraderProfileCard({
         </div>
       </div>
 
-      {/* Capsule "Chin" - tabs attached below, offset from avatar */}
+      {/* Tabs - attached below, offset from avatar */}
       <motion.div
-        className="absolute -bottom-2 left-[136px] right-4 z-10"
+        className="absolute -bottom-2 left-[136px] right-4 z-10 flex items-center justify-center gap-8"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4, duration: 0.4 }}
       >
-        <div className="flex items-center h-10 px-4 bg-gradient-to-r from-black/70 via-black/60 to-black/70 backdrop-blur-xl rounded-full border border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
+        {tabs.map((tab) => (
+          <motion.button
+            key={tab.id}
+            onClick={() => onViewChange(tab.id)}
+            className="relative flex flex-col items-center gap-1.5 py-2 group"
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {/* Icon + Label */}
+            <div className={cn(
+              "flex items-center gap-2 transition-colors duration-200",
+              activeView === tab.id
+                ? "text-[#c4f70e]"
+                : "text-white/40 group-hover:text-white/70"
+            )}>
+              <TabIcon type={tab.iconType} className="w-4 h-4" />
+              <span className="text-[11px] font-semibold uppercase tracking-wide">{tab.label}</span>
+            </div>
 
-          {/* Glowing name badge */}
-          <div className="flex items-center gap-2 pr-4 border-r border-[#c4f70e]/30">
-            <motion.div
-              className="w-1.5 h-1.5 rounded-full bg-[#c4f70e]"
-              animate={{ opacity: [0.5, 1, 0.5], boxShadow: ["0 0 4px #c4f70e", "0 0 10px #c4f70e", "0 0 4px #c4f70e"] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-            <span className="text-[#c4f70e] font-mono text-[10px] font-bold tracking-[0.15em]">
-              SUPER ROUTER
-            </span>
-          </div>
+            {/* Underline indicator */}
+            {activeView === tab.id && (
+              <motion.div
+                layoutId="activeTabIndicator"
+                className="absolute -bottom-1 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#c4f70e] to-transparent"
+                initial={false}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+            )}
 
-          {/* Tab buttons */}
-          <div className="flex items-center gap-1.5 pl-4">
-            {tabs.map((tab) => (
-              <motion.button
-                key={tab.id}
-                onClick={() => onViewChange(tab.id)}
-                className={cn(
-                  "capsule-tab-button flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-semibold uppercase tracking-wide transition-all duration-200",
-                  activeView === tab.id
-                    ? "bg-[#c4f70e]/15 text-[#c4f70e] shadow-[0_0_12px_rgba(196,247,14,0.2)]"
-                    : "text-white/40 hover:text-white/70 hover:bg-white/5"
-                )}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <TabIcon type={tab.iconType} />
-                <span>{tab.label}</span>
-              </motion.button>
-            ))}
-          </div>
-        </div>
+            {/* Glow effect for active */}
+            {activeView === tab.id && (
+              <motion.div
+                layoutId="activeTabGlow"
+                className="absolute -bottom-1 left-1/4 right-1/4 h-[2px] blur-sm bg-[#c4f70e]"
+                initial={false}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+            )}
+          </motion.button>
+        ))}
       </motion.div>
 
       {/* Avatar with animated glow rings */}
