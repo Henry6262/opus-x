@@ -246,7 +246,7 @@ export function MigrationFeedPanel({
               <AnimatePresence mode="popLayout">
                 {readyToTrade.map((ranked) => (
                   <MigrationTokenCard
-                    key={ranked.migration.tokenMint}
+                    key={ranked.tokenMint}
                     ranked={ranked}
                     onAnalyze={handleAnalyze}
                     onRefresh={handleRefreshToken}
@@ -275,7 +275,7 @@ export function MigrationFeedPanel({
               <AnimatePresence mode="popLayout">
                 {monitoring.map((ranked) => (
                   <MigrationTokenCard
-                    key={ranked.migration.tokenMint}
+                    key={ranked.tokenMint}
                     ranked={ranked}
                     onAnalyze={handleAnalyze}
                     onRefresh={handleRefreshToken}

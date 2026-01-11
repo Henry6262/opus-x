@@ -248,14 +248,14 @@ export function useTerminalNarrator({
     const newMigrations = findNewItems(
       prevState.rankedMigrations,
       state.rankedMigrations,
-      (m) => m.migration.tokenMint
+      (m) => m.tokenMint
     );
     if (newMigrations.length > 0) {
       const ranked = newMigrations[0];
       emitEvent({
         type: "migration:detected",
         data: {
-          tokenSymbol: ranked.migration.tokenSymbol ?? "Unknown",
+          tokenSymbol: ranked.tokenSymbol ?? "Unknown",
         },
         priority: "normal",
       });
@@ -266,22 +266,22 @@ export function useTerminalNarrator({
     // Check for new AI decisions on migrations
     for (const ranked of state.rankedMigrations.slice(0, 5)) {
       const prevRanked = prevState.rankedMigrations.find(
-        (r) => r.migration.tokenMint === ranked.migration.tokenMint
+        (r) => r.tokenMint === ranked.tokenMint
       );
 
       // New AI analysis completed
       if (
-        ranked.migration.lastAiDecision &&
-        ranked.migration.lastAiConfidence &&
-        (!prevRanked?.migration.lastAiDecision ||
-          prevRanked.migration.lastAnalyzedAt !== ranked.migration.lastAnalyzedAt)
+        ranked.lastAiDecision &&
+        ranked.lastAiConfidence &&
+        (!prevRanked?.lastAiDecision ||
+          prevRanked.lastAnalyzedAt !== ranked.lastAnalyzedAt)
       ) {
         emitEvent({
           type: "ai:decision",
           data: {
-            tokenSymbol: ranked.migration.tokenSymbol ?? "Unknown",
-            decision: ranked.migration.lastAiDecision,
-            confidence: ranked.migration.lastAiConfidence,
+            tokenSymbol: ranked.tokenSymbol ?? "Unknown",
+            decision: ranked.lastAiDecision,
+            confidence: ranked.lastAiConfidence,
           },
           priority: "normal",
         });
@@ -294,18 +294,18 @@ export function useTerminalNarrator({
     // Check for new wallet signals on migrations
     for (const ranked of state.rankedMigrations.slice(0, 5)) {
       const prevRanked = prevState.rankedMigrations.find(
-        (r) => r.migration.tokenMint === ranked.migration.tokenMint
+        (r) => r.tokenMint === ranked.tokenMint
       );
 
-      const prevSignalCount = prevRanked?.migration.walletSignalCount ?? 0;
-      const currentSignalCount = ranked.migration.walletSignalCount ?? 0;
+      const prevSignalCount = prevRanked?.walletSignalCount ?? 0;
+      const currentSignalCount = ranked.walletSignalCount ?? 0;
 
-      if (currentSignalCount > prevSignalCount && ranked.migration.walletSignals?.length > 0) {
-        const latestSignal = ranked.migration.walletSignals[0];
+      if (currentSignalCount > prevSignalCount && ranked.walletSignals?.length > 0) {
+        const latestSignal = ranked.walletSignals[0];
         emitEvent({
           type: "wallet:signal_detected",
           data: {
-            tokenSymbol: ranked.migration.tokenSymbol ?? "Unknown",
+            tokenSymbol: ranked.tokenSymbol ?? "Unknown",
             walletLabel: latestSignal.walletLabel ?? "Tracked wallet",
             action: latestSignal.action,
           },

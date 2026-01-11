@@ -118,14 +118,15 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const { migration, score, breakdown, isReadyToTrade } = ranked;
-  const decision = migration.lastAiDecision;
+  // RankedMigration is a FLAT structure - all properties at root level
+  const { score, breakdown, isReadyToTrade } = ranked;
+  const decision = ranked.lastAiDecision;
   const decisionConfig = decision ? AI_DECISION_CONFIG[decision] : null;
 
-  const priceChange = migration.lastPriceChange1h ?? 0;
-  const marketCap = migration.lastMarketCap ?? 0;
-  const liquidity = migration.lastLiquidity ?? 0;
-  const volume = migration.lastVolume24h ?? 0;
+  const priceChange = ranked.lastPriceChange1h ?? 0;
+  const marketCap = ranked.lastMarketCap ?? 0;
+  const liquidity = ranked.lastLiquidity ?? 0;
+  const volume = ranked.lastVolume24h ?? 0;
 
   // Flash animations for live updates
   const priceFlash = usePriceFlash(priceChange, 0.5); // Flash on 0.5% change
@@ -137,7 +138,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
     if (!onAnalyze || isAnalyzing) return;
     setIsAnalyzing(true);
     try {
-      await onAnalyze(migration.tokenMint);
+      await onAnalyze(ranked.tokenMint);
     } finally {
       setIsAnalyzing(false);
     }
@@ -147,14 +148,14 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
     if (!onRefresh || isRefreshing) return;
     setIsRefreshing(true);
     try {
-      await onRefresh(migration.tokenMint);
+      await onRefresh(ranked.tokenMint);
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  const timeSinceDetection = getTimeSince(migration.detectedAt);
-  const expiresIn = migration.expiresAt ? getTimeUntil(migration.expiresAt) : null;
+  const timeSinceDetection = getTimeSince(ranked.detectedAt);
+  const expiresIn = ranked.expiresAt ? getTimeUntil(ranked.expiresAt) : null;
 
   return (
     <motion.div
@@ -183,7 +184,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-white truncate">
-                {migration.tokenSymbol || "Unknown"}
+                {ranked.tokenSymbol || "Unknown"}
               </span>
               {isReadyToTrade && (
                 <motion.div
@@ -197,7 +198,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
               )}
             </div>
             <p className="text-xs text-white/40 truncate mt-0.5">
-              {migration.tokenName || shortenAddress(migration.tokenMint)}
+              {ranked.tokenName || shortenAddress(ranked.tokenMint)}
             </p>
           </div>
 
@@ -208,9 +209,9 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
               <span className={`text-sm font-bold ${decisionConfig.color}`}>
                 {decisionConfig.label}
               </span>
-              {migration.lastAiConfidence && (
+              {ranked.lastAiConfidence && (
                 <span className="text-xs text-white/40">
-                  {Math.round(migration.lastAiConfidence * 100)}%
+                  {Math.round(ranked.lastAiConfidence * 100)}%
                 </span>
               )}
             </div>
@@ -277,9 +278,9 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
         </div>
 
         {/* Wallet signals */}
-        {migration.walletSignalCount > 0 && migration.walletSignals.length > 0 && (
+        {ranked.walletSignalCount > 0 && ranked.walletSignals.length > 0 && (
           <div className="mt-3 pt-3 border-t border-white/5">
-            <WalletSignalStack signals={migration.walletSignals} maxDisplay={3} />
+            <WalletSignalStack signals={ranked.walletSignals} maxDisplay={3} />
           </div>
         )}
 
@@ -344,10 +345,10 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
             >
               <div className="mt-3 pt-3 border-t border-white/5 space-y-3">
                 {/* AI Reasoning */}
-                {migration.lastAiReasoning && (
+                {ranked.lastAiReasoning && (
                   <div>
                     <span className="text-[10px] text-white/40 uppercase tracking-wider">AI Reasoning</span>
-                    <p className="text-sm text-white/70 mt-1">{migration.lastAiReasoning}</p>
+                    <p className="text-sm text-white/70 mt-1">{ranked.lastAiReasoning}</p>
                   </div>
                 )}
 
@@ -355,11 +356,11 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
                 <div>
                   <span className="text-[10px] text-white/40 uppercase tracking-wider">Signal Breakdown</span>
                   <div className="grid grid-cols-3 gap-2 mt-2">
-                    <SignalBar label="Fresh" value={breakdown.migrationFreshness} max={30} />
+                    <SignalBar label="Age" value={breakdown.migrationAge} max={30} />
                     <SignalBar label="Wallets" value={breakdown.walletSignals} max={50} />
                     <SignalBar label="AI" value={breakdown.aiConfidence} max={25} />
-                    <SignalBar label="Price" value={breakdown.priceAction} max={15} />
-                    <SignalBar label="Liquidity" value={breakdown.liquidity} max={10} />
+                    <SignalBar label="Momentum" value={breakdown.priceMomentum} max={15} />
+                    <SignalBar label="Multi-Wallet" value={breakdown.multipleWallets} max={10} />
                   </div>
                 </div>
 
@@ -367,7 +368,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
                 <div>
                   <span className="text-[10px] text-white/40 uppercase tracking-wider">Token Mint</span>
                   <p className="text-xs text-white/50 font-mono mt-1 break-all">
-                    {migration.tokenMint}
+                    {ranked.tokenMint}
                   </p>
                 </div>
               </div>

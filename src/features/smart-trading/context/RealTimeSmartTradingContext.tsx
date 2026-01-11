@@ -245,6 +245,8 @@ export function RealTimeSmartTradingProvider({
   const fetchDashboard = useCallback(async () => {
     if (!enabled) return;
 
+    console.log("[RealTimeSmartTrading] 🔄 Fetching dashboard data...");
+
     try {
       const [
         dashboardStats,
@@ -264,6 +266,17 @@ export function RealTimeSmartTradingProvider({
         smartTradingService.getHistory(288),
       ]);
 
+      // DEBUG: Log API responses
+      console.log("[RealTimeSmartTrading] ✅ Dashboard data received:", {
+        dashboardStats,
+        config: { tradingEnabled: config?.tradingEnabled },
+        walletsCount: wallets?.length,
+        signalsCount: signalsResponse?.items?.length,
+        openPositionsCount: positionsResponse?.items?.length,
+        closedPositionsCount: historyResponse?.items?.length,
+        chartHistoryCount: chartHistory?.length,
+      });
+
       setState((prev) => ({
         ...prev,
         dashboardStats,
@@ -279,7 +292,7 @@ export function RealTimeSmartTradingProvider({
         lastUpdated: new Date(),
       }));
     } catch (err) {
-      console.error("[RealTimeSmartTrading] Failed to fetch dashboard data:", err);
+      console.error("[RealTimeSmartTrading] ❌ Failed to fetch dashboard data:", err);
       setState((prev) => ({
         ...prev,
         isLoading: false,
@@ -293,15 +306,25 @@ export function RealTimeSmartTradingProvider({
   const fetchMigrations = useCallback(async () => {
     if (!enabled) return;
 
+    console.log("[RealTimeSmartTrading] 🔄 Fetching migrations...");
+
     try {
       const response = await smartTradingService.getRankedMigrations(migrationLimit);
+
+      // DEBUG: Log migration response (RankedMigration is FLAT structure)
+      console.log("[RealTimeSmartTrading] ✅ Migrations received:", {
+        itemsCount: response?.items?.length,
+        stats: response?.stats,
+        firstItem: response?.items?.[0]?.tokenSymbol,
+      });
+
       setState((prev) => ({
         ...prev,
         rankedMigrations: response.items,
         migrationStats: response.stats,
       }));
     } catch (err) {
-      console.error("[RealTimeSmartTrading] Failed to fetch migrations:", err);
+      console.error("[RealTimeSmartTrading] ❌ Failed to fetch migrations:", err);
     }
   }, [enabled, migrationLimit]);
 
@@ -339,19 +362,17 @@ export function RealTimeSmartTradingProvider({
         (data, event) => {
           addActivity(event);
 
+          // RankedMigration is FLAT - update properties directly
           setState((prev) => ({
             ...prev,
             rankedMigrations: prev.rankedMigrations.map((rm) => {
-              if (rm.migration.tokenMint === data.tokenMint) {
+              if (rm.tokenMint === data.tokenMint) {
                 return {
                   ...rm,
-                  migration: {
-                    ...rm.migration,
-                    lastPriceUsd: data.priceUsd ?? rm.migration.lastPriceUsd,
-                    lastMarketCap: data.marketCap ?? rm.migration.lastMarketCap,
-                    lastPriceChange1h: data.priceChange1h ?? rm.migration.lastPriceChange1h,
-                    lastUpdatedAt: new Date().toISOString(),
-                  },
+                  lastPriceUsd: data.priceUsd ?? rm.lastPriceUsd,
+                  lastMarketCap: data.marketCap ?? rm.lastMarketCap,
+                  lastPriceChange1h: data.priceChange1h ?? rm.lastPriceChange1h,
+                  lastUpdatedAt: new Date().toISOString(),
                 };
               }
               return rm;
@@ -368,19 +389,17 @@ export function RealTimeSmartTradingProvider({
         (data, event) => {
           addActivity(event);
 
+          // RankedMigration is FLAT - update properties directly
           setState((prev) => ({
             ...prev,
             rankedMigrations: prev.rankedMigrations.map((rm) => {
-              if (rm.migration.tokenMint === data.tokenMint) {
+              if (rm.tokenMint === data.tokenMint) {
                 return {
                   ...rm,
-                  migration: {
-                    ...rm.migration,
-                    lastAiDecision: data.decision as Migration["lastAiDecision"],
-                    lastAiConfidence: data.confidence,
-                    lastAiReasoning: data.reasoning,
-                    lastAnalyzedAt: new Date().toISOString(),
-                  },
+                  lastAiDecision: data.decision as Migration["lastAiDecision"],
+                  lastAiConfidence: data.confidence,
+                  lastAiReasoning: data.reasoning,
+                  lastAnalyzedAt: new Date().toISOString(),
                 };
               }
               return rm;
@@ -397,27 +416,25 @@ export function RealTimeSmartTradingProvider({
         (data, event) => {
           addActivity(event);
 
+          // RankedMigration is FLAT - update properties directly
           setState((prev) => ({
             ...prev,
             rankedMigrations: prev.rankedMigrations.map((rm) => {
-              if (rm.migration.tokenMint === data.tokenMint) {
+              if (rm.tokenMint === data.tokenMint) {
                 return {
                   ...rm,
-                  migration: {
-                    ...rm.migration,
-                    walletSignalCount: rm.migration.walletSignalCount + 1,
-                    walletSignals: [
-                      {
-                        walletAddress: data.walletAddress,
-                        walletLabel: data.walletLabel,
-                        action: data.action as "BUY" | "SELL",
-                        amountSol: data.amountSol,
-                        timestamp: new Date().toISOString(),
-                      },
-                      ...rm.migration.walletSignals.slice(0, 9),
-                    ],
-                    lastWalletSignalAt: new Date().toISOString(),
-                  },
+                  walletSignalCount: rm.walletSignalCount + 1,
+                  walletSignals: [
+                    {
+                      walletAddress: data.walletAddress,
+                      walletLabel: data.walletLabel,
+                      action: data.action as "BUY" | "SELL",
+                      amountSol: data.amountSol,
+                      timestamp: new Date().toISOString(),
+                    },
+                    ...rm.walletSignals.slice(0, 9),
+                  ],
+                  lastWalletSignalAt: new Date().toISOString(),
                 };
               }
               return rm;
@@ -432,10 +449,11 @@ export function RealTimeSmartTradingProvider({
       on<{ tokenMint: string }>("migration_expired", (data, event) => {
         addActivity(event);
 
+        // RankedMigration is FLAT - access tokenMint directly
         setState((prev) => ({
           ...prev,
           rankedMigrations: prev.rankedMigrations.filter(
-            (rm) => rm.migration.tokenMint !== data.tokenMint
+            (rm) => rm.tokenMint !== data.tokenMint
           ),
         }));
       })
@@ -473,9 +491,18 @@ export function RealTimeSmartTradingProvider({
 
   // Initial fetch (with StrictMode protection)
   useEffect(() => {
-    if (hasFetchedRef.current || !enabled) return;
+    console.log("[RealTimeSmartTrading] 🚀 Initial fetch effect triggered", {
+      hasFetched: hasFetchedRef.current,
+      enabled,
+    });
+
+    if (hasFetchedRef.current || !enabled) {
+      console.log("[RealTimeSmartTrading] ⏭️ Skipping initial fetch (already fetched or disabled)");
+      return;
+    }
     hasFetchedRef.current = true;
 
+    console.log("[RealTimeSmartTrading] 📡 Starting initial data fetch...");
     fetchDashboard();
     fetchMigrations();
   }, [enabled, fetchDashboard, fetchMigrations]);
@@ -631,8 +658,8 @@ export function useActivityFeed() {
 
 /** Hook for dashboard stats */
 export function useRealTimeDashboardStats() {
-  const { dashboardStats, isLoading, error, lastUpdated } = useRealTimeSmartTrading();
-  return { dashboardStats, isLoading, error, lastUpdated };
+  const { dashboardStats, isLoading, error, lastUpdated, refresh } = useRealTimeSmartTrading();
+  return { stats: dashboardStats, dashboardStats, isLoading, error, lastUpdated, refresh };
 }
 
 /** Hook for positions */

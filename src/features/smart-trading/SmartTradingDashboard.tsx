@@ -128,7 +128,7 @@ function ConnectionHeader() {
           </div>
           <p className="text-sm text-white/50">
             {config?.tradingEnabled ? "Auto-trading enabled" : "Trading paused"}
-            {stats && ` • ${stats.activePositions} positions • ${stats.totalPnl >= 0 ? "+" : ""}${stats.totalPnl.toFixed(2)}% P&L`}
+            {stats && ` • ${stats.trading.openPositions} positions • ${stats.performance.netPnlSol >= 0 ? "+" : ""}${stats.performance.netPnlSol.toFixed(2)} SOL`}
           </p>
         </div>
       </div>
@@ -141,14 +141,14 @@ function ConnectionHeader() {
             <StatPill
               icon={<Target className="w-3.5 h-3.5" />}
               label="Win Rate"
-              value={`${stats.winRate.toFixed(0)}%`}
+              value={`${stats.performance.winRate.toFixed(0)}%`}
               color="text-[#c4f70e]"
             />
             <StatPill
-              icon={stats.todayPnl >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+              icon={stats.trading.dailyPnL >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
               label="Today"
-              value={`${stats.todayPnl >= 0 ? "+" : ""}${stats.todayPnl.toFixed(2)}%`}
-              color={stats.todayPnl >= 0 ? "text-green-400" : "text-red-400"}
+              value={`${stats.trading.dailyPnL >= 0 ? "+" : ""}${stats.trading.dailyPnL.toFixed(2)} SOL`}
+              color={stats.trading.dailyPnL >= 0 ? "text-green-400" : "text-red-400"}
             />
           </div>
         )}
@@ -477,7 +477,7 @@ function RealTimeMigrationPanel() {
             <AnimatePresence mode="popLayout">
               {readyToTrade.map((ranked) => (
                 <MigrationTokenCard
-                  key={ranked.migration.tokenMint}
+                  key={ranked.tokenMint}
                   ranked={ranked}
                   onAnalyze={analyzeMigration}
                   onRefresh={refreshMigrationData}
@@ -501,7 +501,7 @@ function RealTimeMigrationPanel() {
             <AnimatePresence mode="popLayout">
               {monitoring.slice(0, 10).map((ranked) => (
                 <MigrationTokenCard
-                  key={ranked.migration.tokenMint}
+                  key={ranked.tokenMint}
                   ranked={ranked}
                   onAnalyze={analyzeMigration}
                   onRefresh={refreshMigrationData}

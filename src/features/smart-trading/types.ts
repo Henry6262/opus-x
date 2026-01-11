@@ -245,19 +245,21 @@ export interface MigrationAnalysis {
   createdAt: string;
 }
 
-export interface RankedMigration {
-  migration: Migration;
+// RankedMigration is a FLAT structure - migration fields are at root level
+// This matches the backend API response from /smart-trading/migration-feed/ranked
+export interface RankedMigration extends Migration {
   score: number;
   breakdown: SignalBreakdown;
   isReadyToTrade: boolean;
 }
 
+// SignalBreakdown matches backend property names from signal-aggregator.service.ts
 export interface SignalBreakdown {
-  migrationFreshness: number;
+  migrationAge: number;
   walletSignals: number;
   aiConfidence: number;
-  priceAction: number;
-  liquidity: number;
+  priceMomentum: number;
+  multipleWallets: number;
   total: number;
 }
 
