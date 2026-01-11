@@ -1,17 +1,15 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "motion/react";
-import { Panel, StatusPill } from "@/components/design-system";
+import { StatusPill } from "@/components/design-system";
 import { CountUp } from "@/components/animations/CountUp";
 import {
   Flame,
   Trophy,
-  Target,
   TrendingUp,
   TrendingDown,
   Activity,
-  Sparkles,
-  Zap,
 } from "lucide-react";
 import type { DashboardStatsResponse, Position, TradingConfig } from "../types";
 
@@ -109,145 +107,115 @@ export function TraderProfileCard({ stats, config, history }: TraderProfileCardP
   const totalTrades = performance?.totalTrades ?? 0;
   const winningTrades = performance?.winningTrades ?? 0;
   const largestWin = performance?.largestWin ?? 0;
-  const profitFactor = performance?.profitFactor ?? 0;
   const netPnl = performance?.netPnlSol ?? 0;
   const isOnStreak = streak.current >= 2 && streak.type === "win";
 
   return (
-    <Panel className="relative overflow-hidden !p-4">
-      <div className="absolute -top-16 -right-16 w-40 h-40 bg-[#c4f70e]/5 rounded-full blur-3xl" />
-      <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl" />
+    <div className="relative rounded-full bg-black/40 backdrop-blur-xl border border-white/10 py-4 pr-8 pl-8">
+      {/* Glow effects */}
+      <div className="absolute -top-16 -right-16 w-40 h-40 bg-[#c4f70e]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
 
-      <div className="relative flex gap-5">
-        {/* LEFT: Character + Name */}
-        <div className="flex flex-col items-center shrink-0 w-28">
-          <motion.div
-            className="relative"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.4 }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-[#c4f70e]/25 to-cyan-500/25 rounded-xl blur-lg" />
-            <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#c4f70e]/40 bg-black/60">
-              <img
-                src="/character/super-router.png"
-                alt="SuperRouter"
-                className="w-full h-full object-cover"
-              />
-              {config?.tradingEnabled && (
-                <motion.div
-                  className="absolute top-1 right-1"
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ repeat: Infinity, duration: 2 }}
-                >
-                  <StatusPill tone="live" className="text-[7px] px-1 py-0">
-                    LIVE
-                  </StatusPill>
-                </motion.div>
-              )}
-            </div>
-          </motion.div>
-
-          <div className="mt-2 text-center">
-            <h3 className="text-xs font-bold text-white flex items-center gap-1 justify-center">
-              <Sparkles className="w-2.5 h-2.5 text-[#c4f70e]" />
-              SuperRouter
-            </h3>
-            <p className="text-[8px] text-white/40 uppercase tracking-wider">
-              Smart Money Agent
-            </p>
-          </div>
+      {/* LEFT: Character Avatar - Absolutely positioned, slightly bigger than container */}
+      <motion.div
+        className="absolute -left-2 -top-2 -bottom-2 w-32 h-32"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.4 }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-[#c4f70e]/30 to-cyan-500/30 rounded-full blur-xl scale-110" />
+        <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-[#c4f70e]/50 bg-black/60 shadow-[0_0_25px_rgba(196,247,14,0.25)]">
+          <img
+            src="/character/super-router.png"
+            alt="SuperRouter"
+            className="w-full h-full object-cover"
+          />
+          {config?.tradingEnabled && (
+            <motion.div
+              className="absolute bottom-2 right-2"
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+            >
+              <StatusPill tone="live" className="text-[9px] px-2 py-1">
+                LIVE
+              </StatusPill>
+            </motion.div>
+          )}
         </div>
+      </motion.div>
+
+      <div className="relative flex items-center gap-8 ml-32">
 
         {/* MIDDLE: Hero Metrics */}
         <div className="flex-1 flex flex-col justify-center">
           {/* Top row: Win Rate Ring + P&L + Streak */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             {/* Win Rate Ring */}
             <div className="flex flex-col items-center">
               <WinRateRing percentage={winRate} />
-              <span className="text-[8px] text-white/40 uppercase tracking-wider mt-0.5">Win Rate</span>
+              <span className="text-[10px] text-white/40 uppercase tracking-wider mt-1">Win Rate</span>
             </div>
 
             {/* P&L - Hero stat */}
             <div className="flex-1">
-              <div className="flex items-center gap-1.5 mb-0.5">
+              <div className="flex items-center gap-2 mb-1">
                 {netPnl >= 0 ? (
-                  <TrendingUp className="w-3.5 h-3.5 text-green-400" />
+                  <TrendingUp className="w-5 h-5 text-white" />
                 ) : (
-                  <TrendingDown className="w-3.5 h-3.5 text-red-400" />
+                  <TrendingDown className="w-5 h-5 text-white" />
                 )}
-                <span className="text-[8px] text-white/40 uppercase tracking-wider">All-Time P&L</span>
+                <span className="text-xs text-white/40 uppercase tracking-wider">All-Time P&L</span>
               </div>
-              <div className={`text-xl font-bold font-mono ${netPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
-                {netPnl >= 0 ? "+" : ""}<CountUp to={netPnl} duration={1.2} />
-                <span className="text-sm ml-1 text-white/50">SOL</span>
+              <div className={`flex items-center gap-2 text-3xl font-bold font-mono ${netPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                <CountUp to={netPnl} duration={1.2} decimals={2} prefix={netPnl >= 0 ? "+" : ""} />
+                <Image src="/logos/solana.png" alt="SOL" width={24} height={24} className="opacity-70" />
               </div>
             </div>
 
             {/* Streak with fire */}
-            <div className="text-right">
-              <div className="flex items-center gap-1 justify-end mb-0.5">
+            <div className="text-right mr-6">
+              <div className="flex items-center gap-1.5 justify-end mb-1">
                 <motion.div
                   animate={isOnStreak ? { scale: [1, 1.2, 1], rotate: [0, 5, -5, 0] } : {}}
                   transition={{ repeat: Infinity, duration: 0.6 }}
                 >
-                  <Flame className={`w-4 h-4 ${isOnStreak ? "text-orange-400 drop-shadow-[0_0_6px_rgba(251,146,60,0.6)]" : "text-white/30"}`} />
+                  <Flame className={`w-5 h-5 ${isOnStreak ? "text-orange-400 drop-shadow-[0_0_6px_rgba(251,146,60,0.6)]" : "text-white/30"}`} />
                 </motion.div>
-                <span className="text-[8px] text-white/40 uppercase tracking-wider">Streak</span>
+                <span className="text-[10px] text-white/40 uppercase tracking-wider">Streak</span>
               </div>
-              <div className="flex items-baseline gap-1 justify-end">
-                <span className={`text-lg font-bold font-mono ${isOnStreak ? "text-orange-400" : "text-white"}`}>
+              <div className="flex items-baseline gap-1.5 justify-end">
+                <span className={`text-2xl font-bold font-mono ${isOnStreak ? "text-orange-400" : "text-white"}`}>
                   <CountUp to={streak.current} duration={0.6} />
                 </span>
-                <span className="text-[10px] text-white/30">/ {streak.best}</span>
+                <span className="text-sm text-white/30">/ {streak.best}</span>
               </div>
             </div>
           </div>
 
-          {/* Bottom row: Supporting metrics */}
-          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/5">
-            <div className="flex items-center gap-1.5">
-              <Activity className="w-3 h-3 text-cyan-400" />
-              <span className="text-[9px] text-white/40">Trades</span>
-              <span className="text-xs font-mono font-medium text-white">
+          {/* Bottom row: Supporting metrics - simplified */}
+          <div className="flex items-center gap-8 mt-4 pt-4 border-t border-white/5">
+            <div className="flex items-center gap-3">
+              <Activity className="w-5 h-5 text-white" />
+              <span className="text-sm text-white/50">Trades</span>
+              <span className="text-xl font-mono font-medium text-white">
                 {totalTrades}
-                <span className="text-green-400/70 text-[9px]"> ({winningTrades}W)</span>
+                <span className="text-green-400/70 text-sm ml-1.5">({winningTrades}W)</span>
               </span>
             </div>
 
-            <div className="w-px h-3 bg-white/10" />
+            <div className="w-px h-5 bg-white/10" />
 
-            <div className="flex items-center gap-1.5">
-              <Trophy className="w-3 h-3 text-yellow-400" />
-              <span className="text-[9px] text-white/40">Best</span>
-              <span className="text-xs font-mono font-medium text-green-400">
-                +<CountUp to={largestWin} duration={0.8} />
-              </span>
-            </div>
-
-            <div className="w-px h-3 bg-white/10" />
-
-            <div className="flex items-center gap-1.5">
-              <Target className="w-3 h-3 text-purple-400" />
-              <span className="text-[9px] text-white/40">PF</span>
-              <span className="text-xs font-mono font-medium text-white">
-                <CountUp to={profitFactor} duration={0.8} />x
-              </span>
-            </div>
-
-            <div className="w-px h-3 bg-white/10" />
-
-            <div className="flex items-center gap-1.5">
-              <Zap className="w-3 h-3 text-cyan-400" />
-              <span className="text-[9px] text-white/40">Open</span>
-              <span className="text-xs font-mono font-bold text-cyan-400">
-                {trading?.openPositions ?? 0}/{trading?.maxOpenPositions ?? 5}
+            <div className="flex items-center gap-3">
+              <Trophy className="w-5 h-5 text-white" />
+              <span className="text-sm text-white/50">Best</span>
+              <span className="flex items-center gap-1.5 text-xl font-mono font-medium text-green-400">
+                <CountUp to={largestWin} duration={0.8} decimals={2} prefix="+" />
+                <Image src="/logos/solana.png" alt="SOL" width={18} height={18} className="opacity-70" />
               </span>
             </div>
           </div>
         </div>
       </div>
-    </Panel>
+    </div>
   );
 }

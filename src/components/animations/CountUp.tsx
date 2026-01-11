@@ -14,6 +14,7 @@ interface CountUpProps {
   separator?: string;
   prefix?: string;
   suffix?: string;
+  decimals?: number;
   onStart?: () => void;
   onEnd?: () => void;
 }
@@ -29,6 +30,7 @@ export function CountUp({
   separator = "",
   prefix = "",
   suffix = "",
+  decimals,
   onStart,
   onEnd,
 }: CountUpProps) {
@@ -56,16 +58,15 @@ export function CountUp({
     return 0;
   };
 
-  const maxDecimals = Math.max(getDecimalPlaces(from), getDecimalPlaces(to));
+  const autoDecimals = Math.max(getDecimalPlaces(from), getDecimalPlaces(to));
+  const maxDecimals = decimals !== undefined ? decimals : autoDecimals;
 
   const formatValue = useCallback(
     (latest: number) => {
-      const hasDecimals = maxDecimals > 0;
-
       const options: Intl.NumberFormatOptions = {
         useGrouping: !!separator,
-        minimumFractionDigits: hasDecimals ? maxDecimals : 0,
-        maximumFractionDigits: hasDecimals ? maxDecimals : 0,
+        minimumFractionDigits: maxDecimals,
+        maximumFractionDigits: maxDecimals,
       };
 
       const formattedNumber = Intl.NumberFormat("en-US", options).format(latest);

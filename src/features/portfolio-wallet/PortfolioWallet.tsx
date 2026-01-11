@@ -211,6 +211,7 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                 duration={!hasInitialAnimated ? 1.2 : shouldAnimate ? 1.2 : 0}
                 prefix={isProfitable ? "+" : ""}
                 suffix="%"
+                decimals={2}
                 className="portfolio-wallet-pnl-value"
                 onEnd={() => {
                   if (!hasInitialAnimated) setHasInitialAnimated(true);

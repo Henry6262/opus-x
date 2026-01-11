@@ -180,3 +180,121 @@ export interface PortfolioSnapshot {
   unrealizedPnLSol: number;
   openPositions: number;
 }
+
+// ============================================
+// MIGRATION FEED TYPES
+// ============================================
+
+export type TrackingStatus = "ACTIVE" | "EXPIRED" | "TRADED";
+export type AiDecision = "ENTER" | "WAIT" | "PASS";
+export type AnalysisTrigger = "SCHEDULED" | "WALLET_SIGNAL" | "MIGRATION" | "PRICE_SPIKE";
+
+export interface Migration {
+  id: string;
+  tokenMint: string;
+  tokenSymbol: string | null;
+  tokenName: string | null;
+  trackingStatus: TrackingStatus;
+  detectedAt: string;
+  poolAddress: string | null;
+  migrationTxSig: string | null;
+  expiresAt: string | null;
+  priorityScore: number;
+
+  // Market data
+  lastPriceUsd: number | null;
+  lastMarketCap: number | null;
+  lastLiquidity: number | null;
+  lastVolume24h: number | null;
+  lastPriceChange1h: number | null;
+  lastUpdatedAt: string | null;
+
+  // AI analysis
+  lastAiDecision: AiDecision | null;
+  lastAiConfidence: number | null;
+  lastAiReasoning: string | null;
+  lastAnalyzedAt: string | null;
+
+  // Wallet signals
+  walletSignalCount: number;
+  walletSignals: WalletSignal[];
+  lastWalletSignalAt: string | null;
+}
+
+export interface WalletSignal {
+  walletAddress: string;
+  walletLabel?: string;
+  action: "BUY" | "SELL";
+  amountSol?: number;
+  timestamp: string;
+}
+
+export interface MigrationAnalysis {
+  id: string;
+  migrationId: string;
+  priceUsd: number;
+  marketCap: number;
+  liquidity: number;
+  volume24h: number | null;
+  decision: AiDecision;
+  confidence: number;
+  reasoning: string;
+  risks: string[];
+  triggerType: AnalysisTrigger;
+  triggerData: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface RankedMigration {
+  migration: Migration;
+  score: number;
+  breakdown: SignalBreakdown;
+  isReadyToTrade: boolean;
+}
+
+export interface SignalBreakdown {
+  migrationFreshness: number;
+  walletSignals: number;
+  aiConfidence: number;
+  priceAction: number;
+  liquidity: number;
+  total: number;
+}
+
+export interface MigrationFeedStats {
+  totalActive: number;
+  pendingAnalysis: number;
+  readyToTrade: number;
+  withWalletSignals: number;
+  expiredToday: number;
+}
+
+// Migration feed API responses
+export interface MigrationFeedResponse {
+  items: Migration[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface RankedMigrationsResponse {
+  items: RankedMigration[];
+  stats: MigrationFeedStats;
+}
+
+// WebSocket event types for migration feed
+export interface MigrationFeedEvent {
+  type:
+    | "connected"
+    | "migration_detected"
+    | "market_data_updated"
+    | "ai_analysis"
+    | "wallet_signal"
+    | "migration_expired"
+    | "feed_update"
+    | "stats_update";
+  data?: unknown;
+  timestamp: number;
+  clientId?: string;
+}

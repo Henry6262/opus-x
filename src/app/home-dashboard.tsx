@@ -4,6 +4,8 @@ import { useState } from "react";
 import { PumpHistorySection } from "@/features/pump-history";
 import { SimulationTwitterSection } from "@/features/simulation-twitter";
 import { SmartTradingSection } from "@/features/smart-trading";
+import { TraderProfileCard } from "@/features/smart-trading/components/TraderProfileCard";
+import { useSmartTrading } from "@/features/smart-trading/hooks/useSmartTrading";
 import { Terminal, TerminalProvider } from "@/features/terminal";
 import type { TerminalLogEntry } from "@/features/terminal";
 import { useAiMood } from "@/hooks/useAiMood";
@@ -78,6 +80,16 @@ function DashboardContent() {
     sortOrder: "desc",
   });
 
+  // Smart Trading data for TraderProfileCard
+  const {
+    config,
+    dashboardStats,
+    positions,
+    history,
+  } = useSmartTrading({
+    refreshIntervalMs: 10000,
+  });
+
   // AI Mood System - dynamically calculates mood based on market data
   const { mood: aiMood, pnl, reason, intensity } = useAiMood({
     tokens,
@@ -103,6 +115,16 @@ function DashboardContent() {
 
         {/* ===== BOTTOM SECTION: THE DASHBOARD ===== */}
         <div className="dashboard-panel">
+          {/* Trader Profile Card - Always Visible */}
+          <div className="mb-6">
+            <TraderProfileCard
+              stats={dashboardStats}
+              config={config}
+              positions={positions}
+              history={history}
+            />
+          </div>
+
           {/* Epic Feature Toggle */}
           <div className="tab-switcher">
             <button

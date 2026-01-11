@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Panel } from "@/components/design-system";
 import { Button } from "@/components/ui";
 import { useSmartTrading } from "./hooks/useSmartTrading";
+import { MigrationFeedPanel } from "./components/MigrationFeedPanel";
 import type { Position, TradingSignal, TrackedWallet } from "./types";
 import {
   AlertCircle,
@@ -13,8 +14,8 @@ import {
   Target,
   Users,
   Zap,
+  Activity,
 } from "lucide-react";
-import { TraderProfileCard } from "./components/TraderProfileCard";
 
 // Format SOL amount
 function formatSol(amount: number | undefined | null): string {
@@ -320,14 +321,6 @@ export function SmartTradingSection() {
         </div>
       </Panel>
 
-      {/* Trader Profile Card */}
-      <TraderProfileCard
-        stats={dashboardStats}
-        config={config}
-        positions={positions}
-        history={history}
-      />
-
       {/* Two columns: Wallets + Signals | Positions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left column: Tracked Wallets + Recent Signals */}
@@ -395,6 +388,24 @@ export function SmartTradingSection() {
             )}
           </div>
         </Panel>
+      </div>
+
+      {/* Migration Feed Section */}
+      <div className="mt-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Activity className="w-4 h-4 text-[#c4f70e]" />
+          <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide">
+            Migration Tracker
+          </h3>
+          <span className="text-xs text-white/30">
+            Real-time pump.fun → Raydium migrations
+          </span>
+        </div>
+        <MigrationFeedPanel
+          limit={15}
+          refreshIntervalMs={5000}
+          showTrackInput={true}
+        />
       </div>
 
       {/* Trading config summary */}

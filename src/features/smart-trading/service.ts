@@ -6,6 +6,11 @@ import type {
   DashboardStatsResponse,
   SignalsResponse,
   PositionsResponse,
+  Migration,
+  MigrationAnalysis,
+  MigrationFeedResponse,
+  RankedMigrationsResponse,
+  MigrationFeedStats,
 } from "./types";
 
 const PONZINOMICS_API_URL =
@@ -112,6 +117,92 @@ export const smartTradingService = {
 
   async getHistory(limit?: number): Promise<import("./types").PortfolioSnapshot[]> {
     return fetchApi(`/smart-trading/stats/chart${limit ? `?limit=${limit}` : ""}`);
+  },
+
+  // ============================================
+  // MIGRATION FEED
+  // ============================================
+
+  // Get paginated migration feed
+  async getMigrationFeed(params?: {
+    status?: string;
+    decision?: string;
+    limit?: number;
+    page?: number;
+  }): Promise<MigrationFeedResponse> {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set("status", params.status);
+    if (params?.decision) searchParams.set("decision", params.decision);
+    if (params?.limit) searchParams.set("limit", params.limit.toString());
+    if (params?.page) searchParams.set("page", params.page.toString());
+
+    const query = searchParams.toString();
+    return fetchApi<MigrationFeedResponse>(
+      `/smart-trading/migration-feed${query ? `?${query}` : ""}`
+    );
+  },
+
+  // Get ranked migrations with scores
+  async getRankedMigrations(limit?: number): Promise<RankedMigrationsResponse> {
+    const query = limit ? `?limit=${limit}` : "";
+    return fetchApi<RankedMigrationsResponse>(
+      `/smart-trading/migration-feed/ranked${query}`
+    );
+  },
+
+  // Get single migration by token mint
+  async getMigration(tokenMint: string): Promise<Migration> {
+    return fetchApi<Migration>(`/smart-trading/migration-feed/${tokenMint}`);
+  },
+
+  // Get migration analysis history
+  async getMigrationAnalysisHistory(
+    tokenMint: string,
+    limit?: number
+  ): Promise<MigrationAnalysis[]> {
+    const query = limit ? `?limit=${limit}` : "";
+    return fetchApi<MigrationAnalysis[]>(
+      `/smart-trading/migration-feed/${tokenMint}/analysis${query}`
+    );
+  },
+
+  // Get migration feed stats
+  async getMigrationFeedStats(): Promise<MigrationFeedStats> {
+    return fetchApi<MigrationFeedStats>("/smart-trading/migration-feed/stats");
+  },
+
+  // Manually add a token to migration tracking
+  async trackMigration(
+    tokenMint: string,
+    options?: { skipVerification?: boolean }
+  ): Promise<Migration> {
+    return fetchApi<Migration>("/smart-trading/migration-feed", {
+      method: "POST",
+      body: JSON.stringify({ tokenMint, ...options }),
+    });
+  },
+
+  // Stop tracking a migration
+  async stopTrackingMigration(tokenMint: string): Promise<void> {
+    await fetchApi(`/smart-trading/migration-feed/${tokenMint}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Trigger AI analysis for a specific token
+  async analyzeMigration(tokenMint: string): Promise<MigrationAnalysis> {
+    return fetchApi<MigrationAnalysis>(
+      `/smart-trading/migration-feed/${tokenMint}/analyze`,
+      { method: "POST" }
+    );
+  },
+
+  // Refresh market data for a specific token
+  async refreshMigrationMarketData(tokenMint: string): Promise<Migration> {
+    return fetchApi<Migration>(
+      `/smart-trading/migration-feed/${tokenMint}/refresh`,
+      { method: "POST" }
+    );
   },
 };
 
