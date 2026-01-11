@@ -7,7 +7,7 @@ import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { CountUp } from "@/components/animations";
 import type { PortfolioWalletProps, TimeFilter, PortfolioStats, WalletView, Position as UiPosition, Transaction } from "./types";
-import { useSmartTrading } from "@/features/smart-trading/hooks/useSmartTrading";
+import { useSmartTradingContext } from "@/features/smart-trading/context";
 
 // Generate mock chart data (placeholder until we have historical data API)
 function generateChartData(timeFilter: TimeFilter, isProfitable: boolean) {
@@ -53,23 +53,24 @@ function formatTimeAgo(dateInput: string | Date): string {
 }
 
 export function PortfolioWallet({ className }: PortfolioWalletProps) {
-  const { stats, positions, history, dashboardStats, chartHistory } = useSmartTrading({ refreshIntervalMs: 5000 });
+  // Use shared context instead of separate hook (prevents duplicate API calls!)
+  const { dashboardStats, positions, history, chartHistory } = useSmartTradingContext();
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeView, setActiveView] = useState<WalletView>("overview");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("24H");
 
-  // Calculate real values
+  // Calculate real values from dashboardStats.trading
   // Use realWalletBalance if available (even in simulation mode), otherwise fall back to reported balance
-  const walletBalance = stats?.realWalletBalance ?? stats?.walletBalance ?? 0;
+  const walletBalance = dashboardStats?.trading.realWalletBalance ?? dashboardStats?.trading.walletBalance ?? 0;
   const totalExposure = dashboardStats?.trading.totalExposure || 0;
   const unrealizedPnL = dashboardStats?.trading.unrealizedPnL || 0;
   // Total Value = Liquid SOL + Cost Basis of Open Positions + Unrealized PnL
   // (or simpler: Liquid SOL + Current Value of Positions)
   const totalValue = walletBalance + totalExposure + unrealizedPnL;
 
-  // Real PnL values
-  const totalPnL = stats?.totalPnL || 0; // realized
+  // Real PnL values from dashboardStats.performance
+  const totalPnL = dashboardStats?.performance.netPnlSol || 0; // realized
   // For display, we might want combined realized + unrealized
   const displayPnL = totalPnL + unrealizedPnL;
 
@@ -113,7 +114,7 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     totalPnLPercent: pnlPercent,
     winnersCount: dashboardStats?.performance.winningTrades || 0,
     losersCount: dashboardStats?.performance.losingTrades || 0,
-    winRate: stats?.winRate || 0,
+    winRate: dashboardStats?.performance.winRate || 0,
     avgPnL: (dashboardStats?.performance.netPnlSol || 0) / (dashboardStats?.performance.totalTrades || 1), // approx
     topPerformer: null, // TODO: Compute from history
     worstPerformer: null, // TODO: Compute from history
