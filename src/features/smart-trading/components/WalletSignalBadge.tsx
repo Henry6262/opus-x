@@ -7,7 +7,7 @@ import { Wallet, TrendingUp, TrendingDown } from "lucide-react";
 import type { WalletSignal } from "../types";
 
 // Generate consistent colors for wallet avatars
-const AVATAR_COLORS = [
+const AVATAR_COLORS: [string, string][] = [
   ["#c4f70e", "#22d3ee"],
   ["#f97316", "#ef4444"],
   ["#8b5cf6", "#ec4899"],

@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import { CountUp } from "@/components/animations/CountUp";
 import { SmartMoneyAnimation } from "@/components/animations";
 import { cn } from "@/lib/utils";
-import type { DashboardStatsResponse, Position } from "../types";
+import type { DashboardStatsResponse, Position, TradingConfig } from "../types";
 
 type ActiveView = "smart-trading" | "simulation-twitter";
 

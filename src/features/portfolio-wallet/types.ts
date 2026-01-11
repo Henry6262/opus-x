@@ -49,3 +49,8 @@ export interface PortfolioWalletProps {
 
 export type TimeFilter = "1H" | "24H" | "1W" | "1M" | "ALL";
 export type WalletView = "overview" | "positions" | "history";
+
+export interface ChartHistoryEntry {
+  timestamp: string | Date;
+  totalValueSol: number;
+}

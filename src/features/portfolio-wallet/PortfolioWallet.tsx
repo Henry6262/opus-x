@@ -6,7 +6,7 @@ import { X, TrendingUp, TrendingDown, BarChart3, Clock, Layers, ChevronUp, Chevr
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { CountUp } from "@/components/animations";
-import type { PortfolioWalletProps, TimeFilter, PortfolioStats, WalletView, Position as UiPosition, Transaction } from "./types";
+import type { PortfolioWalletProps, TimeFilter, PortfolioStats, WalletView, Position as UiPosition, Transaction, ChartHistoryEntry } from "./types";
 import { useRealTimeDashboardStats, useRealTimePositions } from "@/features/smart-trading";
 
 // Generate mock chart data (placeholder until we have historical data API)
@@ -56,7 +56,7 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   // Use real-time WebSocket context (live updates!)
   const { dashboardStats } = useRealTimeDashboardStats();
   const { positions, history } = useRealTimePositions();
-  const chartHistory: unknown[] = []; // TODO: Add chartHistory to real-time context
+  const chartHistory: ChartHistoryEntry[] = []; // TODO: Add chartHistory to real-time context
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeView, setActiveView] = useState<WalletView>("overview");
