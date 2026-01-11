@@ -352,20 +352,79 @@ main {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  margin-top: -60px !important;
+  margin-top: 48px !important;
   padding: 0 15% var(--space-4) 15% !important;
   padding-bottom: var(--space-12) !important;
   position: relative;
   z-index: 10;
 }
 
-/* ===== TAB SWITCHER ===== */
+/* ===== SUPER ROUTER TITLE (Floating above avatar) ===== */
+.super-router-title {
+  background: linear-gradient(90deg, #c4f70e 0%, #ffffff 50%, #22d3ee 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 12px rgba(196, 247, 14, 0.6));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  animation: title-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes title-glow {
+  0% {
+    filter: drop-shadow(0 0 8px rgba(196, 247, 14, 0.4));
+  }
+  100% {
+    filter: drop-shadow(0 0 16px rgba(196, 247, 14, 0.8));
+  }
+}
+
+/* ===== CAPSULE TAB BUTTONS (Inside the chin) ===== */
+.capsule-tab-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+  transition: all 200ms ease;
+  border: none;
+  cursor: pointer;
+}
+
+.capsule-tab-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.capsule-tab-button.active {
+  background: rgba(196, 247, 14, 0.15);
+  color: #c4f70e;
+  box-shadow: 0 0 12px rgba(196, 247, 14, 0.2);
+}
+
+.capsule-tab-button .icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* ===== TAB SWITCHER (Legacy - can be deprecated) ===== */
 .tab-switcher {
   display: flex !important;
   gap: var(--space-6) !important;
   padding: var(--space-2) var(--space-4) !important;
-  padding-top: 70px !important;
-  margin-bottom: var(--space-4) !important;
+  padding-top: 0 !important;
+  margin-top: -4px !important;
+  margin-bottom: var(--space-3) !important;
   background: transparent !important;
   border: none !important;
   justify-content: center !important;
@@ -1741,7 +1800,7 @@ main {
   }
 
   .dashboard-panel {
-    margin-top: -40px !important;
+    margin-top: 10px !important;
     padding: 0 4% var(--space-4) 4% !important;
   }
 
@@ -1769,7 +1828,7 @@ main {
   }
 
   .dashboard-panel {
-    margin-top: -50px !important;
+    margin-top: 15px !important;
     padding: 0 8% var(--space-6) 8% !important;
   }
 }

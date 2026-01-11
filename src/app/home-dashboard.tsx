@@ -14,8 +14,7 @@ import type { TerminalLogEntry } from "@/features/terminal";
 import { useAiMood } from "@/hooks/useAiMood";
 import { usePumpTokens } from "@/features/pump-history/hooks/usePumpTokens";
 import { VibrCoder } from "@/components/VibrCoder";
-import { Twitter, TrendingUp } from "lucide-react";
-import { SmartMoneyAnimation } from "@/components/animations";
+// Icons no longer needed here - tabs are integrated into TraderProfileCard
 
 // Map AI mood to VibrCoder animation state
 function getVibrCoderState(
@@ -121,39 +120,16 @@ function DashboardContent() {
 
         {/* ===== BOTTOM SECTION: THE DASHBOARD ===== */}
         <div className="dashboard-panel">
-          {/* Trader Profile Card - Always Visible */}
-          <div className="mb-2">
+          {/* Trader Profile Card with Integrated Tabs */}
+          <div className="mb-4">
             <TraderProfileCard
               stats={dashboardStats}
               config={config}
               positions={positions}
               history={history}
+              activeView={activeView}
+              onViewChange={setActiveView}
             />
-          </div>
-
-          {/* Epic Feature Toggle */}
-          <div className="tab-switcher">
-            <button
-              className={`tab-button-epic ${activeView === "smart-trading" ? "active" : ""}`}
-              onClick={() => setActiveView("smart-trading")}
-            >
-              <SmartMoneyAnimation className="tab-icon-large" size={56} />
-              <span className="tab-button-title">SMART MONEY</span>
-            </button>
-            <button
-              className={`tab-button-epic ${activeView === "pump-history" ? "active" : ""}`}
-              onClick={() => setActiveView("pump-history")}
-            >
-              <TrendingUp className="tab-icon-large" />
-              <span className="tab-button-title">AI TRADING BOT</span>
-            </button>
-            <button
-              className={`tab-button-epic ${activeView === "simulation-twitter" ? "active" : ""}`}
-              onClick={() => setActiveView("simulation-twitter")}
-            >
-              <Twitter className="tab-icon-large" />
-              <span className="tab-button-title">TWITTER QUOTE BOT</span>
-            </button>
           </div>
 
           {/* Feature Content */}
