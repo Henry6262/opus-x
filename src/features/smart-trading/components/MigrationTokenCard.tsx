@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
+import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { StatusPill } from "@/components/design-system";
 import { CountUp } from "@/components/animations/CountUp";
 import {
@@ -18,6 +20,140 @@ import {
 } from "lucide-react";
 import type { RankedMigration, AiDecision } from "../types";
 import { WalletSignalStack } from "./WalletSignalBadge";
+
+// ============================================
+// Token Image - Real image with gradient fallback
+// ============================================
+
+const AVATAR_COLORS = [
+  ["#c4f70e", "#22d3ee"], // lime to cyan
+  ["#f97316", "#ef4444"], // orange to red
+  ["#8b5cf6", "#ec4899"], // purple to pink
+  ["#06b6d4", "#3b82f6"], // cyan to blue
+  ["#10b981", "#14b8a6"], // emerald to teal
+  ["#f59e0b", "#eab308"], // amber to yellow
+  ["#6366f1", "#8b5cf6"], // indigo to violet
+  ["#ec4899", "#f43f5e"], // pink to rose
+];
+
+function getAvatarColors(symbol: string): [string, string] {
+  const hash = symbol.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
+interface TokenImageProps {
+  imageUrl: string | null;
+  symbol: string;
+  tokenMint: string;
+  size?: number;
+}
+
+function TokenImage({ imageUrl, symbol, tokenMint, size = 44 }: TokenImageProps) {
+  const [imgError, setImgError] = useState(false);
+  const [color1, color2] = getAvatarColors(symbol);
+  const initials = symbol.slice(0, 2).toUpperCase();
+
+  // Try DexScreener image if no imageUrl provided
+  const dexScreenerUrl = `https://dd.dexscreener.com/ds-data/tokens/solana/${tokenMint}.png`;
+  const finalImageUrl = imageUrl || dexScreenerUrl;
+
+  if (imgError || !finalImageUrl) {
+    return (
+      <div
+        className="relative flex items-center justify-center rounded-xl font-bold text-white shadow-lg flex-shrink-0 overflow-hidden"
+        style={{
+          width: size,
+          height: size,
+          background: `linear-gradient(135deg, ${color1}, ${color2})`,
+          fontSize: size * 0.35,
+        }}
+      >
+        {initials}
+        <div
+          className="absolute inset-0 rounded-xl opacity-30"
+          style={{
+            background: "linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%)",
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="relative rounded-xl overflow-hidden flex-shrink-0 shadow-lg"
+      style={{ width: size, height: size }}
+    >
+      <Image
+        src={finalImageUrl}
+        alt={symbol}
+        width={size}
+        height={size}
+        className="object-cover"
+        onError={() => setImgError(true)}
+        unoptimized
+      />
+      <div
+        className="absolute inset-0 rounded-xl opacity-20 pointer-events-none"
+        style={{
+          background: "linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%)",
+        }}
+      />
+    </div>
+  );
+}
+
+// ============================================
+// Mini Sparkline Chart
+// ============================================
+
+interface SparklineProps {
+  data: number[] | null;
+  width?: number;
+  height?: number;
+  tokenMint: string;
+}
+
+function Sparkline({ data, width = 60, height = 28, tokenMint }: SparklineProps) {
+  const chartData = useMemo(() => {
+    if (!data || data.length < 2) return null;
+    return data.map((value, i) => ({ value, index: i }));
+  }, [data]);
+
+  const isPositive = useMemo(() => {
+    if (!data || data.length < 2) return true;
+    return data[data.length - 1] >= data[0];
+  }, [data]);
+
+  if (!chartData) return null;
+
+  const gradientId = `spark-${tokenMint.slice(0, 8)}`;
+  const strokeColor = isPositive ? "#4ade80" : "#f87171";
+
+  return (
+    <div style={{ width, height }} className="flex-shrink-0 opacity-80">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 1, right: 1, left: 1, bottom: 1 }}>
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={strokeColor} stopOpacity={0.4} />
+              <stop offset="100%" stopColor={strokeColor} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <Area
+            type="monotone"
+            dataKey="value"
+            stroke={strokeColor}
+            strokeWidth={1.5}
+            fill={`url(#${gradientId})`}
+            dot={false}
+            isAnimationActive={false}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 // ============================================
 // Price Flash Hook - Tracks value changes
@@ -179,7 +315,23 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
       {/* Main content */}
       <div className="relative p-4">
         {/* Header row */}
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          {/* Token Image with DexScreener fallback */}
+          <TokenImage
+            imageUrl={ranked.tokenImageUrl}
+            symbol={ranked.tokenSymbol || "??"}
+            tokenMint={ranked.tokenMint}
+            size={48}
+          />
+
+          {/* Sparkline chart - next to token image */}
+          <Sparkline
+            data={ranked.priceHistory}
+            tokenMint={ranked.tokenMint}
+            width={64}
+            height={44}
+          />
+
           {/* Token info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -219,60 +371,63 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
         </div>
 
         {/* Metrics row */}
-        <div className="grid grid-cols-4 gap-3 mt-4">
-          {/* Price Change */}
-          <div className="flex flex-col">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">1h</span>
-            <div className={`flex items-center gap-1 ${priceChange >= 0 ? "text-green-400" : "text-red-400"}`}>
-              {priceChange >= 0 ? (
-                <TrendingUp className="w-3.5 h-3.5" />
-              ) : (
-                <TrendingDown className="w-3.5 h-3.5" />
-              )}
-              <FlashValue
-                value={`${priceChange >= 0 ? "+" : ""}${priceChange.toFixed(1)}%`}
-                flash={priceFlash}
-                className="font-mono font-medium"
-              />
+        <div className="flex items-center gap-3 mt-4">
+          {/* Metrics grid */}
+          <div className="grid grid-cols-4 gap-3 flex-1">
+            {/* Price Change */}
+            <div className="flex flex-col">
+              <span className="text-[10px] text-white/40 uppercase tracking-wider">1h</span>
+              <div className={`flex items-center gap-1 ${priceChange >= 0 ? "text-green-400" : "text-red-400"}`}>
+                {priceChange >= 0 ? (
+                  <TrendingUp className="w-3.5 h-3.5" />
+                ) : (
+                  <TrendingDown className="w-3.5 h-3.5" />
+                )}
+                <FlashValue
+                  value={`${priceChange >= 0 ? "+" : ""}${priceChange.toFixed(1)}%`}
+                  flash={priceFlash}
+                  className="font-mono font-medium"
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Market Cap */}
-          <div className="flex flex-col">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">MCap</span>
-            <div className="flex items-center gap-1 text-white">
-              <BarChart3 className="w-3.5 h-3.5 text-white/40" />
-              <FlashValue
-                value={formatCompactNumber(marketCap)}
-                flash={marketCapFlash}
-                className="font-mono font-medium text-sm"
-              />
+            {/* Market Cap */}
+            <div className="flex flex-col">
+              <span className="text-[10px] text-white/40 uppercase tracking-wider">MCap</span>
+              <div className="flex items-center gap-1 text-white">
+                <BarChart3 className="w-3.5 h-3.5 text-white/40" />
+                <FlashValue
+                  value={formatCompactNumber(marketCap)}
+                  flash={marketCapFlash}
+                  className="font-mono font-medium text-sm"
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Liquidity */}
-          <div className="flex flex-col">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">Liq</span>
-            <div className="flex items-center gap-1 text-white">
-              <Droplets className="w-3.5 h-3.5 text-cyan-400" />
-              <FlashValue
-                value={formatCompactNumber(liquidity)}
-                flash={liquidityFlash}
-                className="font-mono font-medium text-sm"
-              />
+            {/* Liquidity */}
+            <div className="flex flex-col">
+              <span className="text-[10px] text-white/40 uppercase tracking-wider">Liq</span>
+              <div className="flex items-center gap-1 text-white">
+                <Droplets className="w-3.5 h-3.5 text-cyan-400" />
+                <FlashValue
+                  value={formatCompactNumber(liquidity)}
+                  flash={liquidityFlash}
+                  className="font-mono font-medium text-sm"
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Priority Score */}
-          <div className="flex flex-col">
-            <span className="text-[10px] text-white/40 uppercase tracking-wider">Score</span>
-            <div className="flex items-center gap-1">
-              <Zap className="w-3.5 h-3.5 text-[#c4f70e]" />
-              <FlashValue
-                value={<CountUp to={score} duration={0.5} decimals={0} />}
-                flash={scoreFlash}
-                className="font-mono font-bold text-[#c4f70e]"
-              />
+            {/* Priority Score */}
+            <div className="flex flex-col">
+              <span className="text-[10px] text-white/40 uppercase tracking-wider">Score</span>
+              <div className="flex items-center gap-1">
+                <Zap className="w-3.5 h-3.5 text-[#c4f70e]" />
+                <FlashValue
+                  value={<CountUp to={score} duration={0.5} decimals={0} />}
+                  flash={scoreFlash}
+                  className="font-mono font-bold text-[#c4f70e]"
+                />
+              </div>
             </div>
           </div>
         </div>

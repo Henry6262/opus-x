@@ -194,6 +194,7 @@ export interface Migration {
   tokenMint: string;
   tokenSymbol: string | null;
   tokenName: string | null;
+  tokenImageUrl: string | null;
   trackingStatus: TrackingStatus;
   detectedAt: string;
   poolAddress: string | null;
@@ -208,6 +209,9 @@ export interface Migration {
   lastVolume24h: number | null;
   lastPriceChange1h: number | null;
   lastUpdatedAt: string | null;
+
+  // Price history for sparkline (array of prices over time)
+  priceHistory: number[] | null;
 
   // AI analysis
   lastAiDecision: AiDecision | null;
@@ -227,6 +231,10 @@ export interface WalletSignal {
   action: "BUY" | "SELL";
   amountSol?: number;
   timestamp: string;
+  // Twitter profile data (from TrackedWallet)
+  twitterUsername?: string | null;
+  twitterAvatar?: string | null;
+  twitterName?: string | null;
 }
 
 export interface MigrationAnalysis {

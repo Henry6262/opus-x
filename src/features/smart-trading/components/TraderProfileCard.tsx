@@ -3,12 +3,11 @@
 import Image from "next/image";
 import { motion } from "motion/react";
 import { CountUp } from "@/components/animations/CountUp";
-import { Zap, TrendingUp } from "lucide-react";
 import { SmartMoneyAnimation } from "@/components/animations";
 import { cn } from "@/lib/utils";
-import type { DashboardStatsResponse, Position, TradingConfig } from "../types";
+import type { DashboardStatsResponse, Position } from "../types";
 
-type ActiveView = "smart-trading" | "pump-history" | "simulation-twitter";
+type ActiveView = "smart-trading" | "simulation-twitter";
 
 interface TraderProfileCardProps {
   stats: DashboardStatsResponse | null;
@@ -21,7 +20,6 @@ interface TraderProfileCardProps {
 
 const tabs = [
   { id: "smart-trading" as const, label: "SMART MONEY", iconType: "smart-money" as const },
-  { id: "pump-history" as const, label: "AI BOT", iconType: "trending" as const },
   { id: "simulation-twitter" as const, label: "TWITTER", iconType: "twitter" as const },
 ];
 
@@ -64,14 +62,16 @@ function XIcon({ className }: { className?: string }) {
   );
 }
 
-function TabIcon({ type, className }: { type: "smart-money" | "trending" | "twitter"; className?: string }) {
+function TabIcon({ type, className }: { type: "smart-money" | "twitter"; className?: string }) {
   if (type === "smart-money") {
-    return <SmartMoneyAnimation className={className} size={24} />;
+    // Smart money lottie is wider than tall, use larger size with constrained container
+    return (
+      <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
+        <SmartMoneyAnimation className={className} size={56} />
+      </div>
+    );
   }
-  if (type === "trending") {
-    return <TrendingUp className={cn("w-6 h-6", className)} />;
-  }
-  return <XIcon className={cn("w-6 h-6", className)} />;
+  return <XIcon className={cn("w-7 h-7", className)} />;
 }
 
 export function TraderProfileCard({
@@ -92,7 +92,7 @@ export function TraderProfileCard({
   const isOnStreak = streak.current >= 2 && streak.type === "win";
 
   return (
-    <div className="relative pb-12">
+    <div className="relative pt-4 pb-16">
       {/* SUPER ROUTER floating title - above avatar */}
       <motion.div
         className="absolute -top-6 left-4 z-30"
@@ -102,6 +102,21 @@ export function TraderProfileCard({
       >
         <span className="super-router-title">SUPER ROUTER</span>
       </motion.div>
+
+      {/* X/Twitter Handle - below pill, right of avatar */}
+      <motion.a
+        href="https://x.com/SuperRouterSol"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="absolute top-[88px] left-[140px] flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 group z-10"
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.5, duration: 0.3 }}
+        whileHover={{ scale: 1.02 }}
+      >
+        <XIcon className="w-4 h-4 text-white/60 group-hover:text-white transition-colors" />
+        <span className="text-sm font-medium text-white/60 group-hover:text-white transition-colors">@SuperRouterSol</span>
+      </motion.a>
 
       {/* Main pill container */}
       <div className="relative rounded-full bg-black/50 backdrop-blur-xl border border-white/10 h-20 ml-16 overflow-visible">
@@ -197,9 +212,9 @@ export function TraderProfileCard({
         </div>
       </div>
 
-      {/* Tabs - attached below, offset from avatar */}
+      {/* Tabs - centered on screen */}
       <motion.div
-        className="absolute -bottom-6 left-[136px] right-4 z-10 flex items-center justify-center gap-8"
+        className="absolute -bottom-6 left-0 right-0 z-10 flex items-center justify-center gap-8"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4, duration: 0.4 }}
@@ -283,20 +298,6 @@ export function TraderProfileCard({
             alt="SuperRouter"
             className="w-full h-full object-cover"
           />
-
-          {/* Live indicator */}
-          {config?.tradingEnabled && (
-            <motion.div
-              className="absolute bottom-1.5 right-1.5"
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-            >
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/90 border border-green-400/50">
-                <Zap className="w-2.5 h-2.5 text-white fill-white" />
-                <span className="text-[8px] font-bold text-white uppercase tracking-wider">Live</span>
-              </div>
-            </motion.div>
-          )}
         </div>
       </motion.div>
     </div>

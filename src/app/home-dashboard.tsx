@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { PumpHistorySection } from "@/features/pump-history";
 import { SimulationTwitterSection } from "@/features/simulation-twitter";
 import {
   SmartTradingDashboard,
@@ -15,7 +14,6 @@ import {
 import { TraderProfileCard } from "@/features/smart-trading/components/TraderProfileCard";
 import { Terminal, TerminalProvider, useTerminalNarrator } from "@/features/terminal";
 import { useAiMood } from "@/hooks/useAiMood";
-import { usePumpTokens } from "@/features/pump-history/hooks/usePumpTokens";
 import { VibrCoder } from "@/components/VibrCoder";
 
 // Map AI mood to VibrCoder animation state
@@ -31,7 +29,7 @@ function getVibrCoderState(
   }
 }
 
-type ActiveView = "pump-history" | "simulation-twitter" | "smart-trading";
+type ActiveView = "simulation-twitter" | "smart-trading";
 
 export function HomeDashboard() {
   return (
@@ -45,13 +43,6 @@ export function HomeDashboard() {
 
 function DashboardContent() {
   const [activeView, setActiveView] = useState<ActiveView>("smart-trading");
-
-  // Fetch real token data for mood calculation
-  const { tokens } = usePumpTokens({
-    limit: 20,
-    sortBy: "detected_at",
-    sortOrder: "desc",
-  });
 
   // Smart Trading data from real-time WebSocket context (live updates!)
   const { config } = useRealTimeConfig();
@@ -74,9 +65,9 @@ function DashboardContent() {
     enabled: true,
   });
 
-  // AI Mood System - dynamically calculates mood based on market data
+  // AI Mood System - dynamically calculates mood based on migration data
   const { mood: aiMood, pnl, reason } = useAiMood({
-    tokens,
+    tokens: [], // No longer using pump-history tokens
     isActive: true,
     isExecuting: false,
   });
@@ -115,11 +106,6 @@ function DashboardContent() {
           {activeView === "smart-trading" && (
             <div className="space-y-4">
               <SmartTradingDashboard />
-            </div>
-          )}
-          {activeView === "pump-history" && (
-            <div className="space-y-4">
-              <PumpHistorySection />
             </div>
           )}
           {activeView === "simulation-twitter" && (

@@ -202,18 +202,7 @@ export function LiveActivityFeed({
             <Activity className="w-4 h-4 text-[#c4f70e]" />
             <span className="text-sm font-medium text-white">Live Activity</span>
           </div>
-          <div className="flex items-center gap-2">
-            <ConnectionStatusBadge />
-            {activityFeed.length > 0 && (
-              <button
-                onClick={clearActivityFeed}
-                className="p-1 rounded-full hover:bg-white/10 transition-colors"
-                title="Clear activity"
-              >
-                <X className="w-3.5 h-3.5 text-white/40 hover:text-white/60" />
-              </button>
-            )}
-          </div>
+          <ConnectionStatusBadge />
         </div>
       )}
 

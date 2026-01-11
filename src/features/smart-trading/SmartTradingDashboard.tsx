@@ -13,16 +13,10 @@ import {
   ChevronUp,
   AlertCircle,
   Settings,
-  TrendingUp,
-  TrendingDown,
-  Wifi,
-  WifiOff,
 } from "lucide-react";
-import { Panel } from "@/components/design-system";
+import { Panel, CollapsibleSidePanel } from "@/components/design-system";
 import { Button } from "@/components/ui";
 import {
-  useConnectionStatus,
-  useActivityFeed,
   useRealTimeDashboardStats,
   useRealTimePositions,
   useRealTimeWalletSignals,
@@ -59,8 +53,7 @@ function shortenAddress(address: string): string {
 // ============================================
 
 function ConnectionHeader() {
-  const { connectionStatus, isConnected } = useConnectionStatus();
-  const { stats, isLoading, refresh } = useRealTimeDashboardStats();
+  const { isLoading, refresh } = useRealTimeDashboardStats();
   const { config, toggleTrading } = useRealTimeConfig();
   const [isToggling, setIsToggling] = useState(false);
 
@@ -77,127 +70,31 @@ function ConnectionHeader() {
   };
 
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between p-4 rounded-xl bg-black/40 backdrop-blur-xl border border-white/10">
-      {/* Left: Connection & Status */}
-      <div className="flex items-center gap-4">
-        {/* Connection indicator */}
-        <div className="relative">
-          <div
-            className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-              isConnected
-                ? "bg-green-500/20"
-                : connectionStatus === "connecting"
-                  ? "bg-yellow-500/20"
-                  : "bg-red-500/20"
-            }`}
-          >
-            {isConnected ? (
-              <Wifi className="w-6 h-6 text-green-400" />
-            ) : connectionStatus === "connecting" ? (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              >
-                <RefreshCw className="w-6 h-6 text-yellow-400" />
-              </motion.div>
-            ) : (
-              <WifiOff className="w-6 h-6 text-red-400" />
-            )}
-          </div>
-          {isConnected && (
-            <motion.div
-              animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-green-400"
-            />
-          )}
-        </div>
+    <div className="flex items-center justify-end gap-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={refresh}
+        disabled={isLoading}
+        className="p-2"
+      >
+        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+      </Button>
 
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-white">Smart Trading</h1>
-            <span
-              className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                isConnected
-                  ? "bg-green-500/20 text-green-400"
-                  : "bg-red-500/20 text-red-400"
-              }`}
-            >
-              {isConnected ? "LIVE" : connectionStatus.toUpperCase()}
-            </span>
-          </div>
-          <p className="text-sm text-white/50">
-            {config?.tradingEnabled ? "Auto-trading enabled" : "Trading paused"}
-            {stats && ` • ${stats.trading.openPositions} positions • ${stats.performance.netPnlSol >= 0 ? "+" : ""}${stats.performance.netPnlSol.toFixed(2)} SOL`}
-          </p>
-        </div>
-      </div>
-
-      {/* Right: Controls */}
-      <div className="flex items-center gap-2">
-        {/* Stats pills */}
-        {stats && (
-          <div className="hidden md:flex items-center gap-2 mr-4">
-            <StatPill
-              icon={<Target className="w-3.5 h-3.5" />}
-              label="Win Rate"
-              value={`${stats.performance.winRate.toFixed(0)}%`}
-              color="text-[#c4f70e]"
-            />
-            <StatPill
-              icon={stats.trading.dailyPnL >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-              label="Today"
-              value={`${stats.trading.dailyPnL >= 0 ? "+" : ""}${stats.trading.dailyPnL.toFixed(2)} SOL`}
-              color={stats.trading.dailyPnL >= 0 ? "text-green-400" : "text-red-400"}
-            />
-          </div>
-        )}
-
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={refresh}
-          disabled={isLoading}
-          className="p-2"
-        >
-          <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-        </Button>
-
-        <Button
-          variant={config?.tradingEnabled ? "solid" : "ghost"}
-          size="sm"
-          onClick={handleToggleTrading}
-          disabled={isToggling || !config}
-          className={
-            config?.tradingEnabled
-              ? "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30"
-              : "bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30"
-          }
-        >
-          <Power className="w-4 h-4 mr-1" />
-          {config?.tradingEnabled ? "Stop" : "Start"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function StatPill({
-  icon,
-  label,
-  value,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  color: string;
-}) {
-  return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10">
-      <span className={color}>{icon}</span>
-      <span className="text-xs text-white/50">{label}:</span>
-      <span className={`text-xs font-semibold ${color}`}>{value}</span>
+      <Button
+        variant={config?.tradingEnabled ? "solid" : "ghost"}
+        size="sm"
+        onClick={handleToggleTrading}
+        disabled={isToggling || !config}
+        className={
+          config?.tradingEnabled
+            ? "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30"
+            : "bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30"
+        }
+      >
+        <Power className="w-4 h-4 mr-1" />
+        {config?.tradingEnabled ? "Stop" : "Start"}
+      </Button>
     </div>
   );
 }
@@ -604,23 +501,29 @@ export function SmartTradingDashboard() {
       <ConnectionHeader />
 
       {/* Main content grid */}
-      <div className="grid grid-cols-12 gap-4">
-        {/* Left column: Live Activity Feed */}
-        <div className="col-span-12 lg:col-span-3">
-          <div className="h-[500px] rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden">
+      <div className="flex gap-4">
+        {/* Left: Collapsible Live Activity Feed */}
+        <div className="h-[500px] flex-shrink-0">
+          <CollapsibleSidePanel
+            icon={<Activity className="w-5 h-5" />}
+            title="Live Activity"
+            direction="left"
+            defaultCollapsed={true}
+            collapsedWidth={48}
+            expandedWidth="280px"
+            className="h-full"
+          >
             <LiveActivityFeed maxItems={30} />
-          </div>
+          </CollapsibleSidePanel>
         </div>
 
-        {/* Center column: Migration Feed */}
-        <div className="col-span-12 lg:col-span-6">
-          <div className="h-[500px]">
-            <RealTimeMigrationPanel />
-          </div>
+        {/* Center: Migration Feed (grows to fill space) */}
+        <div className="flex-1 min-w-0 h-[500px]">
+          <RealTimeMigrationPanel />
         </div>
 
-        {/* Right column: Positions + Signals */}
-        <div className="col-span-12 lg:col-span-3 space-y-4">
+        {/* Right: Positions + Signals */}
+        <div className="w-[300px] flex-shrink-0 space-y-4">
           <div className="h-[240px]">
             <PositionsPanel />
           </div>
