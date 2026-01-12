@@ -571,7 +571,7 @@ function formatCompactNumber(num: number): string {
   return `$${num.toFixed(0)}`;
 }
 
-function getTimeSince(dateStr: string, t: (key: string, params?: Record<string, unknown>) => string): string {
+function getTimeSince(dateStr: string, t: (key: string, params?: Record<string, string | number | Date>) => string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -584,7 +584,7 @@ function getTimeSince(dateStr: string, t: (key: string, params?: Record<string, 
   return t("daysAgo", { count: Math.floor(diffHours / 24) });
 }
 
-function getTimeUntil(dateStr: string, t: (key: string, params?: Record<string, unknown>) => string): string {
+function getTimeUntil(dateStr: string, t: (key: string, params?: Record<string, string | number | Date>) => string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = date.getTime() - now.getTime();

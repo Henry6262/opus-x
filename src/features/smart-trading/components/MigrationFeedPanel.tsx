@@ -128,11 +128,10 @@ export function MigrationFeedPanel({
             {showTrackInput && (
               <button
                 onClick={() => setShowTrackForm(!showTrackForm)}
-                className={`p-2 rounded-lg transition-colors ${
-                  showTrackForm
+                className={`p-2 rounded-lg transition-colors ${showTrackForm
                     ? "bg-[#c4f70e]/20 text-[#c4f70e]"
                     : "bg-white/5 text-white/60 hover:bg-white/10"
-                }`}
+                  }`}
                 title="Track token manually"
               >
                 {showTrackForm ? (
@@ -151,9 +150,8 @@ export function MigrationFeedPanel({
               title="Refresh feed"
             >
               <RefreshCw
-                className={`w-4 h-4 text-white/60 ${
-                  isRefreshing ? "animate-spin" : ""
-                }`}
+                className={`w-4 h-4 text-white/60 ${isRefreshing ? "animate-spin" : ""
+                  }`}
               />
             </button>
           </div>
@@ -356,7 +354,7 @@ function StatItem({
   );
 }
 
-function formatTimeAgo(date: Date, t: (key: string, params?: Record<string, unknown>) => string): string {
+function formatTimeAgo(date: Date, t: (key: string, params?: Record<string, string | number | Date>) => string): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffSecs = Math.floor(diffMs / 1000);
