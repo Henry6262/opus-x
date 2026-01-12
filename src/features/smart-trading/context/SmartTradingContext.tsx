@@ -132,6 +132,39 @@ function generateActivityMessage(event: MigrationFeedEvent): { message: string; 
       };
     }
 
+    case "signal_detected": {
+      const signal = data?.signal as Record<string, any> | undefined;
+      const symbol = signal?.symbol || signal?.token_name || "Token";
+      const source = signal?.source === "wallet_buy" ? "Wallet Signal" : "Migration";
+      const strength = (signal?.signal_strength as number) || 0;
+      return {
+        message: `Signal Detected: ${symbol} (${source})`,
+        color: strength > 0.8 ? "green" : "cyan",
+      };
+    }
+
+    case "wallet_buy_detected": {
+      const wallet = data?.wallet as Record<string, any> | undefined;
+      const token = data?.token as Record<string, any> | undefined;
+      const label = wallet?.label || wallet?.address?.toString().slice(0, 8) || "Whale";
+      const symbol = token?.symbol || "Token";
+      const amountUsd = token?.buy_size_usd ? `$${Math.round(token.buy_size_usd)}` : "";
+      return {
+        message: `🐋 ${label} bought ${amountUsd} of ${symbol}`,
+        color: "purple",
+      };
+    }
+
+    case "position_opened": {
+      const pos = data?.position as Record<string, any> | undefined;
+      const symbol = pos?.symbol || pos?.token_name || "Token";
+      const price = pos?.entry_price ? `$${(pos.entry_price as number).toFixed(6)}` : "";
+      return {
+        message: `🚀 Position Opened: ${symbol} @ ${price}`,
+        color: "green",
+      };
+    }
+
     case "migration_expired": {
       const symbol = data?.tokenSymbol || "Token";
       return { message: `Expired: ${symbol}`, color: "red" };
@@ -385,7 +418,7 @@ export function SmartTradingProvider({
       )
     );
 
-    // Wallet signal received - surgical update
+    // Wallet signal received - surgical update (Legacy)
     unsubscribes.push(
       on<{ tokenMint: string; walletAddress: string; walletLabel?: string; action: string; amountSol?: number }>(
         "wallet_signal",
@@ -417,6 +450,37 @@ export function SmartTradingProvider({
           }));
         }
       )
+    );
+
+    // NEW: Signal Detected
+    unsubscribes.push(
+      on("signal_detected", (data, event) => {
+        addActivity(event);
+        // A new signal might mean a new opportunity - refetch signals list
+        // Note: For now we just refresh dashboard to keep it simple
+        console.log("[SmartTrading] Signal detected:", data);
+        fetchDashboard();
+      })
+    );
+
+    // NEW: Wallet Buy Detected
+    unsubscribes.push(
+      on("wallet_buy_detected", (data, event) => {
+        addActivity(event);
+        // This is important - trigger refetch
+        console.log("[SmartTrading] Wallet buy detected:", data);
+        fetchDashboard();
+      })
+    );
+
+    // NEW: Position Opened
+    unsubscribes.push(
+      on("position_opened", (data, event) => {
+        addActivity(event);
+        // Definitely refetch to show new position
+        console.log("[SmartTrading] Position opened:", data);
+        fetchDashboard();
+      })
     );
 
     // Migration expired - remove from list
