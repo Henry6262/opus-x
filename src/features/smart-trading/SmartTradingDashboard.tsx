@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -510,13 +510,53 @@ function ConfigSummary() {
 // Main Dashboard Component
 // ============================================
 
+type PanelId = "activity" | "migration" | "positions";
+
 export function SmartTradingDashboard() {
   const t = useTranslations("activity");
   const tMigration = useTranslations("migration");
 
-  // Accordion state - only one panel can be expanded at a time
+  // Accordion state - only one panel can be expanded at a time (mobile only)
   // Default to migration feed being active
-  const [activePanel, setActivePanel] = useState<string>("migration");
+  const [activePanel, setActivePanel] = useState<PanelId>("migration");
+  const [isMobile, setIsMobile] = useState(false);
+  const panelRefs = useRef<Record<PanelId, HTMLDivElement | null>>({
+    activity: null,
+    migration: null,
+    positions: null,
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(max-width: 768px)");
+    const updateMatch = () => setIsMobile(media.matches);
+    updateMatch();
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", updateMatch);
+      return () => media.removeEventListener("change", updateMatch);
+    }
+    media.addListener(updateMatch);
+    return () => media.removeListener(updateMatch);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile) return;
+    const target = panelRefs.current[activePanel];
+    if (target) {
+      requestAnimationFrame(() => {
+        target.scrollIntoView({
+          behavior: "smooth",
+          inline: "center",
+          block: "nearest",
+        });
+      });
+    }
+  }, [activePanel, isMobile]);
+
+  const accordionActiveId = isMobile ? activePanel : undefined;
+  const handlePanelActivate = isMobile
+    ? (panelId: string) => setActivePanel(panelId as PanelId)
+    : undefined;
 
   return (
     <div className="space-y-4">
@@ -526,7 +566,12 @@ export function SmartTradingDashboard() {
       {/* Main content grid - panels side by side */}
       <div className="flex flex-row gap-4 overflow-x-auto">
         {/* Left: Collapsible Live Activity Feed */}
-        <div className="h-[500px] flex-shrink-0">
+        <div
+          className="h-[500px] flex-shrink-0"
+          ref={(el) => {
+            panelRefs.current.activity = el;
+          }}
+        >
           <CollapsibleSidePanel
             icon={<Activity className="w-5 h-5" />}
             title={t("liveActivity")}
@@ -536,15 +581,20 @@ export function SmartTradingDashboard() {
             expandedWidth="280px"
             className="h-full"
             id="activity"
-            activeId={activePanel}
-            onActivate={setActivePanel}
+            activeId={accordionActiveId}
+            onActivate={handlePanelActivate}
           >
             <LiveActivityFeed maxItems={30} />
           </CollapsibleSidePanel>
         </div>
 
         {/* Center: Migration Feed (grows to fill space) */}
-        <div className="flex-1 min-w-0 h-[500px]">
+        <div
+          className="flex-1 min-w-0 h-[500px]"
+          ref={(el) => {
+            panelRefs.current.migration = el;
+          }}
+        >
           <CollapsibleSidePanel
             icon={<Activity className="w-5 h-5" />}
             title={tMigration("title")}
@@ -554,15 +604,20 @@ export function SmartTradingDashboard() {
             className="h-full"
             contentClassName="h-full"
             id="migration"
-            activeId={activePanel}
-            onActivate={setActivePanel}
+            activeId={accordionActiveId}
+            onActivate={handlePanelActivate}
           >
             <RealTimeMigrationPanel />
           </CollapsibleSidePanel>
         </div>
 
         {/* Right: Positions + Signals */}
-        <div className="w-[300px] flex-shrink-0 h-[500px]">
+        <div
+          className="w-[300px] flex-shrink-0 h-[500px]"
+          ref={(el) => {
+            panelRefs.current.positions = el;
+          }}
+        >
           <CollapsibleSidePanel
             icon={<Wallet className="w-5 h-5" />}
             title="Positions & Signals"
@@ -572,8 +627,8 @@ export function SmartTradingDashboard() {
             className="h-full"
             contentClassName="h-full flex flex-col gap-4"
             id="positions"
-            activeId={activePanel}
-            onActivate={setActivePanel}
+            activeId={accordionActiveId}
+            onActivate={handlePanelActivate}
           >
             <div className="h-[230px]">
               <PositionsPanel />

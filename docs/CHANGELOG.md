@@ -7,7 +7,10 @@ All notable changes to Opus-X are documented here.
 - Tracked wallet presets were enriched with Orange, Dior, Jack Duval, and POW Twitter handles, and they now default to the SuperRouter avatar whenever no profile image is provided.
 - Tracked wallet panel switched to a two-column grid with slimmer, gradient cards so more operators are visible at once without endless scrolling.
 - Hero terminal toggle no longer sits over the video; the pill hides while the terminal is open and only returns when collapsed so the hero stays clean.
+- Mobile dashboard automatically scrolls the active live/migration/positions panel into view, ensuring phones always show one expanded section without manual sideways scrolling.
+- Accordion behavior for the Live Activity, Migration Feed, and Positions stack now only applies on mobile, restoring independent collapsible panels on desktop.
 - Language switcher now rewrites paths to the selected locale so the English/中文 toggle works consistently across the dashboard.
+- Language switching also persists by writing the `NEXT_LOCALE` cookie before routing, preventing the middleware from forcing a redirect back to the previous language.
 - Portfolio wallet pill sticks to the viewport, keeping balance stats visible as users scroll down the cockpit layout.
 - Migration feed cards pack their stats into inline pills within the header row, reducing height so more items fit on screen.
 - Migration cards dropped their bottom controls, moved copy + timestamp into the header, and now show all metrics as inline labels beneath the ticker for the most compact layout yet.

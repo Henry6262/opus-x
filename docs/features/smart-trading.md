@@ -21,8 +21,11 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - 2026-01-12: Tracked wallet presets now include Orange, Dior, Jack Duval, and POW Twitter handles, falling back to the SuperRouter avatar whenever a profile image is missing.
 - 2026-01-12: Tracked wallet cards now render in a responsive two-column grid with compact gradient tiles so the list shows twice as many wallets without scrolling.
 - 2026-01-12: Language switcher now rewrites paths for the selected locale so hopping between English and 中文 always updates the dashboard.
+- 2026-01-12: Language switcher now sets the `NEXT_LOCALE` cookie before navigating so the middleware stops redirecting back to the previous language.
 - 2026-01-12: The top-left wallet pill stays fixed to the viewport, keeping live balance context visible while scrolling the cockpit.
 - 2026-01-12: Migration cards trimmed further—controls removed, copy action sits beside the ticker, and the detection timestamp lives in the top-right for a true single-row glance.
+- 2026-01-12: Mobile view now auto-scrolls the active live/migration/positions panel into view so there's always one expanded section visible without swiping around.
+- 2026-01-12: The accordion behavior for Live Activity / Migration Feed / Positions is now mobile-only; desktop keeps independent collapses so multiple panels can stay open.
 - 2026-01-12: The hero terminal toggle no longer hovers over the video; the pill only appears when the terminal is collapsed, keeping the hero unobstructed while still making the reopen action obvious.
 - 2026-01-12: Shared button component now enforces a pointer cursor (and disabled cursor states) for consistent affordance cues.
 - 2026-01-12: Removed the floating “Super Router” tag from the trader card and increased spacing below the hero section so the dashboard content breathes more on all breakpoints.

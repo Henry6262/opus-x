@@ -81,6 +81,10 @@ interface DevprintTradingConfig {
   price_poll_interval_secs: number;
   enabled: boolean;
   auto_buy: boolean;
+  // Wallet info (from backend)
+  wallet_address?: string | null;
+  sol_balance?: number | null;
+  trading_mode?: 'paper' | 'real';
 }
 
 /** Devprint position from /api/trading/positions */
@@ -290,23 +294,29 @@ function mapDevprintPosition(pos: DevprintPosition): Position {
   };
 }
 
-/** Map devprint stats to DashboardStatsResponse */
-function mapDevprintStats(stats: DevprintTradingStats): DashboardStatsResponse {
+/** Map devprint stats to DashboardStatsResponse (with optional config for wallet balance) */
+function mapDevprintStats(
+  stats: DevprintTradingStats,
+  config?: DevprintTradingConfig | null
+): DashboardStatsResponse {
+  const solBalance = config?.sol_balance ?? 0;
+  const isLiveMode = config?.trading_mode === 'real';
+
   return {
     trading: {
-      tradingEnabled: true,
-      walletBalance: 0,
-      realWalletBalance: 0,
+      tradingEnabled: config?.enabled ?? true,
+      walletBalance: solBalance,
+      realWalletBalance: isLiveMode ? solBalance : 0,
       openPositions: stats.open_positions,
-      maxOpenPositions: 10,
+      maxOpenPositions: config?.max_positions ?? 10,
       dailyPnL: stats.total_pnl,
       maxDailyLoss: 1.0,
       dailyTrades: stats.open_positions + stats.closed_positions,
       maxDailyTrades: 10,
-      totalExposure: 0,
+      totalExposure: stats.total_unrealized_pnl > 0 ? stats.total_unrealized_pnl : 0,
       unrealizedPnL: stats.total_unrealized_pnl,
-      availableForTrading: 0,
-      recommendedPositionSize: 0.1,
+      availableForTrading: Math.max(0, solBalance - stats.total_unrealized_pnl),
+      recommendedPositionSize: config?.buy_amount_sol ?? 0.1,
     },
     performance: {
       totalTrades: stats.winning_trades + stats.losing_trades,
@@ -353,7 +363,7 @@ export const smartTradingService = {
     const mappedWallets = wallets.map(mapDevprintWallet);
     const mappedConfig = mapDevprintConfig(configResult);
     const mappedPositions = positions.map(mapDevprintPosition);
-    const mappedStats = mapDevprintStats(statsResult);
+    const mappedStats = mapDevprintStats(statsResult, configResult);
     const mappedMigrations = tokens.map((t, i) => mapTokenToMigration(t, i, tokens.length));
 
     return {
@@ -381,8 +391,12 @@ export const smartTradingService = {
 
   // Dashboard stats
   async getDashboardStats(): Promise<DashboardStatsResponse> {
-    const stats = await fetchDevprint<DevprintTradingStats>("/api/trading/stats");
-    return mapDevprintStats(stats);
+    // Fetch stats and config in parallel to get wallet balance
+    const [stats, config] = await Promise.all([
+      fetchDevprint<DevprintTradingStats>("/api/trading/stats"),
+      fetchDevprint<DevprintTradingConfig>("/api/trading/config"),
+    ]);
+    return mapDevprintStats(stats, config);
   },
 
   // Trading config

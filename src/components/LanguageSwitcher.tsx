@@ -27,6 +27,12 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
         ? trailingPath || "/"
         : `/${newLocale}${trailingPath}`;
 
+    try {
+      document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000`;
+    } catch (error) {
+      console.warn("Failed to set locale cookie", error);
+    }
+
     router.push(nextPath === "" ? "/" : nextPath);
   };
 
