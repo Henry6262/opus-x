@@ -304,15 +304,18 @@ export interface RankedMigrationsResponse {
 // WebSocket event types for migration feed
 export interface MigrationFeedEvent {
   type:
-    | "connected"
-    | "migration_detected"
-    | "token_added"
-    | "market_data_updated"
-    | "ai_analysis"
-    | "wallet_signal"
-    | "migration_expired"
-    | "feed_update"
-    | "stats_update";
+  | "connected"
+  | "migration_detected"
+  | "token_added"
+  | "market_data_updated"
+  | "ai_analysis"
+  | "wallet_signal"
+  | "migration_expired"
+  | "feed_update"
+  | "stats_update"
+  | "signal_detected"
+  | "wallet_buy_detected"
+  | "position_opened";
   data?: unknown;
   timestamp: number;
   clientId?: string;
