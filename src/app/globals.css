@@ -538,7 +538,7 @@ main {
   /* Mobile TraderProfileCard adjustments */
   .dashboard-panel {
     padding-top: var(--space-8) !important;
-    margin-top: 24px !important;
+    margin-top: 48px !important;
   }
 
   /* Smaller trader card on mobile */
@@ -585,35 +585,11 @@ main {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  margin-top: 48px !important;
+  margin-top: 96px !important;
   padding: 0 15% var(--space-4) 15% !important;
   padding-bottom: var(--space-12) !important;
   position: relative;
   z-index: 10;
-}
-
-/* ===== SUPER ROUTER TITLE (Floating above avatar) ===== */
-.super-router-title {
-  background: linear-gradient(90deg, #c4f70e 0%, #ffffff 50%, #22d3ee 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 0 12px rgba(196, 247, 14, 0.6));
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  font-family: var(--font-mono);
-  animation: title-glow 3s ease-in-out infinite alternate;
-}
-
-@keyframes title-glow {
-  0% {
-    filter: drop-shadow(0 0 8px rgba(196, 247, 14, 0.4));
-  }
-  100% {
-    filter: drop-shadow(0 0 16px rgba(196, 247, 14, 0.8));
-  }
 }
 
 /* ===== CAPSULE TAB BUTTONS (Inside the chin) ===== */
@@ -2850,7 +2826,7 @@ button:focus-visible {
 }
 
 .portfolio-wallet {
-  position: absolute;
+  position: fixed;
   top: var(--space-4);
   left: var(--space-4);
   z-index: 15;
@@ -3043,7 +3019,7 @@ button:focus-visible {
 
 .portfolio-wallet.collapsed.variant-pump {
   /* Positioning - fixed in top-left corner */
-  position: absolute;
+  position: fixed;
   top: var(--space-4);
   left: var(--space-4);
   z-index: 15;
@@ -4452,4 +4428,176 @@ button:focus-visible {
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* ===== CUSTOM SCROLLBAR FOR SIGNALS ===== */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(196, 247, 14, 0.4), rgba(196, 247, 14, 0.2));
+  border-radius: 3px;
+  transition: background 200ms ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(196, 247, 14, 0.6), rgba(196, 247, 14, 0.3));
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(196, 247, 14, 0.3) rgba(255, 255, 255, 0.05);
+}
+
+
+/* ===== PORTFOLIO WALLET - BRAND UPDATE (2026 Refresh) ===== */
+/* Use brand lime #c4f70e, fully rounded items, simplified UI */
+
+/* Override matrix-green with brand lime */
+.portfolio-wallet .text-matrix-green,
+.portfolio-wallet-stat-value.text-matrix-green,
+.portfolio-wallet-total-pnl.positive,
+.portfolio-wallet-position-pnl.positive,
+.portfolio-wallet-transaction-pnl.positive,
+.portfolio-wallet-tab.active,
+.portfolio-wallet-filter.active {
+  color: #c4f70e !important;
+}
+
+/* Tabs - Fully rounded pills */
+.portfolio-wallet-tabs {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 9999px !important;
+  padding: 4px !important;
+}
+
+.portfolio-wallet-tab {
+  border-radius: 9999px !important;
+  padding: 8px 12px !important;
+  font-size: 11px !important;
+}
+
+.portfolio-wallet-tab.active {
+  background: rgba(196, 247, 14, 0.15) !important;
+  color: #c4f70e !important;
+  box-shadow: 0 0 12px rgba(196, 247, 14, 0.2) !important;
+}
+
+.portfolio-wallet-tab-count {
+  background: rgba(196, 247, 14, 0.2) !important;
+}
+
+.portfolio-wallet-tab.active .portfolio-wallet-tab-count {
+  background: rgba(196, 247, 14, 0.4) !important;
+  color: #000 !important;
+}
+
+/* Time filters - Fully rounded */
+.portfolio-wallet-filters {
+  border-radius: 9999px !important;
+}
+
+.portfolio-wallet-filter {
+  border-radius: 9999px !important;
+}
+
+.portfolio-wallet-filter.active {
+  background: rgba(196, 247, 14, 0.15) !important;
+  color: #c4f70e !important;
+  box-shadow: 0 0 10px rgba(196, 247, 14, 0.2) !important;
+}
+
+/* Position cards - Fully rounded, gradient border */
+.portfolio-wallet-position {
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+  border: 1px solid rgba(196, 247, 14, 0.1) !important;
+}
+
+.portfolio-wallet-position:hover {
+  border-color: rgba(196, 247, 14, 0.25) !important;
+  background: linear-gradient(135deg, rgba(196, 247, 14, 0.05) 0%, rgba(196, 247, 14, 0.02) 100%) !important;
+}
+
+.portfolio-wallet-position-pnl.positive {
+  color: #c4f70e !important;
+  text-shadow: 0 0 10px rgba(196, 247, 14, 0.5) !important;
+}
+
+/* Transaction cards - Fully rounded */
+.portfolio-wallet-transaction {
+  border-radius: 12px !important;
+}
+
+.portfolio-wallet-transaction-type {
+  border-radius: 9999px !important;
+  padding: 4px 10px !important;
+}
+
+.portfolio-wallet-transaction-type.buy {
+  background: rgba(196, 247, 14, 0.2) !important;
+  color: #c4f70e !important;
+}
+
+/* Stats grid - Fully rounded items */
+.portfolio-wallet-stat {
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.portfolio-wallet-stat:hover {
+  border-color: rgba(196, 247, 14, 0.15);
+  background: rgba(196, 247, 14, 0.05) !important;
+}
+
+/* Chart gradient brand color */
+.portfolio-wallet-chart .recharts-area {
+  stroke: #c4f70e !important;
+}
+
+/* Header title brand color */
+.portfolio-wallet-title {
+  color: #c4f70e !important;
+}
+
+/* Close button fully rounded */
+.portfolio-wallet-close {
+  border-radius: 9999px !important;
+  width: 28px !important;
+  height: 28px !important;
+}
+
+/* Empty state with brand icon tint */
+.portfolio-wallet-empty svg {
+  color: rgba(196, 247, 14, 0.2) !important;
+}
+
+/* Scrollbar brand colors */
+.portfolio-wallet-positions-list::-webkit-scrollbar-thumb,
+.portfolio-wallet-history-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(196, 247, 14, 0.4), rgba(196, 247, 14, 0.2)) !important;
+}
+
+.portfolio-wallet-positions-list::-webkit-scrollbar-thumb:hover,
+.portfolio-wallet-history-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(196, 247, 14, 0.6), rgba(196, 247, 14, 0.3)) !important;
+}
+
+/* Expanded wallet - softer border */
+.portfolio-wallet.expanded {
+  border: 1px solid rgba(196, 247, 14, 0.1) !important;
+  border-radius: 28px !important;
+}
+
+/* PnL animation brand colors */
+.portfolio-wallet-pnl-animated.positive {
+  color: #c4f70e !important;
 }

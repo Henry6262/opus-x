@@ -181,7 +181,7 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   const chartConfig: ChartConfig = {
     value: {
       label: "Portfolio Value",
-      color: isProfitable ? "#00ff41" : "#ff3366",
+      color: isProfitable ? "#c4f70e" : "#ff3366",
     },
   };
 
@@ -332,8 +332,8 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                     <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
                       <defs>
                         <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={isProfitable ? "#00ff41" : "#ff3366"} stopOpacity={0.4} />
-                          <stop offset="100%" stopColor={isProfitable ? "#00ff41" : "#ff3366"} stopOpacity={0} />
+                          <stop offset="0%" stopColor={isProfitable ? "#c4f70e" : "#ff3366"} stopOpacity={0.4} />
+                          <stop offset="100%" stopColor={isProfitable ? "#c4f70e" : "#ff3366"} stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <XAxis dataKey="time" hide />
@@ -349,11 +349,11 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                       <Area
                         type="monotone"
                         dataKey="value"
-                        stroke={isProfitable ? "#00ff41" : "#ff3366"}
+                        stroke={isProfitable ? "#c4f70e" : "#ff3366"}
                         strokeWidth={2}
                         fill="url(#portfolioGradient)"
                         dot={false}
-                        activeDot={{ r: 4, fill: isProfitable ? "#00ff41" : "#ff3366" }}
+                        activeDot={{ r: 4, fill: isProfitable ? "#c4f70e" : "#ff3366" }}
                       />
                     </AreaChart>
                   </ChartContainer>
