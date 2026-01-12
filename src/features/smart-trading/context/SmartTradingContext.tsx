@@ -531,6 +531,12 @@ export function SmartTradingProvider({
         target_progress: number | null;
         timestamp: number;
       }>("price_update", (data) => {
+        // Safety check
+        if (!data || !data.mint) {
+          console.warn("[SmartTrading] Invalid price_update data:", data);
+          return;
+        }
+
         // Don't add to activity feed - too noisy
         // Surgical update to positions
         setState((prev) => ({
@@ -562,6 +568,12 @@ export function SmartTradingProvider({
         remaining: number;
         is_final: boolean;
       }>("take_profit_triggered", (data, event) => {
+        // Safety check
+        if (!data || !data.mint) {
+          console.warn("[SmartTrading] Invalid take_profit_triggered data:", data);
+          return;
+        }
+
         addActivity({
           ...event,
           type: "take_profit_triggered",
@@ -604,6 +616,12 @@ export function SmartTradingProvider({
         reason: string;
         total_pnl_sol: number;
       }>("position_closed", (data, event) => {
+        // Safety check
+        if (!data || !data.mint) {
+          console.warn("[SmartTrading] Invalid position_closed data:", data);
+          return;
+        }
+
         addActivity({
           ...event,
           type: "position_closed",
