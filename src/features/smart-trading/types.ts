@@ -113,6 +113,7 @@ export interface TradingConfig {
   maxDailyLossSol: number;
   maxDailyTrades: number;
   maxSlippageBps: number;
+  wallet_address?: string; // Trading wallet public key
   createdAt?: string;
   updatedAt?: string;
 }
