@@ -216,6 +216,7 @@ export function SmartTradingProvider({
     connect,
   } = useSharedWebSocket({
     autoConnect: enabled,
+    path: "/ws/trading",
   });
 
   // State
