@@ -113,10 +113,13 @@ export interface TradingConfig {
   maxDailyLossSol: number;
   maxDailyTrades: number;
   maxSlippageBps: number;
-  wallet_address?: string; // Trading wallet public key
+  wallet_address?: string;    // Trading wallet public key
+  trading_mode?: 'paper' | 'real'; // Current trading mode
+  sol_balance?: number;       // SOL balance (real mode only)
   createdAt?: string;
   updatedAt?: string;
 }
+
 
 // Dashboard stats response from /smart-trading/stats/dashboard
 export interface DashboardStatsResponse {
