@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,10 @@ export interface CollapsibleSidePanelProps {
   className?: string;
   contentClassName?: string;
   onCollapsedChange?: (collapsed: boolean) => void;
+  // New: for accordion behavior
+  id?: string;
+  activeId?: string | null;
+  onActivate?: (id: string) => void;
 }
 
 export function CollapsibleSidePanel({
@@ -29,14 +33,30 @@ export function CollapsibleSidePanel({
   className,
   contentClassName,
   onCollapsedChange,
+  // Accordion props
+  id,
+  activeId,
+  onActivate,
 }: CollapsibleSidePanelProps) {
-  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+  // If accordion mode (activeId provided), use that, otherwise use local state
+  const isAccordionMode = activeId !== undefined && id !== undefined;
+  const [localCollapsed, setLocalCollapsed] = useState(defaultCollapsed);
 
-  const toggleCollapsed = () => {
-    const newState = !isCollapsed;
-    setIsCollapsed(newState);
-    onCollapsedChange?.(newState);
-  };
+  const isCollapsed = isAccordionMode ? activeId !== id : localCollapsed;
+
+  const toggleCollapsed = useCallback(() => {
+    if (isAccordionMode && id) {
+      // In accordion mode, clicking expands this panel (closes others)
+      if (isCollapsed) {
+        onActivate?.(id);
+      }
+      // Don't allow collapsing in accordion mode - one must always be open
+    } else {
+      const newState = !localCollapsed;
+      setLocalCollapsed(newState);
+      onCollapsedChange?.(newState);
+    }
+  }, [isAccordionMode, id, isCollapsed, localCollapsed, onActivate, onCollapsedChange]);
 
   const ChevronIcon = direction === "left"
     ? (isCollapsed ? ChevronRight : ChevronLeft)
@@ -44,26 +64,19 @@ export function CollapsibleSidePanel({
 
   return (
     <div className="relative h-full">
-      {/* Toggle button - positioned outside the panel container for proper overflow */}
+      {/* Toggle button - positioned at the right edge of the panel */}
       <motion.button
         onClick={toggleCollapsed}
         initial={false}
-        animate={{
-          x: direction === "left"
-            ? (isCollapsed ? collapsedWidth - 10 : parseInt(expandedWidth) || 280) - 10
-            : 0,
-        }}
-        transition={{
-          duration: 0.4,
-          ease: [0.32, 0.72, 0, 1],
-        }}
         className={cn(
-          "absolute top-1/2 -translate-y-1/2 z-50 w-6 h-12 flex items-center justify-center",
+          "absolute top-1/2 -translate-y-1/2 z-50",
+          "w-6 h-12 flex items-center justify-center",
           "bg-black/80 border border-white/20 rounded-full",
-          "hover:bg-white/20 hover:border-[#c4f70e]/50 hover:scale-110",
-          "transition-all duration-200 ease-out",
+          "hover:bg-white/20 hover:border-[#c4f70e]/50",
+          "transition-colors duration-200",
           "shadow-[0_0_20px_rgba(0,0,0,0.5)]",
-          direction === "left" ? "translate-x-1/2" : "-translate-x-1/2"
+          // Position at the right edge of the panel content
+          direction === "left" ? "right-0 translate-x-1/2" : "left-0 -translate-x-1/2"
         )}
         title={isCollapsed ? "Expand" : "Collapse"}
       >

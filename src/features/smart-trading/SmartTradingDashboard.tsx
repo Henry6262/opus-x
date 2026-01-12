@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -113,17 +113,10 @@ interface PositionCardProps {
 }
 
 function PositionCard({ position, onClose, t }: PositionCardProps) {
-  const entryPrice = position.entryPriceSol || 0;
-  const currentPrice = position.currentPrice || entryPrice;
-  const multiplier = entryPrice > 0 ? currentPrice / entryPrice : 1;
-  const pnlPercent = (multiplier - 1) * 100;
+  const pnlPercent = position.entryPriceSol
+    ? ((position.currentPrice || position.entryPriceSol) / position.entryPriceSol - 1) * 100
+    : 0;
   const isProfit = pnlPercent >= 0;
-
-  // Target progress (towards 2x then 3x)
-  const nextTarget = !position.target1Hit ? 2.0 : !position.target2Hit ? 3.0 : null;
-  const targetProgress = nextTarget
-    ? Math.min(100, ((multiplier - 1) / (nextTarget - 1)) * 100)
-    : 100;
 
   return (
     <motion.div
@@ -133,12 +126,11 @@ function PositionCard({ position, onClose, t }: PositionCardProps) {
       exit={{ opacity: 0, scale: 0.95 }}
       className="p-3 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
     >
-      {/* Header: Symbol + Multiplier */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span
             className={`w-2 h-2 rounded-full ${position.status === "OPEN"
-              ? "bg-green-400 animate-pulse"
+              ? "bg-green-400"
               : position.status === "STOPPED_OUT"
                 ? "bg-red-400"
                 : "bg-gray-400"
@@ -148,44 +140,14 @@ function PositionCard({ position, onClose, t }: PositionCardProps) {
             {position.tokenSymbol || shortenAddress(position.tokenMint)}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Multiplier badge */}
-          <span
-            className={`font-mono font-bold text-xs px-1.5 py-0.5 rounded ${multiplier >= 2 ? "bg-green-500/20 text-green-400" :
-              multiplier >= 1.5 ? "bg-cyan-500/20 text-cyan-400" :
-                multiplier >= 1 ? "bg-white/10 text-white/60" : "bg-red-500/20 text-red-400"
-              }`}
-          >
-            {multiplier.toFixed(2)}x
-          </span>
-          <span
-            className={`font-mono font-bold text-sm ${isProfit ? "text-green-400" : "text-red-400"
-              }`}
-          >
-            {formatPercent(pnlPercent)}
-          </span>
-        </div>
+        <span
+          className={`font-mono font-bold text-sm ${isProfit ? "text-green-400" : "text-red-400"
+            }`}
+        >
+          {formatPercent(pnlPercent)}
+        </span>
       </div>
 
-      {/* Target Progress Bar */}
-      {nextTarget && position.status === "OPEN" && (
-        <div className="mb-2">
-          <div className="flex items-center justify-between text-xs text-white/40 mb-1">
-            <span>Target: {nextTarget}x</span>
-            <span>{Math.round(targetProgress)}%</span>
-          </div>
-          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-            <motion.div
-              className={`h-full ${targetProgress >= 100 ? "bg-green-400" : "bg-cyan-400"}`}
-              initial={{ width: 0 }}
-              animate={{ width: `${targetProgress}%` }}
-              transition={{ duration: 0.3 }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Footer: Entry + Actions */}
       <div className="flex items-center justify-between text-xs text-white/50">
         <span>{t("entry")}: {formatSol(position.entryAmountSol)}</span>
         <div className="flex items-center gap-1">
@@ -552,30 +514,46 @@ export function SmartTradingDashboard() {
   const t = useTranslations("activity");
   const tMigration = useTranslations("migration");
 
+  // Accordion state - on mobile, only one panel can be expanded at a time
+  // Default to migration feed being active
+  const [activePanel, setActivePanel] = useState<string>("migration");
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   return (
     <div className="space-y-4">
       {/* Header with connection status and controls */}
       <ConnectionHeader />
 
-      {/* Main content grid */}
-      <div className="flex gap-4">
+      {/* Main content grid - stack on mobile */}
+      <div className="flex flex-col lg:flex-row gap-4">
         {/* Left: Collapsible Live Activity Feed */}
-        <div className="h-[500px] flex-shrink-0">
+        <div className="h-[300px] lg:h-[500px] flex-shrink-0">
           <CollapsibleSidePanel
             icon={<Activity className="w-5 h-5" />}
             title={t("liveActivity")}
             direction="left"
-            defaultCollapsed={true}
+            defaultCollapsed={!isMobile || activePanel !== "activity"}
             collapsedWidth={48}
             expandedWidth="280px"
             className="h-full"
+            id="activity"
+            activeId={isMobile ? activePanel : undefined}
+            onActivate={isMobile ? setActivePanel : undefined}
           >
             <LiveActivityFeed maxItems={30} />
           </CollapsibleSidePanel>
         </div>
 
         {/* Center: Migration Feed (grows to fill space) */}
-        <div className="flex-1 min-w-0 h-[500px]">
+        <div className="flex-1 min-w-0 h-[400px] lg:h-[500px]">
           <CollapsibleSidePanel
             icon={<Activity className="w-5 h-5" />}
             title={tMigration("title")}
@@ -584,13 +562,16 @@ export function SmartTradingDashboard() {
             expandedWidth="100%"
             className="h-full"
             contentClassName="h-full"
+            id="migration"
+            activeId={isMobile ? activePanel : undefined}
+            onActivate={isMobile ? setActivePanel : undefined}
           >
             <RealTimeMigrationPanel />
           </CollapsibleSidePanel>
         </div>
 
         {/* Right: Positions + Signals */}
-        <div className="w-[300px] flex-shrink-0 h-[500px]">
+        <div className="w-full lg:w-[300px] flex-shrink-0 h-[350px] lg:h-[500px]">
           <CollapsibleSidePanel
             icon={<Wallet className="w-5 h-5" />}
             title="Positions & Signals"
@@ -599,6 +580,9 @@ export function SmartTradingDashboard() {
             expandedWidth="300px"
             className="h-full"
             contentClassName="h-full flex flex-col gap-4"
+            id="positions"
+            activeId={isMobile ? activePanel : undefined}
+            onActivate={isMobile ? setActivePanel : undefined}
           >
             <div className="h-[230px]">
               <PositionsPanel />
