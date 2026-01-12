@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import type { MigrationAnalysis, AiDecision } from "../types";
 
-type TimeTranslator = (key: string, params?: Record<string, string | number | Date>) => string;
+type TimeTranslator = (key: string, params?: Record<string, unknown>) => string;
 
 interface AiReasoningPanelProps {
   analyses: MigrationAnalysis[];

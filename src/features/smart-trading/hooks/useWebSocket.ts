@@ -139,12 +139,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
           // Notify specific handlers
           const handlers = handlersRef.current.get(event.type);
           if (handlers) {
-            // Pass the entire event object as data (backend sends flat events)
-            handlers.forEach((handler) => handler(event, event));
+            handlers.forEach((handler) => handler(event.data, event));
           }
 
           // Notify 'any' handlers
-          anyHandlersRef.current.forEach((handler) => handler(event, event));
+          anyHandlersRef.current.forEach((handler) => handler(event.data, event));
         } catch (err) {
           console.warn("[WebSocket] Failed to parse message:", messageEvent.data);
         }

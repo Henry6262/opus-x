@@ -140,6 +140,8 @@
       "unknown": "Unknown",
       "ago": "ago",
       "expires": "Expires",
+      "copyAddress": "Copy contract address",
+      "copied": "Copied!",
       "refreshData": "Refresh market data",
       "triggerAi": "Trigger AI analysis",
       "aiReasoning": "AI Reasoning",

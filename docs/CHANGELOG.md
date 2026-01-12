@@ -3,6 +3,16 @@
 All notable changes to Opus-X are documented here.
 
 ## 2026-01-12
+- Migration cards replaced their token-name row with a minimalist inline stat strip (MCap · Liq · Score) separated by subtle dividers directly beneath the ticker.
+- Tracked wallet presets were enriched with Orange, Dior, Jack Duval, and POW Twitter handles, and they now default to the SuperRouter avatar whenever no profile image is provided.
+- Tracked wallet panel switched to a two-column grid with slimmer, gradient cards so more operators are visible at once without endless scrolling.
+- Hero terminal toggle no longer sits over the video; the pill hides while the terminal is open and only returns when collapsed so the hero stays clean.
+- Language switcher now rewrites paths to the selected locale so the English/中文 toggle works consistently across the dashboard.
+- Portfolio wallet pill sticks to the viewport, keeping balance stats visible as users scroll down the cockpit layout.
+- Migration feed cards pack their stats into inline pills within the header row, reducing height so more items fit on screen.
+- Migration cards dropped their bottom controls, moved copy + timestamp into the header, and now show all metrics as inline labels beneath the ticker for the most compact layout yet.
+- Shared UI button component now forces a pointer cursor (with disabled overrides) so every button feels interactive.
+- Removed the floating “Super Router” text badge from the trader profile card and increased the margin between the hero video and dashboard content to reduce visual crowding.
 - Trader profile metrics on the Smart Trading card now keep streak/trade/best stats visible on mobile by shifting them below the main pill while retaining the inline desktop view.
 - Tracked wallet rows now surface a single inline address pill with copy state beside each name, showing the first four characters clearly.
 - Seeded the Smart Trading tracked wallets panel with the Orange focus set client-side (unnamed entries display “Rando Router” until we map real handles).

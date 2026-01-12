@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { StatusPill } from "@/components/design-system";
 import { CountUp } from "@/components/animations/CountUp";
@@ -12,15 +12,10 @@ import {
   Brain,
   TrendingUp,
   TrendingDown,
-  Clock,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw,
-  BarChart3,
-  Droplets,
+  Copy,
+  Check,
 } from "lucide-react";
 import type { RankedMigration, AiDecision, PriceHistoryPoint } from "../types";
-import { WalletSignalStack } from "./WalletSignalBadge";
 
 // ============================================
 // Token Image - Real image with gradient fallback
@@ -199,7 +194,7 @@ function usePriceFlash(value: number, threshold = 0.001): FlashDirection {
 // ============================================
 
 interface FlashValueProps {
-  value: React.ReactNode;
+  value: ReactNode;
   flash: FlashDirection;
   className?: string;
 }
@@ -225,8 +220,6 @@ function FlashValue({ value, flash, className = "" }: FlashValueProps) {
 
 interface MigrationTokenCardProps {
   ranked: RankedMigration;
-  onAnalyze?: (tokenMint: string) => Promise<void>;
-  onRefresh?: (tokenMint: string) => Promise<void>;
 }
 
 const AI_DECISION_CONFIG: Record<AiDecision, { color: string; bg: string; label: string; tone: "live" | "warn" | "neutral" }> = {
@@ -250,23 +243,20 @@ const AI_DECISION_CONFIG: Record<AiDecision, { color: string; bg: string; label:
   },
 };
 
-export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTokenCardProps) {
+export function MigrationTokenCard({ ranked }: MigrationTokenCardProps) {
   const t = useTranslations("migration");
   const tTime = useTranslations("time");
 
-  const [expanded, setExpanded] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // RankedMigration is a FLAT structure - all properties at root level
-  const { score, breakdown, isReadyToTrade } = ranked;
+  const { score, isReadyToTrade } = ranked;
   const decision = ranked.lastAiDecision;
   const decisionConfig = decision ? AI_DECISION_CONFIG[decision] : null;
 
   const priceChange = ranked.lastPriceChange1h ?? 0;
   const marketCap = ranked.lastMarketCap ?? 0;
   const liquidity = ranked.lastLiquidity ?? 0;
-  const volume = ranked.lastVolume24h ?? 0;
 
   // Flash animations for live updates
   const priceFlash = usePriceFlash(priceChange, 0.5); // Flash on 0.5% change
@@ -274,28 +264,18 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
   const liquidityFlash = usePriceFlash(liquidity, 0.02);
   const scoreFlash = usePriceFlash(score, 0.05);
 
-  const handleAnalyze = async () => {
-    if (!onAnalyze || isAnalyzing) return;
-    setIsAnalyzing(true);
-    try {
-      await onAnalyze(ranked.tokenMint);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleRefresh = async () => {
-    if (!onRefresh || isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await onRefresh(ranked.tokenMint);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
   const timeSinceDetection = getTimeSince(ranked.detectedAt, tTime);
   const expiresIn = ranked.expiresAt ? getTimeUntil(ranked.expiresAt, tTime) : null;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(ranked.tokenMint);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch (err) {
+      console.error("Failed to copy token address", err);
+    }
+  };
 
   return (
     <motion.div
@@ -304,7 +284,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       className={`
-        relative rounded-xl border backdrop-blur-xl overflow-hidden
+        relative rounded-3xl border backdrop-blur-xl overflow-hidden
         ${isReadyToTrade
           ? "bg-green-500/5 border-green-500/30"
           : "bg-black/40 border-white/10"
@@ -319,7 +299,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
       {/* Main content */}
       <div className="relative p-4">
         {/* Header row */}
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-4">
           {/* Token Image with DexScreener fallback */}
           <TokenImage
             imageUrl={ranked.tokenImageUrl}
@@ -338,10 +318,21 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
 
           {/* Token info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-white truncate">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-lg font-bold text-white truncate flex-1 min-w-0">
                 {ranked.tokenSymbol || t("card.unknown")}
               </span>
+              <button
+                onClick={handleCopy}
+                className="p-1.5 rounded-full bg-white/5 hover:bg-white/15 transition-colors"
+                title={copied ? t("card.copied") : t("card.copyAddress")}
+              >
+                {copied ? (
+                  <Check className="w-3.5 h-3.5 text-green-400" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 text-white/60" />
+                )}
+              </button>
               {isReadyToTrade && (
                 <motion.div
                   animate={{ scale: [1, 1.1, 1] }}
@@ -353,209 +344,68 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
                 </motion.div>
               )}
             </div>
-            <p className="text-xs text-white/40 truncate mt-0.5">
-              {ranked.tokenName || shortenAddress(ranked.tokenMint)}
-            </p>
+            <div className="flex items-center gap-4 mt-2 w-full text-[10px] whitespace-nowrap">
+              <MiniStat
+                label={t("card.metrics.mcap")}
+                value={formatCompactNumber(marketCap)}
+                flash={marketCapFlash}
+              />
+              <span className="text-white/20">|</span>
+              <MiniStat
+                label={t("card.metrics.liquidity")}
+                value={formatCompactNumber(liquidity)}
+                flash={liquidityFlash}
+              />
+              <span className="text-white/20">|</span>
+              <MiniStat
+                label={t("card.metrics.score")}
+                value={<CountUp to={score} duration={0.5} decimals={0} />}
+                valueClassName="text-[#c4f70e]"
+              />
+            </div>
           </div>
 
-          {/* AI Decision badge */}
-          {decisionConfig && (
-            <div className={`px-3 py-1.5 rounded-lg ${decisionConfig.bg} flex items-center gap-2`}>
-              <Brain className={`w-4 h-4 ${decisionConfig.color}`} />
-              <span className={`text-sm font-bold ${decisionConfig.color}`}>
-                {decisionConfig.label}
-              </span>
-              {ranked.lastAiConfidence && (
-                <span className="text-xs text-white/40">
-                  {Math.round(ranked.lastAiConfidence * 100)}%
+          <div className="flex flex-col items-end gap-2 min-w-[140px] text-right">
+            {decisionConfig && (
+              <div className={`px-3 py-1.5 rounded-lg ${decisionConfig.bg} flex items-center gap-2`}>
+                <Brain className={`w-4 h-4 ${decisionConfig.color}`} />
+                <span className={`text-sm font-bold ${decisionConfig.color}`}>
+                  {decisionConfig.label}
                 </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Metrics row */}
-        <div className="flex items-center gap-3 mt-4">
-          {/* Metrics grid */}
-          <div className="grid grid-cols-4 gap-3 flex-1">
-            {/* Price Change */}
-            <div className="flex flex-col">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.metrics.priceChange1h")}</span>
-              <div className={`flex items-center gap-1 ${priceChange >= 0 ? "text-green-400" : "text-red-400"}`}>
-                {priceChange >= 0 ? (
-                  <TrendingUp className="w-3.5 h-3.5" />
-                ) : (
-                  <TrendingDown className="w-3.5 h-3.5" />
+                {ranked.lastAiConfidence && (
+                  <span className="text-xs text-white/40">
+                    {Math.round(ranked.lastAiConfidence * 100)}%
+                  </span>
                 )}
-                <FlashValue
-                  value={`${priceChange >= 0 ? "+" : ""}${priceChange.toFixed(1)}%`}
-                  flash={priceFlash}
-                  className="font-mono font-medium"
-                />
-              </div>
-            </div>
-
-            {/* Market Cap */}
-            <div className="flex flex-col">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.metrics.mcap")}</span>
-              <div className="flex items-center gap-1 text-white">
-                <BarChart3 className="w-3.5 h-3.5 text-white/40" />
-                <FlashValue
-                  value={formatCompactNumber(marketCap)}
-                  flash={marketCapFlash}
-                  className="font-mono font-medium text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Liquidity */}
-            <div className="flex flex-col">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.metrics.liquidity")}</span>
-              <div className="flex items-center gap-1 text-white">
-                <Droplets className="w-3.5 h-3.5 text-cyan-400" />
-                <FlashValue
-                  value={formatCompactNumber(liquidity)}
-                  flash={liquidityFlash}
-                  className="font-mono font-medium text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Priority Score */}
-            <div className="flex flex-col">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.metrics.score")}</span>
-              <div className="flex items-center gap-1">
-                <Zap className="w-3.5 h-3.5 text-[#c4f70e]" />
-                <FlashValue
-                  value={<CountUp to={score} duration={0.5} decimals={0} />}
-                  flash={scoreFlash}
-                  className="font-mono font-bold text-[#c4f70e]"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Wallet signals */}
-        {ranked.walletSignalCount > 0 && ranked.walletSignals.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-white/5">
-            <WalletSignalStack signals={ranked.walletSignals} maxDisplay={3} />
-          </div>
-        )}
-
-        {/* Time info & Actions */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-          <div className="flex items-center gap-3 text-xs text-white/40">
-            <div className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" />
-              <span>{timeSinceDetection}</span>
-            </div>
-            {expiresIn && (
-              <div className="flex items-center gap-1 text-amber-400/70">
-                <span>{expiresIn}</span>
               </div>
             )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Refresh button */}
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="p-1.5 rounded-md bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-50"
-              title={t("card.refreshData")}
-            >
-              <RefreshCw className={`w-4 h-4 text-white/60 ${isRefreshing ? "animate-spin" : ""}`} />
-            </button>
-
-            {/* Analyze button */}
-            <button
-              onClick={handleAnalyze}
-              disabled={isAnalyzing}
-              className="p-1.5 rounded-md bg-[#c4f70e]/10 hover:bg-[#c4f70e]/20 transition-colors disabled:opacity-50"
-              title={t("card.triggerAi")}
-            >
-              <Brain className={`w-4 h-4 text-[#c4f70e] ${isAnalyzing ? "animate-pulse" : ""}`} />
-            </button>
-
-            {/* Expand button */}
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="p-1.5 rounded-md bg-white/5 hover:bg-white/10 transition-colors"
-            >
-              {expanded ? (
-                <ChevronUp className="w-4 h-4 text-white/60" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-white/60" />
+            <div className="text-[11px] text-white/50">
+              <span>{timeSinceDetection}</span>
+              {expiresIn && (
+                <div className="text-amber-400/80">
+                  {expiresIn}
+                </div>
               )}
-            </button>
+            </div>
           </div>
         </div>
-
-        {/* Expanded section */}
-        <AnimatePresence>
-          {expanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="mt-3 pt-3 border-t border-white/5 space-y-3">
-                {/* AI Reasoning */}
-                {ranked.lastAiReasoning && (
-                  <div>
-                    <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.aiReasoning")}</span>
-                    <p className="text-sm text-white/70 mt-1">{ranked.lastAiReasoning}</p>
-                  </div>
-                )}
-
-                {/* Signal Breakdown */}
-                <div>
-                  <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.signalBreakdown")}</span>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    <SignalBar label={t("card.breakdown.age")} value={breakdown.migrationAge} max={30} />
-                    <SignalBar label={t("card.breakdown.wallets")} value={breakdown.walletSignals} max={50} />
-                    <SignalBar label={t("card.breakdown.ai")} value={breakdown.aiConfidence} max={25} />
-                    <SignalBar label={t("card.breakdown.momentum")} value={breakdown.priceMomentum} max={15} />
-                    <SignalBar label={t("card.breakdown.multiWallet")} value={breakdown.multipleWallets} max={10} />
-                  </div>
-                </div>
-
-                {/* Token address */}
-                <div>
-                  <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.tokenMint")}</span>
-                  <p className="text-xs text-white/50 font-mono mt-1 break-all">
-                    {ranked.tokenMint}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </motion.div>
   );
 }
 
-function SignalBar({ label, value, max }: { label: string; value: number; max: number }) {
-  const percent = Math.min((value / max) * 100, 100);
+interface MiniStatProps {
+  label: string;
+  value: ReactNode;
+  flash?: FlashDirection;
+  valueClassName?: string;
+}
 
+function MiniStat({ label, value, flash, valueClassName }: MiniStatProps) {
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex justify-between text-[10px]">
-        <span className="text-white/40">{label}</span>
-        <span className="text-white/60 font-mono">{value.toFixed(0)}</span>
-      </div>
-      <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${percent}%` }}
-          transition={{ duration: 0.5 }}
-          className="h-full bg-gradient-to-r from-[#c4f70e] to-cyan-400 rounded-full"
-        />
-      </div>
+    <div className="flex items-center gap-1 whitespace-nowrap">
+      <span className="uppercase tracking-widest text-white/35">{label}</span>
+      <FlashValue value={value} flash={flash ?? null} className={`font-mono ${valueClassName || "text-white/80"}`} />
     </div>
   );
 }

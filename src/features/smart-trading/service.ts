@@ -41,13 +41,6 @@ interface DevprintToken {
   transaction_signature: string | null;
   creator: string | null;
   sol_amount: number | null;
-  // Market data (enriched from backend cache)
-  price_usd?: number | null;
-  market_cap?: number | null;
-  liquidity?: number | null;
-  volume_24h?: number | null;
-  price_change_24h_pct?: number | null;
-  market_data_age_secs?: number | null;
 }
 
 /** Devprint wallet response from /api/wallets */
@@ -90,47 +83,22 @@ interface DevprintTradingConfig {
   auto_buy: boolean;
 }
 
-/** Devprint position from /api/trading/positions - matches backend Position struct */
+/** Devprint position from /api/trading/positions */
 interface DevprintPosition {
   id: string;
-  mint: string;
-  token_name: string;
-  ticker: string;
-
-  // Entry details
-  entry_price: number;
-  entry_time: string;
-  initial_quantity: number;
-  entry_sol_value: number;
-
-  // Current state
-  current_quantity: number;
-  current_price: number;
-  current_value_sol: number;
-  unrealized_pnl_sol: number;
-  unrealized_pnl_pct: number;
-  peak_price: number;
-  peak_pnl_pct: number;
-
-  // Take profit
-  targets_hit: Array<{
-    target_multiplier: number;
-    sold_quantity: number;
-    sold_price: number;
-    sold_time: string;
-    realized_sol: number;
-  }>;
-  realized_pnl_sol: number;
-
-  // Status
+  token_mint: string;
+  token_symbol: string | null;
+  token_name: string | null;
+  entry_price_usd: number;
+  entry_amount_sol: number;
+  entry_tokens: number;
+  current_price_usd: number | null;
   status: string;
-  closed_at: string | null;
-  close_reason: string | null;
-
-  // Metadata
-  buy_criteria?: unknown;
+  unrealized_pnl: number;
+  realized_pnl: number;
   created_at: string;
   updated_at: string;
+  closed_at: string | null;
 }
 
 /** Devprint trading stats from /api/trading/stats */
@@ -202,12 +170,12 @@ function mapTokenToMigration(token: DevprintToken, index: number, total: number)
     expiresAt: null,
     priorityScore: total - index,
 
-    // Market data (enriched from cache by backend)
-    lastPriceUsd: token.price_usd ?? null,
-    lastMarketCap: token.market_cap ?? null,
-    lastLiquidity: token.liquidity ?? null,
-    lastVolume24h: token.volume_24h ?? null,
-    lastPriceChange1h: token.price_change_24h_pct ?? null,
+    // Market data
+    lastPriceUsd: null,
+    lastMarketCap: null,
+    lastLiquidity: null,
+    lastVolume24h: null,
+    lastPriceChange1h: null,
     lastUpdatedAt: token.updated_at,
     priceHistory: null,
 
@@ -286,39 +254,35 @@ function mapDevprintConfig(config: DevprintTradingConfig): TradingConfig {
 
 /** Map devprint position to Position */
 function mapDevprintPosition(pos: DevprintPosition): Position {
-  // Check if any targets have been hit
-  const target1Hit = pos.targets_hit?.some(t => t.target_multiplier >= 2.0) ?? false;
-  const target2Hit = pos.targets_hit?.some(t => t.target_multiplier >= 3.0) ?? false;
-
   return {
     id: pos.id,
     signalId: pos.id,
-    tokenMint: pos.mint,
-    tokenSymbol: pos.ticker,
+    tokenMint: pos.token_mint,
+    tokenSymbol: pos.token_symbol,
     status: pos.status === "open" ? "OPEN" : pos.status === "closed" ? "CLOSED" : "PENDING",
 
-    entryPriceSol: pos.entry_price,
-    entryAmountSol: pos.entry_sol_value,
-    entryTokens: pos.initial_quantity,
+    entryPriceSol: pos.entry_price_usd, // Note: devprint uses USD
+    entryAmountSol: pos.entry_amount_sol,
+    entryTokens: pos.entry_tokens,
     entryTxSig: null,
 
-    target1Price: pos.entry_price * 2,
+    target1Price: pos.entry_price_usd * 2,
     target1Percent: 100,
-    target1Hit,
+    target1Hit: false,
     target1TxSig: null,
 
-    target2Price: pos.entry_price * 3,
-    target2Hit,
+    target2Price: pos.entry_price_usd * 3,
+    target2Hit: false,
     target2TxSig: null,
 
-    stopLossPrice: pos.entry_price * 0.5,
+    stopLossPrice: pos.entry_price_usd * 0.5,
     stoppedOut: false,
     stopLossTxSig: null,
 
-    currentPrice: pos.current_price,
-    remainingTokens: pos.current_quantity,
-    realizedPnlSol: pos.realized_pnl_sol,
-    unrealizedPnl: pos.unrealized_pnl_sol,
+    currentPrice: pos.current_price_usd,
+    remainingTokens: pos.entry_tokens,
+    realizedPnlSol: pos.realized_pnl,
+    unrealizedPnl: pos.unrealized_pnl,
 
     createdAt: pos.created_at,
     updatedAt: pos.updated_at,

@@ -131,16 +131,6 @@ export function TraderProfileCard({
 
   return (
     <div className="relative pt-4 pb-16">
-      {/* SUPER ROUTER floating title - above avatar */}
-      <motion.div
-        className="absolute -top-6 left-4 z-30"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-      >
-        <span className="super-router-title">{tProfile("superRouter")}</span>
-      </motion.div>
-
       {/* Language Switcher - top right */}
       <motion.div
         className="absolute -top-6 right-4 z-30"

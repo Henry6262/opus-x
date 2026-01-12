@@ -100,7 +100,7 @@ const WALLET_TWITTER_MAP: Record<string, {
   twitterFollowers?: number;
   twitterVerified?: boolean;
 }> = {
-  // Cupsey - verified from TwitterAPI.io
+  // Cupsey
   "6CPRX2qdoVHXyqJ43uDuMCTHmB63ZRXUHqCpzxqUxaWs": {
     twitterUsername: "cupseyy",
     twitterName: "Cupsey",
@@ -115,36 +115,61 @@ const WALLET_TWITTER_MAP: Record<string, {
     twitterFollowers: 183384,
     twitterVerified: false,
   },
-  // Loopier - placeholder until correct handle found
-  "8YCdowALgH5b3rb87YixjCbQMKdfUHmGKvAPavFHLguH": {
-    twitterUsername: "loopier",
-    twitterName: "Loopier",
-    twitterAvatar: "https://pbs.twimg.com/profile_images/1867638877310816257/xfY2XWMR_400x400.jpg",
-    twitterFollowers: 89000,
+  // Orange
+  "2X4H5Y9C4Fy6Pf3wpq8Q4gMvLcWvfrrwDv2bdR8AAwQv": {
+    twitterUsername: "OrangeSBS",
+    twitterName: "Orange",
+    twitterAvatar: "https://pbs.twimg.com/profile_images/1847560651999578112/V2U5eTjO_400x400.jpg",
     twitterVerified: false,
   },
-  // Pow - verified from TwitterAPI.io
-  "J6TDXvarvpBdPXTaTU8eJbtso1PUCYKGkVtMKUUY8iEa": {
-    twitterUsername: "pow_xbt",
-    twitterName: "pow🧲",
+  // Dior
+  "87rRdssFiTJKY4MGARa4G5vQ31hmR7MxSmhzeaJ5AAxJ": {
+    twitterUsername: "Dior100x",
+    twitterName: "Dior",
+    twitterAvatar: "https://pbs.twimg.com/profile_images/1862263374563762177/7zB5It1n_400x400.jpg",
+    twitterVerified: false,
+  },
+  // Ton (placeholder reuse Cupsey avatar until confirmed)
+  "2chb7q48B8r69QsUj4sBGnumis4g2DURP7Uru9aka2My": {
+    twitterUsername: "ton",
+    twitterName: "Ton",
+    twitterAvatar: "https://pbs.twimg.com/profile_images/1568672973876756482/7zdg3Nof_400x400.jpg",
+    twitterVerified: false,
+  },
+  // Loopier Side
+  "6CPRX2qdoVHXyqJ43uDuMCTHmB63ZRXUHqCpzxqUxaWs": {
+    twitterUsername: "loopier",
+    twitterName: "Loopier Side",
+    twitterAvatar: "https://pbs.twimg.com/profile_images/1867638877310816257/xfY2XWMR_400x400.jpg",
+    twitterVerified: false,
+  },
+  // POW
+  "8YCdowALgH5b3rb87YixjCbQMKdfUHmGKvAPavFHLguH": {
+    twitterUsername: "traderpow",
+    twitterName: "POW",
     twitterAvatar: "https://pbs.twimg.com/profile_images/2006851277851160576/L8vAUJOH_400x400.jpg",
     twitterFollowers: 155019,
     twitterVerified: false,
   },
-  // Pain - placeholder until correct handle found
+  // Pain
   "DNfuF1L62WWyW3pNakVkyGGFzVVhj4Yr52jSmdTyeBHm": {
     twitterUsername: "pain",
     twitterName: "Pain",
     twitterAvatar: "https://pbs.twimg.com/profile_images/1868308826286870528/KLqYT8sV_400x400.jpg",
-    twitterFollowers: 95000,
     twitterVerified: false,
   },
-  // Gake - verified from TwitterAPI.io
-  "ATFRUwvyMh61w2Ab6AZxUyxsAfiiuG1RqL6iv3Vi9q2B": {
+  // temugake
+  "76ZUBj1JLz7arTVHSRJok5oSTEqDuVBgySFMVHtzxzZc": {
     twitterUsername: "gaborux",
     twitterName: "gake",
     twitterAvatar: "https://pbs.twimg.com/profile_images/2007657851423207431/binqODel_400x400.jpg",
-    twitterFollowers: 169490,
+    twitterVerified: false,
+  },
+  // Jack Duval
+  "BAr5csYtpWoNpwhUjixX7ZPHXkUciFZzjBp9uNxZXJPh": {
+    twitterUsername: "jackduvalstocks",
+    twitterName: "Jack Duval",
+    twitterAvatar: "https://pbs.twimg.com/profile_images/1840796760347936769/mC5ZX18j_400x400.jpg",
     twitterVerified: false,
   },
 };
@@ -152,17 +177,18 @@ const WALLET_TWITTER_MAP: Record<string, {
 // Enrich wallet with hardcoded Twitter data if available
 function enrichWalletWithTwitterData(wallet: TrackedWallet): TrackedWallet {
   const twitterData = WALLET_TWITTER_MAP[wallet.address];
-  if (twitterData && !wallet.twitterUsername) {
-    return {
-      ...wallet,
-      twitterUsername: twitterData.twitterUsername,
-      twitterName: twitterData.twitterName ?? wallet.label,
-      twitterAvatar: twitterData.twitterAvatar,
-      twitterFollowers: twitterData.twitterFollowers,
-      twitterVerified: twitterData.twitterVerified,
-    };
+  if (!twitterData) {
+    return wallet;
   }
-  return wallet;
+
+  return {
+    ...wallet,
+    twitterUsername: wallet.twitterUsername ?? twitterData.twitterUsername,
+    twitterName: wallet.twitterName ?? twitterData.twitterName ?? wallet.label,
+    twitterAvatar: wallet.twitterAvatar ?? twitterData.twitterAvatar,
+    twitterFollowers: wallet.twitterFollowers ?? twitterData.twitterFollowers,
+    twitterVerified: wallet.twitterVerified ?? twitterData.twitterVerified,
+  };
 }
 
 function normalizeWalletLabel(wallet: TrackedWallet): TrackedWallet {
@@ -212,133 +238,97 @@ function WalletRow({
   return (
     <motion.div
       onClick={onClick}
-      className="relative flex items-center gap-4 px-5 py-4 rounded-2xl bg-black border border-white/5 cursor-pointer overflow-hidden group"
-      whileHover={{ scale: 1.01 }}
-      whileTap={{ scale: 0.99 }}
-      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className="relative flex flex-col gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 via-black/60 to-black/80 p-4 cursor-pointer overflow-hidden group"
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: "spring", stiffness: 320, damping: 26 }}
     >
-      {/* Hover glow effect */}
       <motion.div
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         style={{
-          background: `radial-gradient(ellipse at center, ${BRAND_GREEN}08 0%, transparent 70%)`,
+          background: `radial-gradient(circle at top, ${BRAND_GREEN}12 0%, transparent 65%)`,
         }}
       />
 
-      {/* Border glow on hover */}
-      <motion.div
-        className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-        style={{
-          boxShadow: `inset 0 0 0 1px ${BRAND_GREEN}30, 0 0 20px ${BRAND_GREEN}10`,
-        }}
-      />
-
-      {/* Avatar with green ring on active */}
-      <div className="relative z-10 flex-shrink-0">
-        {wallet.twitterAvatar ? (
+      <div className="flex items-center gap-3 relative z-10">
+        <div className="relative flex-shrink-0">
           <div
-            className="relative w-14 h-14 rounded-full p-[2px]"
+            className="relative w-12 h-12 rounded-full p-[2px]"
             style={{
               background: wallet.active
-                ? `linear-gradient(135deg, ${BRAND_GREEN}, ${BRAND_GREEN}60)`
-                : 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+                ? `linear-gradient(135deg, ${BRAND_GREEN}, ${BRAND_GREEN}40)`
+                : "linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05))",
             }}
           >
             <img
-              src={wallet.twitterAvatar}
+              src={wallet.twitterAvatar || "/character/super-router.png"}
               alt={wallet.label}
               className="w-full h-full rounded-full object-cover bg-black"
             />
-            {/* Active pulse indicator */}
-            {wallet.active && (
-              <motion.div
-                className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: BRAND_GREEN }}
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <div className="w-2 h-2 rounded-full bg-black" />
-              </motion.div>
-            )}
           </div>
-        ) : (
-          <div
-            className="relative w-14 h-14 rounded-full flex items-center justify-center text-base font-bold bg-black border-2"
-            style={{
-              borderColor: wallet.active ? BRAND_GREEN : 'rgba(255,255,255,0.1)',
-              color: wallet.active ? BRAND_GREEN : 'rgba(255,255,255,0.5)',
-            }}
-          >
-            {displayLabel.slice(0, 2).toUpperCase()}
-            {wallet.active && (
-              <motion.div
-                className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: BRAND_GREEN }}
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <div className="w-2 h-2 rounded-full bg-black" />
-              </motion.div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Name and Twitter Handle */}
-      <div className="relative z-10 flex flex-col gap-0.5 flex-1 min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="font-semibold text-white text-base truncate">
-            {displayLabel}
-          </p>
-          {wallet.twitterVerified && (
-            <span style={{ color: BRAND_GREEN }} title="Verified">
-              <svg
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-4 h-4 flex-shrink-0"
-              >
-                <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .495.083.965.238 1.4-1.272.65-2.147 2.02-2.147 3.6 0 1.435.716 2.69 1.782 3.407-.123.498-.192 1.02-.192 1.553 0 2.98 2.42 5.4 5.4 5.4.61 0 1.19-.11 1.734-.312.637.586 1.48.947 2.412.947 1.836 0 3.325-1.39 3.522-3.218.42-.03.835-.115 1.235-.247 1.91.95 4.263-.44 4.263-2.583 0-.53-.07-1.05-.192-1.553 1.066-.717 1.782-1.972 1.782-3.407zM10.153 15.65c-.244.25-.64.25-.884 0l-3.004-3.04c-.243-.246-.243-.646 0-.892.244-.245.64-.245.884 0l2.56 2.592 5.37-5.434c.244-.246.64-.246.883 0 .244.246.244.646 0 .892l-5.81 5.88z" />
-              </svg>
-            </span>
+          {wallet.active && (
+            <motion.span
+              className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border border-black"
+              style={{ backgroundColor: BRAND_GREEN }}
+              animate={{ scale: [1, 1.25, 1], opacity: [0.8, 1, 0.8] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+            />
           )}
         </div>
-        {wallet.twitterUsername && (
-          <span
-            className="text-sm font-medium truncate"
-            style={{ color: `${BRAND_GREEN}99` }}
-          >
-            @{wallet.twitterUsername}
-          </span>
-        )}
-        {wallet.twitterFollowers !== undefined && wallet.twitterFollowers !== null && (
-          <span className="text-xs text-white/30">
-            {wallet.twitterFollowers.toLocaleString()} {tCommon("followers")}
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-white/15 bg-white/5 text-[11px] font-mono text-white/80 tracking-[0.25em] hover:text-white hover:border-white/40 transition-colors"
-          aria-label="Copy wallet address"
-        >
-          <span>{shortAddress}</span>
-          {copied ? (
-            <Check className="w-3.5 h-3.5 text-[#c4f70e]" />
-          ) : (
-            <Copy className="w-3.5 h-3.5" />
-          )}
-        </button>
-      </div>
 
-      {/* Arrow indicator on hover */}
-      <motion.div
-        className="relative z-10 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-        style={{ color: BRAND_GREEN }}
-      >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
-      </motion.div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-semibold text-white text-sm sm:text-base truncate">
+                  {displayLabel}
+                </p>
+                {wallet.twitterVerified && (
+                  <span style={{ color: BRAND_GREEN }} title="Verified">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="w-4 h-4 flex-shrink-0"
+                    >
+                      <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .495.083.965.238 1.4-1.272.65-2.147 2.02-2.147 3.6 0 1.435.716 2.69 1.782 3.407-.123.498-.192 1.02-.192 1.553 0 2.98 2.42 5.4 5.4 5.4.61 0 1.19-.11 1.734-.312.637.586 1.48.947 2.412.947 1.836 0 3.325-1.39 3.522-3.218.42-.03.835-.115 1.235-.247 1.91.95 4.263-.44 4.263-2.583 0-.53-.07-1.05-.192-1.553 1.066-.717 1.782-1.972 1.782-3.407zM10.153 15.65c-.244.25-.64.25-.884 0l-3.004-3.04c-.243-.246-.243-.646 0-.892.244-.245.64-.245.884 0l2.56 2.592 5.37-5.434c.244-.246.64-.246.883 0 .244.246.244.646 0 .892l-5.81 5.88z" />
+                    </svg>
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-white/55 mt-0.5">
+                {wallet.twitterUsername && (
+                  <span className="inline-flex items-center gap-1">
+                    @{wallet.twitterUsername}
+                    <a
+                      href={`https://solscan.io/account/${wallet.address}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-white/60 hover:text-white transition-colors"
+                      onClick={(event) => event.stopPropagation()}
+                      aria-label="View on Solscan"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </span>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-white/15 bg-white/5 text-[10px] uppercase tracking-[0.25em] text-white/70 hover:border-white/40 hover:text-white transition-colors"
+              aria-label="Copy wallet address"
+            >
+              <span>{shortAddress}</span>
+              {copied ? (
+                <Check className="w-3 h-3 text-[#c4f70e]" />
+              ) : (
+                <Copy className="w-3 h-3" />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -724,7 +714,7 @@ export function TrackedWalletsPanel() {
             </p>
           </div>
         </div>
-        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
           {isLoading && enrichedWallets.length === 0 ? (
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="w-5 h-5 animate-spin text-white/50" />

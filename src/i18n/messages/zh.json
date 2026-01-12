@@ -140,6 +140,8 @@
       "unknown": "未知",
       "ago": "前",
       "expires": "过期于",
+      "copyAddress": "复制合约地址",
+      "copied": "已复制！",
       "refreshData": "刷新市场数据",
       "triggerAi": "触发AI分析",
       "aiReasoning": "AI推理",

@@ -17,20 +17,17 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const handleLocaleChange = (newLocale: Locale) => {
     if (!pathname || newLocale === locale) return;
 
-    const rawSegments = pathname.replace(/^\/+/, "").split("/").filter(Boolean);
-    const hasLocale = locales.includes(rawSegments[0] as Locale);
-    const pathSegments = hasLocale ? rawSegments.slice(1) : rawSegments;
+    const segments = pathname.replace(/^\/+/, "").split("/").filter(Boolean);
+    const hasLocale = locales.includes(segments[0] as Locale);
+    const pathSegments = hasLocale ? segments.slice(1) : segments;
+    const trailingPath = pathSegments.length > 0 ? `/${pathSegments.join("/")}` : "";
 
-    let newPath = "";
-    if (newLocale !== defaultLocale) {
-      newPath = `/${newLocale}`;
-    }
-    if (pathSegments.length > 0) {
-      newPath += `/${pathSegments.join("/")}`;
-    }
-    if (newPath === "") newPath = "/";
+    const nextPath =
+      newLocale === defaultLocale
+        ? trailingPath || "/"
+        : `/${newLocale}${trailingPath}`;
 
-    router.push(newPath);
+    router.push(nextPath === "" ? "/" : nextPath);
   };
 
   return (

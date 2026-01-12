@@ -87,31 +87,71 @@ function StatusBadge({ status, t }: { status: string; t: (key: string) => string
   );
 }
 
-// Signal row component
+// Signal row component - Premium design
 function SignalRow({ signal, t }: { signal: TradingSignal; t: (key: string) => string }) {
+  const strengthColors = {
+    STRONG: "from-green-500/20 to-green-500/5 border-green-500/30",
+    WEAK: "from-yellow-500/20 to-yellow-500/5 border-yellow-500/30",
+    PENDING: "from-blue-500/20 to-blue-500/5 border-blue-500/30",
+    REJECTED: "from-red-500/20 to-red-500/5 border-red-500/30",
+  };
+
+  const strengthIcons = {
+    STRONG: "🚀",
+    WEAK: "⚡",
+    PENDING: "⏳",
+    REJECTED: "❌",
+  };
+
+  const sentiment = signal.sentimentScore != null ? (signal.sentimentScore * 100).toFixed(0) : null;
+
   return (
-    <div className="flex items-center justify-between p-3 rounded bg-white/5 border border-white/10">
-      <div className="flex items-center gap-3">
-        <SignalBadge strength={signal.signalStrength} t={t} />
-        <div>
-          <p className="font-medium text-white font-mono">
-            {signal.tokenSymbol || shortenAddress(signal.tokenMint)}
-          </p>
-          <p className="text-xs text-white/50">
-            {t("from")} {signal.wallet?.label || t("unknown")} · {formatSol(signal.buyAmountSol)}
-          </p>
+    <div className={`relative p-4 rounded-xl bg-gradient-to-br ${strengthColors[signal.signalStrength] || strengthColors.PENDING} border backdrop-blur-sm hover:scale-[1.02] transition-all duration-200`}>
+      {/* Top row: Icon + Token + Strength */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">{strengthIcons[signal.signalStrength] || "📊"}</span>
+          <div>
+            <p className="font-bold text-white font-mono text-lg">
+              {signal.tokenSymbol || shortenAddress(signal.tokenMint)}
+            </p>
+            <p className="text-xs text-white/60 flex items-center gap-1.5 mt-0.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-white/40"></span>
+              {signal.wallet?.label || t("unknown")}
+            </p>
+          </div>
         </div>
+        <SignalBadge strength={signal.signalStrength} t={t} />
       </div>
-      <div className="text-right">
-        <p className="text-xs text-white/50">
-          {signal.sentimentScore != null
-            ? `${t("sentiment")}: ${(signal.sentimentScore * 100).toFixed(0)}%`
-            : t("analyzing")}
-        </p>
-        <p className="text-xs text-white/40">
-          {new Date(signal.createdAt).toLocaleTimeString()}
-        </p>
+
+      {/* Bottom row: Stats */}
+      <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center gap-4">
+          {/* SOL Amount */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-white/40">💰</span>
+            <span className="font-mono font-semibold text-white/90">{formatSol(signal.buyAmountSol)}</span>
+          </div>
+
+          {/* Sentiment */}
+          {sentiment && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-white/40">🎯</span>
+              <span className="font-mono font-semibold text-white/90">{sentiment}%</span>
+            </div>
+          )}
+        </div>
+
+        {/* Time */}
+        <span className="text-white/40 font-mono">
+          {new Date(signal.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </span>
       </div>
+
+      {/* Pulse effect for STRONG signals */}
+      {signal.signalStrength === "STRONG" && (
+        <div className="absolute inset-0 rounded-xl bg-green-500/10 animate-pulse pointer-events-none"></div>
+      )}
     </div>
   );
 }
@@ -291,16 +331,23 @@ export function SmartTradingSection() {
           <TrackedWalletsPanel />
 
           {/* Recent Signals */}
-          <Panel>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide flex items-center gap-2">
-                <Zap className="w-4 h-4" />
-                {t("recentSignals")} ({signals.length})
+          <Panel className="bg-gradient-to-br from-white/5 to-white/[0.02]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2">
+                <Zap className="w-4 h-4 text-yellow-400" />
+                {t("recentSignals")}
+                <span className="ml-1 px-2 py-0.5 text-xs font-mono bg-white/10 rounded-full">
+                  {signals.length}
+                </span>
               </h3>
             </div>
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
               {signals.length === 0 ? (
-                <p className="text-sm text-white/50 text-center py-4">{t("noRecentSignals")}</p>
+                <div className="text-center py-12">
+                  <Zap className="w-12 h-12 mx-auto mb-3 text-white/20" />
+                  <p className="text-sm text-white/40">{t("noRecentSignals")}</p>
+                  <p className="text-xs text-white/30 mt-1">Signals will appear when wallets make trades</p>
+                </div>
               ) : (
                 signals.map((signal) => <SignalRow key={signal.id} signal={signal} t={tSignals} />)
               )}

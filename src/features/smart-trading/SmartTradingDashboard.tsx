@@ -514,46 +514,37 @@ export function SmartTradingDashboard() {
   const t = useTranslations("activity");
   const tMigration = useTranslations("migration");
 
-  // Accordion state - on mobile, only one panel can be expanded at a time
+  // Accordion state - only one panel can be expanded at a time
   // Default to migration feed being active
   const [activePanel, setActivePanel] = useState<string>("migration");
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Detect mobile on mount and resize
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
   return (
     <div className="space-y-4">
       {/* Header with connection status and controls */}
       <ConnectionHeader />
 
-      {/* Main content grid - stack on mobile */}
-      <div className="flex flex-col lg:flex-row gap-4">
+      {/* Main content grid - panels side by side */}
+      <div className="flex flex-row gap-4 overflow-x-auto">
         {/* Left: Collapsible Live Activity Feed */}
-        <div className="h-[300px] lg:h-[500px] flex-shrink-0">
+        <div className="h-[500px] flex-shrink-0">
           <CollapsibleSidePanel
             icon={<Activity className="w-5 h-5" />}
             title={t("liveActivity")}
             direction="left"
-            defaultCollapsed={!isMobile || activePanel !== "activity"}
+            defaultCollapsed={true}
             collapsedWidth={48}
             expandedWidth="280px"
             className="h-full"
             id="activity"
-            activeId={isMobile ? activePanel : undefined}
-            onActivate={isMobile ? setActivePanel : undefined}
+            activeId={activePanel}
+            onActivate={setActivePanel}
           >
             <LiveActivityFeed maxItems={30} />
           </CollapsibleSidePanel>
         </div>
 
         {/* Center: Migration Feed (grows to fill space) */}
-        <div className="flex-1 min-w-0 h-[400px] lg:h-[500px]">
+        <div className="flex-1 min-w-0 h-[500px]">
           <CollapsibleSidePanel
             icon={<Activity className="w-5 h-5" />}
             title={tMigration("title")}
@@ -563,15 +554,15 @@ export function SmartTradingDashboard() {
             className="h-full"
             contentClassName="h-full"
             id="migration"
-            activeId={isMobile ? activePanel : undefined}
-            onActivate={isMobile ? setActivePanel : undefined}
+            activeId={activePanel}
+            onActivate={setActivePanel}
           >
             <RealTimeMigrationPanel />
           </CollapsibleSidePanel>
         </div>
 
         {/* Right: Positions + Signals */}
-        <div className="w-full lg:w-[300px] flex-shrink-0 h-[350px] lg:h-[500px]">
+        <div className="w-[300px] flex-shrink-0 h-[500px]">
           <CollapsibleSidePanel
             icon={<Wallet className="w-5 h-5" />}
             title="Positions & Signals"
@@ -581,8 +572,8 @@ export function SmartTradingDashboard() {
             className="h-full"
             contentClassName="h-full flex flex-col gap-4"
             id="positions"
-            activeId={isMobile ? activePanel : undefined}
-            onActivate={isMobile ? setActivePanel : undefined}
+            activeId={activePanel}
+            onActivate={setActivePanel}
           >
             <div className="h-[230px]">
               <PositionsPanel />

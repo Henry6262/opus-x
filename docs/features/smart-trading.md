@@ -17,6 +17,15 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - Trading config summary (targets, stop loss, slippage, limits)
 
 ## Changelog
+- 2026-01-12: Migration cards replaced the token name row with a minimalist inline stat strip (MCap · Liq · Score) separated by subtle dividers directly beneath the ticker.
+- 2026-01-12: Tracked wallet presets now include Orange, Dior, Jack Duval, and POW Twitter handles, falling back to the SuperRouter avatar whenever a profile image is missing.
+- 2026-01-12: Tracked wallet cards now render in a responsive two-column grid with compact gradient tiles so the list shows twice as many wallets without scrolling.
+- 2026-01-12: Language switcher now rewrites paths for the selected locale so hopping between English and 中文 always updates the dashboard.
+- 2026-01-12: The top-left wallet pill stays fixed to the viewport, keeping live balance context visible while scrolling the cockpit.
+- 2026-01-12: Migration cards trimmed further—controls removed, copy action sits beside the ticker, and the detection timestamp lives in the top-right for a true single-row glance.
+- 2026-01-12: The hero terminal toggle no longer hovers over the video; the pill only appears when the terminal is collapsed, keeping the hero unobstructed while still making the reopen action obvious.
+- 2026-01-12: Shared button component now enforces a pointer cursor (and disabled cursor states) for consistent affordance cues.
+- 2026-01-12: Removed the floating “Super Router” tag from the trader card and increased spacing below the hero section so the dashboard content breathes more on all breakpoints.
 - 2026-01-12: Trader profile metrics now stay readable on mobile with streak/trade/best stats moving below the hero pill while desktop keeps the inline layout.
 - 2026-01-12: Tracked wallet rows now show a single inline pill next to each name with the first four address characters and a copy action.
 - 2026-01-12: Seeded the Orange focus tracked wallets client-side, defaulting unnamed wallets to “Rando Router” so operators can fill in handles later.

@@ -274,13 +274,13 @@ export function Terminal() {
 
   return (
     <div className={`terminal-drawer ${isCollapsed ? 'collapsed' : ''}`}>
-<button
-        className={`terminal-collapse-btn ${isCollapsed ? 'terminal-collapse-btn--epic' : ''}`}
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        aria-label={isCollapsed ? 'Open AI Terminal' : 'Collapse terminal'}
-        type="button"
-      >
-        {isCollapsed && (
+      {isCollapsed && (
+        <button
+          className={`terminal-collapse-btn ${isCollapsed ? 'terminal-collapse-btn--epic' : ''}`}
+          onClick={() => setIsCollapsed(false)}
+          aria-label="Open AI Terminal"
+          type="button"
+        >
           <>
             {/* Animated gradient background */}
             <span className="terminal-open-btn__gradient" />
@@ -295,38 +295,30 @@ export function Terminal() {
               ))}
             </span>
           </>
-        )}
 
-        {/* Icon container with glass effect when collapsed */}
-        <span className={`terminal-collapse-btn__icon-wrap ${isCollapsed ? 'terminal-collapse-btn__icon-wrap--glass' : ''}`}>
-          <svg
-            className="terminal-collapse-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            {isCollapsed ? (
-              <>
-                <polyline points="4 17 10 11 4 5" />
-                <line x1="12" y1="19" x2="20" y2="19" />
-              </>
-            ) : (
-              <polyline points="9 18 15 12 9 6" />
-            )}
-          </svg>
-        </span>
+          {/* Icon container with glass effect when collapsed */}
+          <span className={`terminal-collapse-btn__icon-wrap ${isCollapsed ? 'terminal-collapse-btn__icon-wrap--glass' : ''}`}>
+            <svg
+              className="terminal-collapse-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="4 17 10 11 4 5" />
+              <line x1="12" y1="19" x2="20" y2="19" />
+            </svg>
+          </span>
 
-        {/* Two-line label - only when collapsed */}
-        {isCollapsed && (
+          {/* Two-line label */}
           <span className="terminal-open-btn__label">
             <span className="terminal-open-btn__label-text">OPEN</span>
             <span className="terminal-open-btn__label-text terminal-open-btn__label-text--sub">AI TERMINAL</span>
           </span>
-        )}
-      </button>
+        </button>
+      )}
 
       <aside
         ref={terminalRef}
@@ -345,6 +337,8 @@ export function Terminal() {
             onClick={() => setIsCollapsed(true)}
             role="button"
             tabIndex={0}
+            aria-label="Collapse terminal"
+            title="Collapse terminal"
             onKeyDown={(e) => e.key === 'Enter' && setIsCollapsed(true)}
           >
             <div className="terminal-dot active" />
