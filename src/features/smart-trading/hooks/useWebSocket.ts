@@ -63,8 +63,8 @@ function getWebSocketUrl(httpUrl: string, path: string): string {
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const {
     url = process.env.NEXT_PUBLIC_DEVPRNT_WS_URL ||
-      process.env.NEXT_PUBLIC_DEVPRNT_CORE_URL ||
-      "http://localhost:3001",
+    process.env.NEXT_PUBLIC_DEVPRNT_CORE_URL ||
+    "http://localhost:3001",
     path = "/ws",
     autoConnect = true,
     reconnectionAttempts = 5,
@@ -139,11 +139,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
           // Notify specific handlers
           const handlers = handlersRef.current.get(event.type);
           if (handlers) {
-            handlers.forEach((handler) => handler(event.data, event));
+            // Pass the entire event object as data (backend sends flat events)
+            handlers.forEach((handler) => handler(event, event));
           }
 
           // Notify 'any' handlers
-          anyHandlersRef.current.forEach((handler) => handler(event.data, event));
+          anyHandlersRef.current.forEach((handler) => handler(event, event));
         } catch (err) {
           console.warn("[WebSocket] Failed to parse message:", messageEvent.data);
         }
@@ -258,8 +259,8 @@ const statusListeners = new Set<(status: ConnectionStatus) => void>();
 export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const {
     url = process.env.NEXT_PUBLIC_DEVPRNT_WS_URL ||
-      process.env.NEXT_PUBLIC_DEVPRNT_CORE_URL ||
-      "http://localhost:3001",
+    process.env.NEXT_PUBLIC_DEVPRNT_CORE_URL ||
+    "http://localhost:3001",
     path = "/ws",
     autoConnect = true,
     reconnectionAttempts = 5,
