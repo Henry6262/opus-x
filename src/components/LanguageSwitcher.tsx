@@ -16,6 +16,7 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
 
   const handleLocaleChange = (newLocale: Locale) => {
     // Remove the current locale prefix from the pathname
+    if (!pathname) return;
     const segments = pathname.split("/");
     const currentLocaleIndex = locales.includes(segments[1] as Locale) ? 1 : -1;
 
