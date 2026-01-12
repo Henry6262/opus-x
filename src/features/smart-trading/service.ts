@@ -90,22 +90,47 @@ interface DevprintTradingConfig {
   auto_buy: boolean;
 }
 
-/** Devprint position from /api/trading/positions */
+/** Devprint position from /api/trading/positions - matches backend Position struct */
 interface DevprintPosition {
   id: string;
-  token_mint: string;
-  token_symbol: string | null;
-  token_name: string | null;
-  entry_price_usd: number;
-  entry_amount_sol: number;
-  entry_tokens: number;
-  current_price_usd: number | null;
+  mint: string;
+  token_name: string;
+  ticker: string;
+
+  // Entry details
+  entry_price: number;
+  entry_time: string;
+  initial_quantity: number;
+  entry_sol_value: number;
+
+  // Current state
+  current_quantity: number;
+  current_price: number;
+  current_value_sol: number;
+  unrealized_pnl_sol: number;
+  unrealized_pnl_pct: number;
+  peak_price: number;
+  peak_pnl_pct: number;
+
+  // Take profit
+  targets_hit: Array<{
+    target_multiplier: number;
+    sold_quantity: number;
+    sold_price: number;
+    sold_time: string;
+    realized_sol: number;
+  }>;
+  realized_pnl_sol: number;
+
+  // Status
   status: string;
-  unrealized_pnl: number;
-  realized_pnl: number;
+  closed_at: string | null;
+  close_reason: string | null;
+
+  // Metadata
+  buy_criteria?: unknown;
   created_at: string;
   updated_at: string;
-  closed_at: string | null;
 }
 
 /** Devprint trading stats from /api/trading/stats */
@@ -261,35 +286,39 @@ function mapDevprintConfig(config: DevprintTradingConfig): TradingConfig {
 
 /** Map devprint position to Position */
 function mapDevprintPosition(pos: DevprintPosition): Position {
+  // Check if any targets have been hit
+  const target1Hit = pos.targets_hit?.some(t => t.target_multiplier >= 2.0) ?? false;
+  const target2Hit = pos.targets_hit?.some(t => t.target_multiplier >= 3.0) ?? false;
+
   return {
     id: pos.id,
     signalId: pos.id,
-    tokenMint: pos.token_mint,
-    tokenSymbol: pos.token_symbol,
+    tokenMint: pos.mint,
+    tokenSymbol: pos.ticker,
     status: pos.status === "open" ? "OPEN" : pos.status === "closed" ? "CLOSED" : "PENDING",
 
-    entryPriceSol: pos.entry_price_usd, // Note: devprint uses USD
-    entryAmountSol: pos.entry_amount_sol,
-    entryTokens: pos.entry_tokens,
+    entryPriceSol: pos.entry_price,
+    entryAmountSol: pos.entry_sol_value,
+    entryTokens: pos.initial_quantity,
     entryTxSig: null,
 
-    target1Price: pos.entry_price_usd * 2,
+    target1Price: pos.entry_price * 2,
     target1Percent: 100,
-    target1Hit: false,
+    target1Hit,
     target1TxSig: null,
 
-    target2Price: pos.entry_price_usd * 3,
-    target2Hit: false,
+    target2Price: pos.entry_price * 3,
+    target2Hit,
     target2TxSig: null,
 
-    stopLossPrice: pos.entry_price_usd * 0.5,
+    stopLossPrice: pos.entry_price * 0.5,
     stoppedOut: false,
     stopLossTxSig: null,
 
-    currentPrice: pos.current_price_usd,
-    remainingTokens: pos.entry_tokens,
-    realizedPnlSol: pos.realized_pnl,
-    unrealizedPnl: pos.unrealized_pnl,
+    currentPrice: pos.current_price,
+    remainingTokens: pos.current_quantity,
+    realizedPnlSol: pos.realized_pnl_sol,
+    unrealizedPnl: pos.unrealized_pnl_sol,
 
     createdAt: pos.created_at,
     updatedAt: pos.updated_at,
