@@ -165,6 +165,38 @@ function generateActivityMessage(event: MigrationFeedEvent): { message: string; 
       };
     }
 
+    case "price_update": {
+      const ticker = data?.ticker || "Position";
+      const multiplier = data?.multiplier as number | undefined;
+      const pnlPct = data?.pnl_pct as number | undefined;
+      const pnlStr = pnlPct !== undefined ? `${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(1)}%` : "";
+      return {
+        message: `${ticker}: ${multiplier?.toFixed(2)}x ${pnlStr}`,
+        color: pnlPct !== undefined && pnlPct >= 0 ? "green" : "red",
+      };
+    }
+
+    case "take_profit_triggered": {
+      const ticker = data?.ticker || "Position";
+      const target = data?.target_multiplier as number | undefined;
+      const realized = data?.realized as number | undefined;
+      return {
+        message: `🎯 ${target}x TP: ${ticker} +${realized?.toFixed(4) || "?"} SOL`,
+        color: "green",
+      };
+    }
+
+    case "position_closed": {
+      const ticker = data?.ticker || "Position";
+      const reason = data?.reason || "closed";
+      const totalPnl = data?.total_pnl_sol as number | undefined;
+      const pnlStr = totalPnl !== undefined ? `${totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(4)} SOL` : "";
+      return {
+        message: `Closed: ${ticker} (${reason}) ${pnlStr}`,
+        color: totalPnl !== undefined && totalPnl >= 0 ? "green" : "red",
+      };
+    }
+
     case "migration_expired": {
       const symbol = data?.tokenSymbol || "Token";
       return { message: `Expired: ${symbol}`, color: "red" };
@@ -480,6 +512,108 @@ export function SmartTradingProvider({
         addActivity(event);
         // Definitely refetch to show new position
         console.log("[SmartTrading] Position opened:", data);
+        fetchDashboard();
+      })
+    );
+
+    // NEW: Price Update - Surgical position update (high frequency, don't refetch)
+    unsubscribes.push(
+      on<{
+        mint: string;
+        ticker: string;
+        price: number;
+        entry_price: number;
+        multiplier: number;
+        pnl_pct: number;
+        pnl_sol: number;
+        peak_pnl_pct: number;
+        next_target: number | null;
+        target_progress: number | null;
+        timestamp: number;
+      }>("price_update", (data) => {
+        // Don't add to activity feed - too noisy
+        // Surgical update to positions
+        setState((prev) => ({
+          ...prev,
+          positions: prev.positions.map((pos) => {
+            if (pos.tokenMint === data.mint) {
+              return {
+                ...pos,
+                currentPrice: data.price,
+                unrealizedPnl: data.pnl_sol,
+                updatedAt: new Date().toISOString(),
+              };
+            }
+            return pos;
+          }),
+        }));
+      })
+    );
+
+    // NEW: Take Profit Triggered
+    unsubscribes.push(
+      on<{
+        mint: string;
+        ticker: string;
+        target_multiplier: number;
+        sell_quantity: number;
+        sell_price: number;
+        realized: number;
+        remaining: number;
+        is_final: boolean;
+      }>("take_profit_triggered", (data, event) => {
+        addActivity({
+          ...event,
+          type: "take_profit_triggered",
+          data: {
+            ...data,
+            message: `🎯 ${data.target_multiplier}x TP hit on ${data.ticker}! +${data.realized.toFixed(4)} SOL`,
+          },
+        });
+
+        // Surgical update or refetch
+        if (data.is_final) {
+          // Full exit - refetch to move to history
+          fetchDashboard();
+        } else {
+          // Partial exit - update position in place
+          setState((prev) => ({
+            ...prev,
+            positions: prev.positions.map((pos) => {
+              if (pos.tokenMint === data.mint) {
+                return {
+                  ...pos,
+                  remainingTokens: data.remaining,
+                  realizedPnlSol: pos.realizedPnlSol + data.realized,
+                  target1Hit: data.target_multiplier === 2 ? true : pos.target1Hit,
+                  target2Hit: data.target_multiplier === 3 ? true : pos.target2Hit,
+                };
+              }
+              return pos;
+            }),
+          }));
+        }
+      })
+    );
+
+    // NEW: Position Closed
+    unsubscribes.push(
+      on<{
+        mint: string;
+        ticker: string;
+        reason: string;
+        total_pnl_sol: number;
+      }>("position_closed", (data, event) => {
+        addActivity({
+          ...event,
+          type: "position_closed",
+          data: {
+            ...data,
+            message: `Position closed: ${data.ticker} (${data.reason}) - ${data.total_pnl_sol >= 0 ? "+" : ""}${data.total_pnl_sol.toFixed(4)} SOL`,
+          },
+        });
+
+        // Refetch to update positions and history
         fetchDashboard();
       })
     );

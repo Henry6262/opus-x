@@ -45,7 +45,8 @@ function formatPercent(value: number | undefined | null): string {
   return `${sign}${value.toFixed(2)}%`;
 }
 
-function shortenAddress(address: string): string {
+function shortenAddress(address?: string | null): string {
+  if (!address) return "----";
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }
 
@@ -112,10 +113,17 @@ interface PositionCardProps {
 }
 
 function PositionCard({ position, onClose, t }: PositionCardProps) {
-  const pnlPercent = position.entryPriceSol
-    ? ((position.currentPrice || position.entryPriceSol) / position.entryPriceSol - 1) * 100
-    : 0;
+  const entryPrice = position.entryPriceSol || 0;
+  const currentPrice = position.currentPrice || entryPrice;
+  const multiplier = entryPrice > 0 ? currentPrice / entryPrice : 1;
+  const pnlPercent = (multiplier - 1) * 100;
   const isProfit = pnlPercent >= 0;
+
+  // Target progress (towards 2x then 3x)
+  const nextTarget = !position.target1Hit ? 2.0 : !position.target2Hit ? 3.0 : null;
+  const targetProgress = nextTarget
+    ? Math.min(100, ((multiplier - 1) / (nextTarget - 1)) * 100)
+    : 100;
 
   return (
     <motion.div
@@ -125,30 +133,59 @@ function PositionCard({ position, onClose, t }: PositionCardProps) {
       exit={{ opacity: 0, scale: 0.95 }}
       className="p-3 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
     >
+      {/* Header: Symbol + Multiplier */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span
-            className={`w-2 h-2 rounded-full ${
-              position.status === "OPEN"
-                ? "bg-green-400"
-                : position.status === "STOPPED_OUT"
-                  ? "bg-red-400"
-                  : "bg-gray-400"
-            }`}
+            className={`w-2 h-2 rounded-full ${position.status === "OPEN"
+              ? "bg-green-400 animate-pulse"
+              : position.status === "STOPPED_OUT"
+                ? "bg-red-400"
+                : "bg-gray-400"
+              }`}
           />
           <span className="font-mono font-medium text-white text-sm">
             {position.tokenSymbol || shortenAddress(position.tokenMint)}
           </span>
         </div>
-        <span
-          className={`font-mono font-bold text-sm ${
-            isProfit ? "text-green-400" : "text-red-400"
-          }`}
-        >
-          {formatPercent(pnlPercent)}
-        </span>
+        <div className="flex items-center gap-2">
+          {/* Multiplier badge */}
+          <span
+            className={`font-mono font-bold text-xs px-1.5 py-0.5 rounded ${multiplier >= 2 ? "bg-green-500/20 text-green-400" :
+              multiplier >= 1.5 ? "bg-cyan-500/20 text-cyan-400" :
+                multiplier >= 1 ? "bg-white/10 text-white/60" : "bg-red-500/20 text-red-400"
+              }`}
+          >
+            {multiplier.toFixed(2)}x
+          </span>
+          <span
+            className={`font-mono font-bold text-sm ${isProfit ? "text-green-400" : "text-red-400"
+              }`}
+          >
+            {formatPercent(pnlPercent)}
+          </span>
+        </div>
       </div>
 
+      {/* Target Progress Bar */}
+      {nextTarget && position.status === "OPEN" && (
+        <div className="mb-2">
+          <div className="flex items-center justify-between text-xs text-white/40 mb-1">
+            <span>Target: {nextTarget}x</span>
+            <span>{Math.round(targetProgress)}%</span>
+          </div>
+          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <motion.div
+              className={`h-full ${targetProgress >= 100 ? "bg-green-400" : "bg-cyan-400"}`}
+              initial={{ width: 0 }}
+              animate={{ width: `${targetProgress}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Footer: Entry + Actions */}
       <div className="flex items-center justify-between text-xs text-white/50">
         <span>{t("entry")}: {formatSol(position.entryAmountSol)}</span>
         <div className="flex items-center gap-1">
@@ -304,13 +341,12 @@ function SignalCard({ signal, tSignals, tDashboard }: SignalCardProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span
-            className={`px-1.5 py-0.5 text-[10px] font-semibold rounded ${
-              signal.signalStrength === "STRONG"
-                ? "bg-green-500/20 text-green-400"
-                : signal.signalStrength === "WEAK"
-                  ? "bg-yellow-500/20 text-yellow-400"
-                  : "bg-blue-500/20 text-blue-400"
-            }`}
+            className={`px-1.5 py-0.5 text-[10px] font-semibold rounded ${signal.signalStrength === "STRONG"
+              ? "bg-green-500/20 text-green-400"
+              : signal.signalStrength === "WEAK"
+                ? "bg-yellow-500/20 text-yellow-400"
+                : "bg-blue-500/20 text-blue-400"
+              }`}
           >
             {getStrengthLabel(signal.signalStrength)}
           </span>
@@ -363,7 +399,6 @@ function RealTimeMigrationPanel() {
         </button>
       </div>
 
-      {/* Stats bar */}
       {stats && (
         <div className="flex items-center gap-4 px-4 py-2 text-xs border-b border-white/5 bg-black/20">
           <span className="text-green-400">
@@ -382,7 +417,6 @@ function RealTimeMigrationPanel() {
       )}
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        {/* Ready to trade */}
         {readyToTrade.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -404,7 +438,6 @@ function RealTimeMigrationPanel() {
           </div>
         )}
 
-        {/* Monitoring */}
         {monitoring.length > 0 && (
           <div>
             {readyToTrade.length > 0 && (
@@ -428,7 +461,6 @@ function RealTimeMigrationPanel() {
           </div>
         )}
 
-        {/* Empty state */}
         {rankedMigrations.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center py-8 text-white/40">
             <Activity className="w-8 h-8 mb-2 opacity-50" />
@@ -518,6 +550,7 @@ function ConfigSummary() {
 
 export function SmartTradingDashboard() {
   const t = useTranslations("activity");
+  const tMigration = useTranslations("migration");
 
   return (
     <div className="space-y-4">
@@ -543,17 +576,37 @@ export function SmartTradingDashboard() {
 
         {/* Center: Migration Feed (grows to fill space) */}
         <div className="flex-1 min-w-0 h-[500px]">
-          <RealTimeMigrationPanel />
+          <CollapsibleSidePanel
+            icon={<Activity className="w-5 h-5" />}
+            title={tMigration("title")}
+            direction="left"
+            collapsedWidth={48}
+            expandedWidth="100%"
+            className="h-full"
+            contentClassName="h-full"
+          >
+            <RealTimeMigrationPanel />
+          </CollapsibleSidePanel>
         </div>
 
         {/* Right: Positions + Signals */}
-        <div className="w-[300px] flex-shrink-0 space-y-4">
-          <div className="h-[240px]">
-            <PositionsPanel />
-          </div>
-          <div className="h-[240px]">
-            <SignalsPanel />
-          </div>
+        <div className="w-[300px] flex-shrink-0 h-[500px]">
+          <CollapsibleSidePanel
+            icon={<Wallet className="w-5 h-5" />}
+            title="Positions & Signals"
+            direction="left"
+            collapsedWidth={48}
+            expandedWidth="300px"
+            className="h-full"
+            contentClassName="h-full flex flex-col gap-4"
+          >
+            <div className="h-[230px]">
+              <PositionsPanel />
+            </div>
+            <div className="h-[230px]">
+              <SignalsPanel />
+            </div>
+          </CollapsibleSidePanel>
         </div>
       </div>
 

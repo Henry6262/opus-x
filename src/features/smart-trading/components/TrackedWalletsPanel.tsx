@@ -385,7 +385,7 @@ function WalletModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 sm:px-6 sm:py-8 bg-black/90 backdrop-blur-md"
       onClick={onClose}
     >
       <motion.div
@@ -393,7 +393,7 @@ function WalletModal({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         transition={{ type: "spring", stiffness: 300, damping: 25 }}
-        className="w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl bg-black border shadow-2xl"
+        className="w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col rounded-2xl bg-black border shadow-2xl"
         style={{
           borderColor: `${BRAND_GREEN}20`,
           boxShadow: `0 0 60px ${BRAND_GREEN}10`,

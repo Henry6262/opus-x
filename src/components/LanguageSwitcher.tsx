@@ -2,7 +2,7 @@
 
 import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
-import { locales, localeNames, type Locale } from "@/i18n/config";
+import { locales, localeNames, defaultLocale, type Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
 
 interface LanguageSwitcherProps {
@@ -15,25 +15,20 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const pathname = usePathname();
 
   const handleLocaleChange = (newLocale: Locale) => {
-    // Remove the current locale prefix from the pathname
-    if (!pathname) return;
-    const segments = pathname.split("/");
-    const currentLocaleIndex = locales.includes(segments[1] as Locale) ? 1 : -1;
+    if (!pathname || newLocale === locale) return;
 
-    let newPath: string;
-    if (currentLocaleIndex === 1) {
-      // Replace existing locale
-      segments[1] = newLocale;
-      newPath = segments.join("/");
-    } else {
-      // Add locale prefix
-      newPath = `/${newLocale}${pathname}`;
-    }
+    const rawSegments = pathname.replace(/^\/+/, "").split("/").filter(Boolean);
+    const hasLocale = locales.includes(rawSegments[0] as Locale);
+    const pathSegments = hasLocale ? rawSegments.slice(1) : rawSegments;
 
-    // For default locale (en), we can omit the prefix
-    if (newLocale === "en") {
-      newPath = newPath.replace(/^\/en/, "") || "/";
+    let newPath = "";
+    if (newLocale !== defaultLocale) {
+      newPath = `/${newLocale}`;
     }
+    if (pathSegments.length > 0) {
+      newPath += `/${pathSegments.join("/")}`;
+    }
+    if (newPath === "") newPath = "/";
 
     router.push(newPath);
   };

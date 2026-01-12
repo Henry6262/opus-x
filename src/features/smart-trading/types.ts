@@ -315,7 +315,10 @@ export interface MigrationFeedEvent {
   | "stats_update"
   | "signal_detected"
   | "wallet_buy_detected"
-  | "position_opened";
+  | "position_opened"
+  | "price_update"
+  | "take_profit_triggered"
+  | "position_closed";
   data?: unknown;
   timestamp: number;
   clientId?: string;
