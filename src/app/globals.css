@@ -183,19 +183,6 @@ main {
   z-index: 5;
 }
 
-.vibr-coder-overlay {
-  position: absolute;
-  top: var(--space-4);
-  left: var(--space-4);
-  z-index: 10;
-  text-align: center;
-  font-family: var(--font-mono);
-  padding: var(--space-4);
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: var(--radius-lg);
-  backdrop-filter: blur(4px);
-}
-
 /* Gradient fade overlays for smooth video transitions */
 .vibr-coder-fade {
   position: absolute;

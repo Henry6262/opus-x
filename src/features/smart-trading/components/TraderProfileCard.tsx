@@ -97,6 +97,38 @@ export function TraderProfileCard({
     { id: "simulation-twitter" as const, label: tNav("twitter"), iconType: "twitter" as const },
   ];
 
+  const StatsItems = () => (
+    <>
+      <div className="flex flex-col gap-1 text-center md:text-left">
+        <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("streak")}</div>
+        <div className="flex items-baseline gap-0.5 justify-center md:justify-start">
+          <span className={`text-lg font-bold font-mono ${isOnStreak ? "text-orange-400" : "text-white"}`}>
+            {streak.current}
+          </span>
+          <span className="text-xs text-white/30">/{streak.best}</span>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1 text-center md:text-left">
+        <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("trades")}</div>
+        <div className="flex items-baseline gap-1 justify-center md:justify-start">
+          <span className="text-lg font-bold font-mono text-white">{totalTrades}</span>
+          <span className="text-xs text-green-400/70">({winningTrades}W)</span>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1 text-center md:text-left">
+        <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("bestTrade")}</div>
+        <div className="flex items-center gap-1 justify-center md:justify-start">
+          <span className="text-lg font-bold font-mono text-green-400">
+            +<CountUp to={largestWin} duration={0.8} decimals={2} />
+          </span>
+          <Image src="/logos/solana.png" alt="SOL" width={14} height={14} className="opacity-60" />
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className="relative pt-4 pb-16">
       {/* SUPER ROUTER floating title - above avatar */}
@@ -193,38 +225,16 @@ export function TraderProfileCard({
           </div>
 
           {/* ZONE 3: Secondary stats - Clean labels and values */}
-          <div className="flex items-center gap-6 pl-6">
-            {/* Streak */}
-            <div>
-              <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("streak")}</div>
-              <div className="flex items-baseline gap-0.5">
-                <span className={`text-lg font-bold font-mono ${isOnStreak ? "text-orange-400" : "text-white"}`}>
-                  {streak.current}
-                </span>
-                <span className="text-xs text-white/30">/{streak.best}</span>
-              </div>
-            </div>
-
-            {/* Trades */}
-            <div>
-              <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("trades")}</div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg font-bold font-mono text-white">{totalTrades}</span>
-                <span className="text-xs text-green-400/70">({winningTrades}W)</span>
-              </div>
-            </div>
-
-            {/* Best Trade */}
-            <div>
-              <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("bestTrade")}</div>
-              <div className="flex items-center gap-1">
-                <span className="text-lg font-bold font-mono text-green-400">
-                  +<CountUp to={largestWin} duration={0.8} decimals={2} />
-                </span>
-                <Image src="/logos/solana.png" alt="SOL" width={14} height={14} className="opacity-60" />
-              </div>
-            </div>
+          <div className="hidden md:flex items-center gap-6 pl-6">
+            <StatsItems />
           </div>
+        </div>
+      </div>
+
+      {/* Mobile stats below pill */}
+      <div className="md:hidden mt-4 px-6">
+        <div className="grid grid-cols-3 gap-4">
+          <StatsItems />
         </div>
       </div>
 

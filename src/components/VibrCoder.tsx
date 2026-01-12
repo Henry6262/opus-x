@@ -42,10 +42,6 @@ export function VibrCoder({ state, className = '', statusText, reason, pnl, heig
 
       {/* Portfolio Wallet Widget - Top Left */}
       {showWallet && <PortfolioWallet />}
-
-      <div className="vibr-coder-overlay">
-        <div className="gradient-text font-bold text-2xl">VIBR CODER</div>
-      </div>
     </div>
   );
 }
