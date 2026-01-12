@@ -23,7 +23,7 @@ import type { ActivityItem } from "../context";
 // Helper: Time ago format
 // ============================================
 
-type TimeTranslator = (key: string, params?: Record<string, unknown>) => string;
+type TimeTranslator = (key: string, params?: Record<string, string | number | Date>) => string;
 
 function timeAgo(date: Date, t: TimeTranslator): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
