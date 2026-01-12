@@ -3528,7 +3528,7 @@ button:focus-visible {
   box-shadow: 0 0 4px rgba(0, 255, 65, 0.3);
 }
 
-/* Expanded State - Full Panel */
+/* Expanded State - Full Panel with smooth height transition */
 .portfolio-wallet.expanded {
   background: linear-gradient(
     135deg,
@@ -3536,7 +3536,7 @@ button:focus-visible {
     rgba(0, 10, 5, 0.99) 100%
   );
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
+  border-radius: 24px;
   backdrop-filter: blur(24px);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.6),
@@ -3544,15 +3544,23 @@ button:focus-visible {
     0 48px 120px rgba(0, 0, 0, 0.7),
     0 80px 180px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  width: 320px;
+  width: 340px;
+  height: calc(100vh - 120px);
+  max-height: calc(100vh - 120px);
   padding: var(--space-4);
-  animation: wallet-expand 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: wallet-expand 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .portfolio-wallet-expanded {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Staggered content animation */
@@ -3791,13 +3799,17 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .portfolio-wallet-positions-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-height: 280px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-right: var(--space-1);
 }
@@ -3897,13 +3909,17 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .portfolio-wallet-history-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-height: 280px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-right: var(--space-1);
 }

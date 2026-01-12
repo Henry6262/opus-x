@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { io, Socket } from "socket.io-client";
 import type { MigrationFeedEvent } from "../types";
 
 // ============================================
@@ -13,8 +12,10 @@ export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "er
 export type EventHandler<T = unknown> = (data: T, event: MigrationFeedEvent) => void;
 
 interface UseWebSocketOptions {
-  /** WebSocket server URL (defaults to ponzinomics-api) */
+  /** WebSocket server URL (defaults to devprint) */
   url?: string;
+  /** WebSocket path (defaults to /ws) */
+  path?: string;
   /** Auto-connect on mount (default: true) */
   autoConnect?: boolean;
   /** Reconnection attempts (default: 5) */
@@ -43,12 +44,28 @@ interface UseWebSocketReturn {
 }
 
 // ============================================
+// HELPER: Get WebSocket URL from HTTP URL
+// ============================================
+
+function getWebSocketUrl(httpUrl: string, path: string): string {
+  // Convert http(s) to ws(s)
+  let wsUrl = httpUrl.replace(/^http/, "ws");
+  // Remove trailing slash
+  wsUrl = wsUrl.replace(/\/$/, "");
+  // Add path
+  return `${wsUrl}${path}`;
+}
+
+// ============================================
 // HOOK
 // ============================================
 
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const {
-    url = process.env.NEXT_PUBLIC_PONZINOMICS_WS_URL || "http://localhost:4001",
+    url = process.env.NEXT_PUBLIC_DEVPRNT_WS_URL ||
+      process.env.NEXT_PUBLIC_DEVPRNT_CORE_URL ||
+      "http://localhost:3001",
+    path = "/ws",
     autoConnect = true,
     reconnectionAttempts = 5,
     reconnectionDelay = 1000,
@@ -60,80 +77,98 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const [lastEvent, setLastEvent] = useState<MigrationFeedEvent | null>(null);
 
   // Refs for socket and handlers
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
   const handlersRef = useRef<Map<string, Set<EventHandler>>>(new Map());
   const anyHandlersRef = useRef<Set<EventHandler>>(new Set());
+  const reconnectAttemptRef = useRef(0);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Connect to WebSocket
   const connect = useCallback(() => {
-    if (socketRef.current?.connected) return;
+    if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
     setStatus("connecting");
+    reconnectAttemptRef.current = 0;
 
-    const socket = io(url, {
-      path: "/ws/migration-feed",
-      transports: ["websocket", "polling"],
-      reconnectionAttempts,
-      reconnectionDelay,
-      autoConnect: true,
-    });
+    const wsUrl = getWebSocketUrl(url, path);
+    console.log("[WebSocket] Connecting to:", wsUrl);
 
-    socketRef.current = socket;
+    try {
+      const socket = new WebSocket(wsUrl);
+      socketRef.current = socket;
 
-    // Connection events
-    socket.on("connect", () => {
-      console.log("[WebSocket] Connected");
-      setStatus("connected");
-    });
+      socket.onopen = () => {
+        console.log("[WebSocket] Connected to devprint");
+        setStatus("connected");
+        reconnectAttemptRef.current = 0;
+      };
 
-    socket.on("disconnect", (reason) => {
-      console.log("[WebSocket] Disconnected:", reason);
-      setStatus("disconnected");
-      setClientId(null);
-    });
+      socket.onclose = (event) => {
+        console.log("[WebSocket] Disconnected:", event.code, event.reason);
+        setStatus("disconnected");
+        setClientId(null);
 
-    socket.on("connect_error", (error) => {
-      console.error("[WebSocket] Connection error:", error.message);
+        // Auto-reconnect logic
+        if (reconnectAttemptRef.current < reconnectionAttempts) {
+          reconnectAttemptRef.current++;
+          const delay = reconnectionDelay * Math.pow(2, reconnectAttemptRef.current - 1);
+          console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${reconnectAttemptRef.current}/${reconnectionAttempts})`);
+
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connect();
+          }, delay);
+        }
+      };
+
+      socket.onerror = (error) => {
+        console.error("[WebSocket] Connection error:", error);
+        setStatus("error");
+      };
+
+      socket.onmessage = (messageEvent) => {
+        try {
+          const event: MigrationFeedEvent = JSON.parse(messageEvent.data);
+          setLastEvent(event);
+
+          // Handle 'connected' event to get client ID
+          if (event.type === "connected" && event.clientId) {
+            setClientId(event.clientId);
+            console.log("[WebSocket] Client ID:", event.clientId);
+          }
+
+          // Notify specific handlers
+          const handlers = handlersRef.current.get(event.type);
+          if (handlers) {
+            handlers.forEach((handler) => handler(event.data, event));
+          }
+
+          // Notify 'any' handlers
+          anyHandlersRef.current.forEach((handler) => handler(event.data, event));
+        } catch (err) {
+          console.warn("[WebSocket] Failed to parse message:", messageEvent.data);
+        }
+      };
+    } catch (err) {
+      console.error("[WebSocket] Failed to create connection:", err);
       setStatus("error");
-    });
-
-    // Pong response
-    socket.on("pong", (data: { timestamp: number }) => {
-      console.log("[WebSocket] Pong received, latency:", Date.now() - data.timestamp, "ms");
-    });
-
-    // Main message handler - all events come through 'message'
-    socket.on("message", (event: MigrationFeedEvent) => {
-      setLastEvent(event);
-
-      // Handle 'connected' event to get client ID
-      if (event.type === "connected" && event.clientId) {
-        setClientId(event.clientId);
-        console.log("[WebSocket] Client ID:", event.clientId);
-      }
-
-      // Notify specific handlers
-      const handlers = handlersRef.current.get(event.type);
-      if (handlers) {
-        handlers.forEach((handler) => handler(event.data, event));
-      }
-
-      // Notify 'any' handlers
-      anyHandlersRef.current.forEach((handler) => handler(event.data, event));
-    });
-
-    return socket;
-  }, [url, reconnectionAttempts, reconnectionDelay]);
+    }
+  }, [url, path, reconnectionAttempts, reconnectionDelay]);
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    reconnectAttemptRef.current = reconnectionAttempts; // Prevent auto-reconnect
+
     if (socketRef.current) {
-      socketRef.current.disconnect();
+      socketRef.current.close();
       socketRef.current = null;
       setStatus("disconnected");
       setClientId(null);
     }
-  }, []);
+  }, [reconnectionAttempts]);
 
   // Subscribe to specific event type
   const on = useCallback(<T = unknown>(
@@ -159,10 +194,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     };
   }, []);
 
-  // Emit event to server
+  // Emit event to server (send JSON message)
   const emit = useCallback((event: string, data?: unknown) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit(event, data);
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      const message = JSON.stringify({ type: event, data, timestamp: Date.now() });
+      socketRef.current.send(message);
     } else {
       console.warn("[WebSocket] Cannot emit - not connected");
     }
@@ -184,11 +220,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     if (status !== "connected") return;
 
     const interval = setInterval(() => {
-      socketRef.current?.emit("ping");
+      emit("ping", { timestamp: Date.now() });
     }, 30000); // Every 30 seconds
 
     return () => clearInterval(interval);
-  }, [status]);
+  }, [status, emit]);
 
   return {
     status,
@@ -206,9 +242,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 // SINGLETON HOOK (Shared across components)
 // ============================================
 
-let sharedSocket: Socket | null = null;
+let sharedSocket: WebSocket | null = null;
 let sharedStatus: ConnectionStatus = "disconnected";
 let sharedClientId: string | null = null;
+let sharedReconnectAttempt = 0;
+let sharedReconnectTimeout: NodeJS.Timeout | null = null;
 const sharedHandlers = new Map<string, Set<EventHandler>>();
 const sharedAnyHandlers = new Set<EventHandler>();
 const statusListeners = new Set<(status: ConnectionStatus) => void>();
@@ -219,7 +257,10 @@ const statusListeners = new Set<(status: ConnectionStatus) => void>();
  */
 export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const {
-    url = process.env.NEXT_PUBLIC_PONZINOMICS_WS_URL || "http://localhost:4001",
+    url = process.env.NEXT_PUBLIC_DEVPRNT_WS_URL ||
+      process.env.NEXT_PUBLIC_DEVPRNT_CORE_URL ||
+      "http://localhost:3001",
+    path = "/ws",
     autoConnect = true,
     reconnectionAttempts = 5,
     reconnectionDelay = 1000,
@@ -239,61 +280,86 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
   }, []);
 
   const connect = useCallback(() => {
-    if (sharedSocket?.connected) return;
+    if (sharedSocket?.readyState === WebSocket.OPEN) return;
 
     sharedStatus = "connecting";
+    sharedReconnectAttempt = 0;
     statusListeners.forEach((l) => l("connecting"));
 
-    const socket = io(url, {
-      path: "/ws/migration-feed",
-      transports: ["websocket", "polling"],
-      reconnectionAttempts,
-      reconnectionDelay,
-      autoConnect: true,
-    });
+    const wsUrl = getWebSocketUrl(url, path);
+    console.log("[SharedWebSocket] Connecting to:", wsUrl);
 
-    sharedSocket = socket;
+    try {
+      const socket = new WebSocket(wsUrl);
+      sharedSocket = socket;
 
-    socket.on("connect", () => {
-      console.log("[SharedWebSocket] Connected");
-      sharedStatus = "connected";
-      statusListeners.forEach((l) => l("connected"));
-    });
+      socket.onopen = () => {
+        console.log("[SharedWebSocket] Connected to devprint");
+        sharedStatus = "connected";
+        sharedReconnectAttempt = 0;
+        statusListeners.forEach((l) => l("connected"));
+      };
 
-    socket.on("disconnect", () => {
-      console.log("[SharedWebSocket] Disconnected");
+      socket.onclose = (event) => {
+        console.log("[SharedWebSocket] Disconnected:", event.code, event.reason);
+        sharedStatus = "disconnected";
+        sharedClientId = null;
+        statusListeners.forEach((l) => l("disconnected"));
+
+        // Auto-reconnect logic
+        if (sharedReconnectAttempt < reconnectionAttempts) {
+          sharedReconnectAttempt++;
+          const delay = reconnectionDelay * Math.pow(2, sharedReconnectAttempt - 1);
+          console.log(`[SharedWebSocket] Reconnecting in ${delay}ms (attempt ${sharedReconnectAttempt}/${reconnectionAttempts})`);
+
+          sharedReconnectTimeout = setTimeout(() => {
+            connect();
+          }, delay);
+        }
+      };
+
+      socket.onerror = () => {
+        sharedStatus = "error";
+        statusListeners.forEach((l) => l("error"));
+      };
+
+      socket.onmessage = (messageEvent) => {
+        try {
+          const event: MigrationFeedEvent = JSON.parse(messageEvent.data);
+
+          if (event.type === "connected" && event.clientId) {
+            sharedClientId = event.clientId;
+          }
+
+          // Notify handlers
+          sharedHandlers.get(event.type)?.forEach((h) => h(event.data, event));
+          sharedAnyHandlers.forEach((h) => h(event.data, event));
+        } catch (err) {
+          console.warn("[SharedWebSocket] Failed to parse message:", messageEvent.data);
+        }
+      };
+    } catch (err) {
+      console.error("[SharedWebSocket] Failed to create connection:", err);
+      sharedStatus = "error";
+      statusListeners.forEach((l) => l("error"));
+    }
+  }, [url, path, reconnectionAttempts, reconnectionDelay]);
+
+  const disconnect = useCallback(() => {
+    if (sharedReconnectTimeout) {
+      clearTimeout(sharedReconnectTimeout);
+      sharedReconnectTimeout = null;
+    }
+    sharedReconnectAttempt = reconnectionAttempts; // Prevent auto-reconnect
+
+    if (sharedSocket) {
+      sharedSocket.close();
+      sharedSocket = null;
       sharedStatus = "disconnected";
       sharedClientId = null;
       statusListeners.forEach((l) => l("disconnected"));
-    });
-
-    socket.on("connect_error", () => {
-      sharedStatus = "error";
-      statusListeners.forEach((l) => l("error"));
-    });
-
-    socket.on("pong", (data: { timestamp: number }) => {
-      console.log("[SharedWebSocket] Latency:", Date.now() - data.timestamp, "ms");
-    });
-
-    socket.on("message", (event: MigrationFeedEvent) => {
-      if (event.type === "connected" && event.clientId) {
-        sharedClientId = event.clientId;
-      }
-
-      // Notify handlers
-      sharedHandlers.get(event.type)?.forEach((h) => h(event.data, event));
-      sharedAnyHandlers.forEach((h) => h(event.data, event));
-    });
-  }, [url, reconnectionAttempts, reconnectionDelay]);
-
-  const disconnect = useCallback(() => {
-    sharedSocket?.disconnect();
-    sharedSocket = null;
-    sharedStatus = "disconnected";
-    sharedClientId = null;
-    statusListeners.forEach((l) => l("disconnected"));
-  }, []);
+    }
+  }, [reconnectionAttempts]);
 
   const on = useCallback(<T = unknown>(
     eventType: MigrationFeedEvent["type"],
@@ -327,8 +393,11 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
   }, []);
 
   const emit = useCallback((event: string, data?: unknown) => {
-    if (sharedSocket?.connected) {
-      sharedSocket.emit(event, data);
+    if (sharedSocket?.readyState === WebSocket.OPEN) {
+      const message = JSON.stringify({ type: event, data, timestamp: Date.now() });
+      sharedSocket.send(message);
+    } else {
+      console.warn("[SharedWebSocket] Cannot emit - not connected");
     }
   }, []);
 

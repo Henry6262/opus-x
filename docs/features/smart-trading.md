@@ -17,5 +17,7 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - Trading config summary (targets, stop loss, slippage, limits)
 
 ## Changelog
+- 2026-01-12: Tracked wallet rows now show a single inline pill next to each name with the first four address characters and a copy action.
+- 2026-01-12: Seeded the Orange focus tracked wallets client-side, defaulting unnamed wallets to “Rando Router” so operators can fill in handles later.
 - 2026-01-10: Added trader profile card with character art and compact metrics layout.
 - 2026-01-10: Refined trader card UI to stack metrics without individual containers and highlight the character card visually.

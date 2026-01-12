@@ -1,2 +1,1 @@
-export { useSmartTrading } from "./useSmartTrading";
-export { useMigrationFeed } from "./useMigrationFeed";
+export { useWebSocket, useSharedWebSocket } from "./useWebSocket";

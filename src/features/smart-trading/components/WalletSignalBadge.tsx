@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { motion } from "motion/react";
 import { Wallet, TrendingUp, TrendingDown } from "lucide-react";
 import type { WalletSignal } from "../types";
@@ -70,6 +71,7 @@ interface WalletSignalBadgeProps {
 }
 
 export function WalletSignalBadge({ signal, compact = false }: WalletSignalBadgeProps) {
+  const t = useTranslations("wallets");
   const isBuy = signal.action === "BUY";
   const displayName = signal.twitterUsername
     ? `@${signal.twitterUsername}`
@@ -108,7 +110,7 @@ export function WalletSignalBadge({ signal, compact = false }: WalletSignalBadge
       <div className="flex flex-col">
         <span className="text-xs font-medium">{displayName}</span>
         <span className="text-[10px] opacity-70">
-          {isBuy ? "Bought" : "Sold"}
+          {isBuy ? t("bought") : t("sold")}
           {signal.amountSol && ` ${signal.amountSol.toFixed(2)} SOL`}
         </span>
       </div>
@@ -129,6 +131,7 @@ interface WalletSignalStackProps {
 }
 
 export function WalletSignalStack({ signals, maxDisplay = 3 }: WalletSignalStackProps) {
+  const t = useTranslations("wallets");
   const buySignals = signals.filter((s) => s.action === "BUY");
   const displaySignals = signals.slice(0, maxDisplay);
   const remaining = signals.length - maxDisplay;
@@ -138,7 +141,9 @@ export function WalletSignalStack({ signals, maxDisplay = 3 }: WalletSignalStack
       <div className="flex items-center gap-1.5">
         <Wallet className="w-4 h-4 text-[#c4f70e]" />
         <span className="text-xs text-white/60">
-          {buySignals.length} wallet{buySignals.length !== 1 ? "s" : ""} bought
+          {buySignals.length === 1
+            ? t("walletBought", { count: buySignals.length })
+            : t("walletsBought", { count: buySignals.length })}
         </span>
       </div>
       <div className="flex flex-wrap gap-1">
@@ -147,7 +152,7 @@ export function WalletSignalStack({ signals, maxDisplay = 3 }: WalletSignalStack
         ))}
         {remaining > 0 && (
           <span className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] text-white/50">
-            +{remaining} more
+            {t("moreWallets", { count: remaining })}
           </span>
         )}
       </div>

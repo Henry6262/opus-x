@@ -47,6 +47,9 @@ export function CountUp({
 
   const isInView = useInView(ref, { once: true, margin: "0px" });
 
+  // Track if initial animation has been triggered
+  const hasAnimatedRef = useRef(false);
+
   const getDecimalPlaces = (num: number): number => {
     const str = num.toString();
     if (str.includes(".")) {
@@ -76,17 +79,20 @@ export function CountUp({
     [maxDecimals, separator]
   );
 
+  // Set initial text content
   useEffect(() => {
     if (ref.current) {
       ref.current.textContent = `${prefix}${formatValue(direction === "down" ? to : from)}${suffix}`;
     }
   }, [from, to, direction, formatValue, prefix, suffix]);
 
+  // Handle initial animation when in view
   useEffect(() => {
     if (isInView && startWhen) {
-      if (typeof onStart === "function") {
+      if (!hasAnimatedRef.current && typeof onStart === "function") {
         onStart();
       }
+      hasAnimatedRef.current = true;
 
       const timeoutId = setTimeout(() => {
         motionValue.set(direction === "down" ? from : to);
@@ -107,6 +113,19 @@ export function CountUp({
       };
     }
   }, [isInView, startWhen, motionValue, direction, from, to, delay, onStart, onEnd, duration]);
+
+  // Track previous value to detect real changes
+  const prevToRef = useRef(to);
+
+  // Update target when `to` value changes (for live data updates)
+  // Only run after initial animation and when value actually changes
+  useEffect(() => {
+    if (hasAnimatedRef.current && prevToRef.current !== to) {
+      const targetValue = direction === "down" ? from : to;
+      motionValue.set(targetValue);
+    }
+    prevToRef.current = to;
+  }, [to, from, direction, motionValue]);
 
   useEffect(() => {
     const unsubscribe = springValue.on("change", (latest: number) => {

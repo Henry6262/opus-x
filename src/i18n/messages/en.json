@@ -1,0 +1,248 @@
+{
+  "metadata": {
+    "title": "SuperRouter | AI Trading Intelligence",
+    "titleTemplate": "{title} | SuperRouter",
+    "description": "Real-time AI trading intelligence for Solana tokens. Track pump.fun migrations, Twitter sentiment, and market signals. Watch the Vibr Coder work.",
+    "keywords": "Solana, trading, AI, pump.fun, tokens, crypto, DeFi, migration, Twitter, sentiment"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Try again",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "search": "Search",
+    "noData": "No data available",
+    "viewAll": "View All",
+    "showMore": "Show More",
+    "showLess": "Show Less",
+    "followers": "followers",
+    "verified": "Verified",
+    "sol": "SOL",
+    "token": "Token",
+    "amount": "Amount",
+    "time": "Time",
+    "status": "Status"
+  },
+  "nav": {
+    "smartMoney": "SMART MONEY",
+    "twitter": "TWITTER"
+  },
+  "profile": {
+    "superRouter": "SUPER ROUTER",
+    "allTimePnl": "All-Time P&L",
+    "winRate": "Win",
+    "streak": "Streak",
+    "trades": "Trades",
+    "bestTrade": "Best"
+  },
+  "smartTrading": {
+    "title": "Smart Money Copy Trading",
+    "loadingData": "Loading smart trading data...",
+    "tradingLive": "Trading is LIVE",
+    "tradingPaused": "Trading is PAUSED",
+    "updated": "Updated {time}",
+    "startTrading": "Start Trading",
+    "stopTrading": "Stop Trading",
+    "recentSignals": "Recent Signals",
+    "noRecentSignals": "No recent signals",
+    "openPositions": "Open Positions",
+    "noOpenPositions": "No open positions",
+    "positionsWillAppear": "Positions will appear here when signals are executed",
+    "positionHistory": "Position History",
+    "noPositionHistory": "No position history",
+    "config": {
+      "title": "Trading Configuration",
+      "maxPositionSize": "Max Position Size",
+      "target1": "Target 1",
+      "target2": "Target 2",
+      "stopLoss": "Stop Loss",
+      "trailingStop": "Trailing Stop",
+      "minConfidence": "Min Confidence",
+      "autoTrade": "Auto Trade",
+      "maxSlippage": "Max Slippage",
+      "minTweets": "Min Tweets",
+      "sell": "sell {percent}%",
+      "sellRemaining": "sell remaining"
+    },
+    "position": {
+      "entry": "Entry",
+      "tokens": "Tokens",
+      "targetSl": "Target/SL",
+      "pnl": "P&L",
+      "unrealizedPnl": "Unrealized P&L",
+      "realizedPnl": "Realized P&L"
+    }
+  },
+  "signals": {
+    "strength": {
+      "strong": "STRONG",
+      "weak": "WEAK"
+    },
+    "status": {
+      "pending": "PENDING",
+      "rejected": "REJECTED",
+      "open": "OPEN",
+      "closed": "CLOSED",
+      "stoppedOut": "STOPPED OUT",
+      "partiallyClosed": "PARTIALLY CLOSED"
+    },
+    "from": "from",
+    "unknown": "Unknown",
+    "sentiment": "Sentiment",
+    "analyzing": "Analyzing...",
+    "notes": "Notes"
+  },
+  "wallets": {
+    "title": "Smart Money",
+    "trackedWallet": "tracked wallet",
+    "trackedWallets": "tracked wallets",
+    "noWallets": "No wallets tracked",
+    "noTwitterLinked": "No Twitter linked",
+    "tradingSignals": "Trading Signals",
+    "positionsTaken": "Positions Taken",
+    "addWallet": "Add Wallet",
+    "removeWallet": "Remove Wallet",
+    "noSignalsFound": "No recent signals found for this wallet",
+    "noPositionsFound": "No recent positions found for this wallet",
+    "strength": "Strength",
+    "bought": "Bought",
+    "sold": "Sold",
+    "walletBought": "{count} wallet bought",
+    "walletsBought": "{count} wallets bought",
+    "moreWallets": "+{count} more"
+  },
+  "migration": {
+    "title": "Migration Feed",
+    "tracker": "Migration Tracker",
+    "realtimePumpFun": "Real-time pump.fun → Raydium migrations",
+    "subtitle": "Real-time token migration tracking",
+    "loading": "Loading migration feed...",
+    "noMigrations": "No migrations being tracked",
+    "addTokenHint": "Add a token address above or wait for migrations to be detected",
+    "readyToTrade": "Ready to Trade",
+    "monitoring": "Monitoring",
+    "track": "Track",
+    "tracking": "Tracking...",
+    "enterMint": "Enter token mint address...",
+    "stats": {
+      "active": "Active",
+      "pendingAi": "Pending AI",
+      "ready": "Ready",
+      "withSignals": "With Signals",
+      "expired": "Expired"
+    },
+    "updated": "Updated {time}",
+    "card": {
+      "ready": "READY",
+      "unknown": "Unknown",
+      "ago": "ago",
+      "expires": "Expires",
+      "refreshData": "Refresh market data",
+      "triggerAi": "Trigger AI analysis",
+      "aiReasoning": "AI Reasoning",
+      "signalBreakdown": "Signal Breakdown",
+      "tokenMint": "Token Mint",
+      "metrics": {
+        "priceChange1h": "1h",
+        "mcap": "MCap",
+        "liquidity": "Liq",
+        "score": "Score"
+      },
+      "breakdown": {
+        "age": "Age",
+        "wallets": "Wallets",
+        "ai": "AI",
+        "momentum": "Momentum",
+        "multiWallet": "Multi-Wallet"
+      }
+    }
+  },
+  "ai": {
+    "title": "AI Analysis",
+    "loading": "Loading AI analysis...",
+    "noAnalysis": "No AI analysis available yet",
+    "analysisWillAppear": "Analysis will appear after market data is collected",
+    "history": "AI Analysis History",
+    "current": "Current: {decision}",
+    "reasoning": "Reasoning",
+    "marketSnapshot": "Market Snapshot",
+    "riskFactors": "Risk Factors",
+    "confidence": "Confidence",
+    "triggers": {
+      "scheduled": "Scheduled Check",
+      "walletSignal": "Wallet Signal",
+      "migration": "Migration Detected",
+      "priceSpike": "Price Movement"
+    },
+    "metrics": {
+      "price": "Price",
+      "mcap": "MCap",
+      "liquidity": "Liquidity",
+      "volume24h": "24h Vol"
+    }
+  },
+  "filters": {
+    "searchPlaceholder": "Search mint, symbol, or name",
+    "linkType": {
+      "all": "All Types",
+      "tweet": "Tweet",
+      "profile": "Profile",
+      "retweet": "Retweet",
+      "reply": "Reply",
+      "quote": "Quote"
+    },
+    "labelStatus": {
+      "all": "All Labels",
+      "labeled": "Labeled",
+      "unlabeled": "Unlabeled",
+      "scam": "Scam",
+      "legit": "Legit",
+      "uncertain": "Uncertain"
+    }
+  },
+  "terminal": {
+    "title": "Terminal",
+    "connected": "Connected",
+    "disconnected": "Disconnected"
+  },
+  "activity": {
+    "live": "LIVE",
+    "connecting": "CONNECTING",
+    "offline": "OFFLINE",
+    "liveActivity": "Live Activity",
+    "recentActivity": "Recent Activity",
+    "waitingForActivity": "Waiting for activity...",
+    "connectingToFeed": "Connecting to live feed...",
+    "noRecentActivity": "No recent activity",
+    "showingEvents": "Showing {shown} of {total} events"
+  },
+  "dashboard": {
+    "activePositions": "Active Positions",
+    "noOpenPositions": "No open positions",
+    "positionsAppear": "Positions appear when signals execute",
+    "recentSignals": "Recent Signals",
+    "noRecentSignals": "No recent signals",
+    "signalsAppear": "Signals appear when wallets trade",
+    "migrationFeed": "Migration Feed",
+    "tradingConfig": "Trading Configuration",
+    "start": "Start",
+    "stop": "Stop",
+    "entry": "Entry",
+    "close": "Close",
+    "from": "from",
+    "unknown": "Unknown"
+  },
+  "time": {
+    "justNow": "just now",
+    "secondsAgo": "{count}s ago",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "daysAgo": "{count}d ago",
+    "expired": "expired",
+    "inMinutes": "in {count}m",
+    "inHours": "in {count}h"
+  }
+}

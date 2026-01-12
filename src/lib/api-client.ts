@@ -3,7 +3,7 @@
  * Connects SuperRouter to the backend services
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_PONZINOMICS_API_URL || 'https://ponzinomics-production.up.railway.app';
 const PROJECT_ID = process.env.PONZINOMICS_PROJECT_ID || '';
 const API_KEY = process.env.PONZINOMICS_API_KEY || '';
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Brain,
@@ -14,6 +15,8 @@ import {
   Activity,
 } from "lucide-react";
 import type { MigrationAnalysis, AiDecision } from "../types";
+
+type TimeTranslator = (key: string, params?: Record<string, unknown>) => string;
 
 interface AiReasoningPanelProps {
   analyses: MigrationAnalysis[];
@@ -39,11 +42,11 @@ const DECISION_STYLES: Record<AiDecision, { color: string; bg: string; border: s
   },
 };
 
-const TRIGGER_LABELS: Record<string, string> = {
-  SCHEDULED: "Scheduled Check",
-  WALLET_SIGNAL: "Wallet Signal",
-  MIGRATION: "Migration Detected",
-  PRICE_SPIKE: "Price Movement",
+const TRIGGER_KEYS: Record<string, string> = {
+  SCHEDULED: "scheduled",
+  WALLET_SIGNAL: "walletSignal",
+  MIGRATION: "migration",
+  PRICE_SPIKE: "priceSpike",
 };
 
 export function AiReasoningPanel({
@@ -51,6 +54,8 @@ export function AiReasoningPanel({
   currentDecision,
   isLoading = false,
 }: AiReasoningPanelProps) {
+  const t = useTranslations("ai");
+  const tTime = useTranslations("time");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (isLoading) {
@@ -58,7 +63,7 @@ export function AiReasoningPanel({
       <div className="p-4 rounded-xl bg-black/40 backdrop-blur-xl border border-white/10">
         <div className="flex items-center gap-2 mb-4">
           <Brain className="w-5 h-5 text-[#c4f70e] animate-pulse" />
-          <span className="text-sm text-white/60">Loading AI analysis...</span>
+          <span className="text-sm text-white/60">{t("loading")}</span>
         </div>
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -77,14 +82,19 @@ export function AiReasoningPanel({
       <div className="p-4 rounded-xl bg-black/40 backdrop-blur-xl border border-white/10">
         <div className="flex flex-col items-center justify-center py-6 text-center">
           <Brain className="w-8 h-8 text-white/20 mb-2" />
-          <p className="text-sm text-white/40">No AI analysis available yet</p>
+          <p className="text-sm text-white/40">{t("noAnalysis")}</p>
           <p className="text-xs text-white/30 mt-1">
-            Analysis will appear after market data is collected
+            {t("analysisWillAppear")}
           </p>
         </div>
       </div>
     );
   }
+
+  const getTriggerLabel = (triggerType: string): string => {
+    const key = TRIGGER_KEYS[triggerType];
+    return key ? t(`triggers.${key}`) : triggerType;
+  };
 
   return (
     <div className="rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden">
@@ -93,13 +103,13 @@ export function AiReasoningPanel({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Brain className="w-5 h-5 text-[#c4f70e]" />
-            <span className="font-medium text-white">AI Analysis History</span>
+            <span className="font-medium text-white">{t("history")}</span>
           </div>
           {currentDecision && (
             <div
               className={`px-2 py-1 rounded-md text-xs font-medium ${DECISION_STYLES[currentDecision].bg} ${DECISION_STYLES[currentDecision].color}`}
             >
-              Current: {currentDecision}
+              {t("current", { decision: currentDecision })}
             </div>
           )}
         </div>
@@ -140,10 +150,10 @@ export function AiReasoningPanel({
                   {/* Time and trigger */}
                   <div className="flex items-center gap-2 text-xs text-white/40">
                     <span className="px-1.5 py-0.5 rounded bg-white/5">
-                      {TRIGGER_LABELS[analysis.triggerType] || analysis.triggerType}
+                      {getTriggerLabel(analysis.triggerType)}
                     </span>
                     <Clock className="w-3.5 h-3.5" />
-                    <span>{formatTimeAgo(analysis.createdAt)}</span>
+                    <span>{formatTimeAgo(analysis.createdAt, tTime)}</span>
                     <ChevronRight
                       className={`w-4 h-4 transition-transform ${
                         isExpanded ? "rotate-90" : ""
@@ -174,7 +184,7 @@ export function AiReasoningPanel({
                       {/* Full reasoning */}
                       <div>
                         <span className="text-[10px] text-white/40 uppercase tracking-wider">
-                          Reasoning
+                          {t("reasoning")}
                         </span>
                         <p className="mt-1 text-sm text-white/70">
                           {analysis.reasoning}
@@ -184,28 +194,28 @@ export function AiReasoningPanel({
                       {/* Market snapshot */}
                       <div>
                         <span className="text-[10px] text-white/40 uppercase tracking-wider">
-                          Market Snapshot
+                          {t("marketSnapshot")}
                         </span>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
                           <MetricBox
                             icon={<Activity className="w-3.5 h-3.5" />}
-                            label="Price"
+                            label={t("metrics.price")}
                             value={`$${analysis.priceUsd.toFixed(6)}`}
                           />
                           <MetricBox
                             icon={<BarChart3 className="w-3.5 h-3.5" />}
-                            label="MCap"
+                            label={t("metrics.mcap")}
                             value={formatCompact(analysis.marketCap)}
                           />
                           <MetricBox
                             icon={<Droplets className="w-3.5 h-3.5" />}
-                            label="Liquidity"
+                            label={t("metrics.liquidity")}
                             value={formatCompact(analysis.liquidity)}
                           />
                           {analysis.volume24h !== null && (
                             <MetricBox
                               icon={<TrendingUp className="w-3.5 h-3.5" />}
-                              label="24h Vol"
+                              label={t("metrics.volume24h")}
                               value={formatCompact(analysis.volume24h)}
                             />
                           )}
@@ -216,7 +226,7 @@ export function AiReasoningPanel({
                       {analysis.risks.length > 0 && (
                         <div>
                           <span className="text-[10px] text-white/40 uppercase tracking-wider">
-                            Risk Factors
+                            {t("riskFactors")}
                           </span>
                           <div className="mt-2 space-y-1.5">
                             {analysis.risks.map((risk, riskIndex) => (
@@ -236,7 +246,7 @@ export function AiReasoningPanel({
                       <div>
                         <div className="flex justify-between text-[10px] mb-1">
                           <span className="text-white/40 uppercase tracking-wider">
-                            Confidence
+                            {t("confidence")}
                           </span>
                           <span className={style.color}>
                             {Math.round(analysis.confidence * 100)}%
@@ -289,17 +299,19 @@ function MetricBox({
   );
 }
 
-function formatTimeAgo(dateStr: string): string {
+function formatTimeAgo(dateStr: string, t: TimeTranslator): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
+  const diffSecs = Math.floor(diffMs / 1000);
 
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffSecs < 5) return t("justNow");
+  if (diffSecs < 60) return t("secondsAgo", { count: diffSecs });
+  const diffMins = Math.floor(diffSecs / 60);
+  if (diffMins < 60) return t("minutesAgo", { count: diffMins });
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${Math.floor(diffHours / 24)}d ago`;
+  if (diffHours < 24) return t("hoursAgo", { count: diffHours });
+  return t("daysAgo", { count: Math.floor(diffHours / 24) });
 }
 
 function formatCompact(num: number): string {

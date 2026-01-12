@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { MouseEvent } from "react";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Users,
@@ -12,7 +14,7 @@ import {
 } from "lucide-react";
 import { Panel } from "@/components/design-system";
 import { ShinyText } from "@/components/animations";
-import { useRealTimeWalletSignals, useRealTimePositions } from "../context/RealTimeSmartTradingContext";
+import { useWalletSignals, usePositions } from "../context";
 import type { TrackedWallet, TradingSignal, Position } from "../types";
 
 // Format SOL amount
@@ -25,11 +27,6 @@ function formatSol(amount: number | undefined | null): string {
 function formatDate(date: string): string {
   const d = new Date(date);
   return d.toLocaleTimeString() + " " + d.toLocaleDateString();
-}
-
-// Shorten address
-function shortenAddress(address: string): string {
-  return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }
 
 // Get signal strength color
@@ -62,18 +59,56 @@ function getStatusColor(status: string): string {
 
 // Brand color
 const BRAND_GREEN = "#c4f70e";
+const PRESET_TIMESTAMP = "2026-01-01T00:00:00.000Z";
+
+const TRACKED_WALLET_PRESETS: Array<{ address: string; label?: string }> = [
+  { address: "As7HjL7dzzvbRbaD3WCun47robib2kmAKRXMvjHkSMB5", label: "otta" },
+  { address: "87rRdssFiTJKY4MGARa4G5vQ31hmR7MxSmhzeaJ5AAxJ", label: "Dior" },
+  { address: "2chb7q48B8r69QsUj4sBGnumis4g2DURP7Uru9aka2My", label: "Ton" },
+  { address: "6CPRX2qdoVHXyqJ43uDuMCTHmB63ZRXUHqCpzxqUxaWs", label: "Loopier Side" },
+  { address: "76ZUBj1JLz7arTVHSRJok5oSTEqDuVBgySFMVHtzxzZc", label: "temu gake" },
+  { address: "J23qr98GjGJJqKq9CBEnyRhHbmkaVxtTJNNxKu597wsA", label: "Gr3g" },
+  { address: "J6TDXvarvpBdPXTaTU8eJbtso1PUCYKGkVtMKUUY8iEa", label: "Pain" },
+  { address: "BAr5csYtpWoNpwhUjixX7ZPHXkUciFZzjBp9uNxZXJPh", label: "Jack Duval" },
+  { address: "2X4H5Y9C4Fy6Pf3wpq8Q4gMvLcWvfrrwDv2bdR8AAwQv", label: "Orange" },
+  { address: "8YCdowALgH5b3rb87YixjCbQMKdfUHmGKvAPavFHLguH", label: "POW" },
+  { address: "5XVKfruE4Zzeoz3aqBQfFMb5aSscY5nSyc6VwtQwNiid", label: "ILY" },
+  { address: "BZmxuXQ68QeZABbDFSzveHyrXCv5EG6Ut1ATw5qZgm2Q", label: "Insider" },
+  { address: "2fg5QD1eD7rzNNCsvnhmXFm5hqNgwTTG8p7kQ6f3rx6f", label: "Cupsey" },
+];
+
+const PRESET_LABEL_BY_ADDRESS = TRACKED_WALLET_PRESETS.reduce<Record<string, string>>((acc, preset) => {
+  if (preset.label) acc[preset.address] = preset.label;
+  return acc;
+}, {});
+
+const PRESET_TRACKED_WALLETS: TrackedWallet[] = TRACKED_WALLET_PRESETS.map((preset) => ({
+  id: `preset-${preset.address}`,
+  address: preset.address,
+  label: preset.label ?? "Rando Router",
+  active: true,
+  createdAt: PRESET_TIMESTAMP,
+  updatedAt: PRESET_TIMESTAMP,
+}));
 
 // Hardcoded Twitter profile mapping for known wallets
 // Fallback data when backend doesn't return Twitter info
 const WALLET_TWITTER_MAP: Record<string, {
-  twitterUsername: string;
-  twitterName: string;
-  twitterAvatar: string;
+  twitterUsername?: string;
+  twitterName?: string;
+  twitterAvatar?: string;
   twitterFollowers?: number;
   twitterVerified?: boolean;
 }> = {
   // Cupsey - verified from TwitterAPI.io
   "6CPRX2qdoVHXyqJ43uDuMCTHmB63ZRXUHqCpzxqUxaWs": {
+    twitterUsername: "cupseyy",
+    twitterName: "Cupsey",
+    twitterAvatar: "https://pbs.twimg.com/profile_images/1878584793249583104/WMH0-IGY_400x400.jpg",
+    twitterFollowers: 183384,
+    twitterVerified: false,
+  },
+  "2fg5QD1eD7rzNNCsvnhmXFm5hqNgwTTG8p7kQ6f3rx6f": {
     twitterUsername: "cupseyy",
     twitterName: "Cupsey",
     twitterAvatar: "https://pbs.twimg.com/profile_images/1878584793249583104/WMH0-IGY_400x400.jpg",
@@ -121,7 +156,7 @@ function enrichWalletWithTwitterData(wallet: TrackedWallet): TrackedWallet {
     return {
       ...wallet,
       twitterUsername: twitterData.twitterUsername,
-      twitterName: twitterData.twitterName,
+      twitterName: twitterData.twitterName ?? wallet.label,
       twitterAvatar: twitterData.twitterAvatar,
       twitterFollowers: twitterData.twitterFollowers,
       twitterVerified: twitterData.twitterVerified,
@@ -130,14 +165,50 @@ function enrichWalletWithTwitterData(wallet: TrackedWallet): TrackedWallet {
   return wallet;
 }
 
+function normalizeWalletLabel(wallet: TrackedWallet): TrackedWallet {
+  const trimmed = wallet.label?.trim();
+  const fallback = PRESET_LABEL_BY_ADDRESS[wallet.address];
+  const label =
+    trimmed && trimmed.length > 0 && trimmed !== wallet.address
+      ? trimmed
+      : fallback || "Rando Router";
+
+  return {
+    ...wallet,
+    label,
+  };
+}
+
+function getWalletDisplayLabel(wallet: TrackedWallet) {
+  return wallet.twitterName || wallet.label || PRESET_LABEL_BY_ADDRESS[wallet.address] || "Rando Router";
+}
+
 // Wallet Row Component - Polished branded design
 function WalletRow({
   wallet,
   onClick,
+  tCommon,
 }: {
   wallet: TrackedWallet;
   onClick: () => void;
+  tCommon: (key: string) => string;
 }) {
+  const [copied, setCopied] = useState(false);
+  const shortAddress = useMemo(() => wallet.address.slice(0, 4).toUpperCase(), [wallet.address]);
+  const displayLabel = getWalletDisplayLabel(wallet);
+
+  const handleCopy = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    event.preventDefault();
+    try {
+      await navigator.clipboard.writeText(wallet.address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch (err) {
+      console.error("Failed to copy wallet address", err);
+    }
+  };
+
   return (
     <motion.div
       onClick={onClick}
@@ -198,7 +269,7 @@ function WalletRow({
               color: wallet.active ? BRAND_GREEN : 'rgba(255,255,255,0.5)',
             }}
           >
-            {wallet.label.slice(0, 2).toUpperCase()}
+            {displayLabel.slice(0, 2).toUpperCase()}
             {wallet.active && (
               <motion.div
                 className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
@@ -215,9 +286,9 @@ function WalletRow({
 
       {/* Name and Twitter Handle */}
       <div className="relative z-10 flex flex-col gap-0.5 flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <p className="font-semibold text-white text-base truncate">
-            {wallet.twitterName || wallet.label}
+            {displayLabel}
           </p>
           {wallet.twitterVerified && (
             <span style={{ color: BRAND_GREEN }} title="Verified">
@@ -241,9 +312,22 @@ function WalletRow({
         )}
         {wallet.twitterFollowers !== undefined && wallet.twitterFollowers !== null && (
           <span className="text-xs text-white/30">
-            {wallet.twitterFollowers.toLocaleString()} followers
+            {wallet.twitterFollowers.toLocaleString()} {tCommon("followers")}
           </span>
         )}
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-white/15 bg-white/5 text-[11px] font-mono text-white/80 tracking-[0.25em] hover:text-white hover:border-white/40 transition-colors"
+          aria-label="Copy wallet address"
+        >
+          <span>{shortAddress}</span>
+          {copied ? (
+            <Check className="w-3.5 h-3.5 text-[#c4f70e]" />
+          ) : (
+            <Copy className="w-3.5 h-3.5" />
+          )}
+        </button>
       </div>
 
       {/* Arrow indicator on hover */}
@@ -265,13 +349,22 @@ function WalletModal({
   signals,
   positions,
   onClose,
+  tWallets,
+  tCommon,
+  tSmartTrading,
+  tSignals,
 }: {
   wallet: TrackedWallet;
   signals: TradingSignal[];
   positions: Position[];
   onClose: () => void;
+  tWallets: (key: string) => string;
+  tCommon: (key: string) => string;
+  tSmartTrading: (key: string) => string;
+  tSignals: (key: string) => string;
 }) {
   const [copied, setCopied] = useState(false);
+  const displayLabel = getWalletDisplayLabel(wallet);
 
   // Filter signals for this wallet
   const walletSignals = signals.filter((s) => s.walletId === wallet.id);
@@ -322,12 +415,12 @@ function WalletModal({
               {wallet.twitterAvatar ? (
                 <img
                   src={wallet.twitterAvatar}
-                  alt={wallet.label}
+                  alt={displayLabel}
                   className="w-full h-full rounded-full object-cover bg-black"
                 />
               ) : (
                 <div className="w-full h-full rounded-full bg-black flex items-center justify-center text-3xl font-bold" style={{ color: BRAND_GREEN }}>
-                  {wallet.label.slice(0, 2).toUpperCase()}
+                  {displayLabel.slice(0, 2).toUpperCase()}
                 </div>
               )}
             </div>
@@ -335,7 +428,7 @@ function WalletModal({
             {/* Profile Info */}
             <div>
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                {wallet.twitterName || wallet.label}
+                {displayLabel}
                 {wallet.twitterVerified && (
                   <span style={{ color: BRAND_GREEN }} title="Verified">
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -358,13 +451,13 @@ function WalletModal({
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 ) : (
-                  <span className="text-gray-500">No Twitter linked</span>
+                  <span className="text-gray-500">{tWallets("noTwitterLinked")}</span>
                 )}
 
                 {wallet.twitterFollowers !== undefined &&
                   wallet.twitterFollowers !== null && (
                     <span className="text-gray-400 text-sm">
-                      • {wallet.twitterFollowers.toLocaleString()} followers
+                      • {wallet.twitterFollowers.toLocaleString()} {tCommon("followers")}
                     </span>
                   )}
               </div>
@@ -418,17 +511,17 @@ function WalletModal({
           {/* Signals Table */}
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">
-              Trading Signals ({walletSignals.length})
+              {tWallets("tradingSignals")} ({walletSignals.length})
             </h3>
             <div className="overflow-x-auto rounded-lg border border-white/10">
               <table className="w-full">
                 <thead className="bg-white/5">
                   <tr className="text-left text-gray-400 text-xs">
-                    <th className="p-3">Token</th>
-                    <th className="p-3">Amount</th>
-                    <th className="p-3">Strength</th>
-                    <th className="p-3">Notes</th>
-                    <th className="p-3">Time</th>
+                    <th className="p-3">{tCommon("token")}</th>
+                    <th className="p-3">{tCommon("amount")}</th>
+                    <th className="p-3">{tWallets("strength")}</th>
+                    <th className="p-3">{tSignals("notes")}</th>
+                    <th className="p-3">{tCommon("time")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -438,7 +531,7 @@ function WalletModal({
                         colSpan={5}
                         className="p-8 text-center text-gray-500"
                       >
-                        No recent signals found for this wallet
+                        {tWallets("noSignalsFound")}
                       </td>
                     </tr>
                   ) : (
@@ -474,18 +567,18 @@ function WalletModal({
           {/* Positions Table */}
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">
-              Positions Taken ({walletPositions.length})
+              {tWallets("positionsTaken")} ({walletPositions.length})
             </h3>
             <div className="overflow-x-auto rounded-lg border border-white/10">
               <table className="w-full">
                 <thead className="bg-white/5">
                   <tr className="text-left text-gray-400 text-xs">
-                    <th className="p-3">Token</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3">Entry</th>
-                    <th className="p-3">Target/SL</th>
-                    <th className="p-3">P&L</th>
-                    <th className="p-3">Time</th>
+                    <th className="p-3">{tCommon("token")}</th>
+                    <th className="p-3">{tCommon("status")}</th>
+                    <th className="p-3">{tSmartTrading("position.entry")}</th>
+                    <th className="p-3">{tSmartTrading("position.targetSl")}</th>
+                    <th className="p-3">{tSmartTrading("position.pnl")}</th>
+                    <th className="p-3">{tCommon("time")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -495,7 +588,7 @@ function WalletModal({
                         colSpan={6}
                         className="p-8 text-center text-gray-500"
                       >
-                        No recent positions found for this wallet
+                        {tWallets("noPositionsFound")}
                       </td>
                     </tr>
                   ) : (
@@ -573,12 +666,36 @@ function WalletModal({
 
 // Main Panel Component
 export function TrackedWalletsPanel() {
-  const { wallets, signals, isLoading } = useRealTimeWalletSignals();
-  const { positions } = useRealTimePositions();
+  const tWallets = useTranslations("wallets");
+  const tCommon = useTranslations("common");
+  const tSmartTrading = useTranslations("smartTrading");
+  const tSignals = useTranslations("signals");
+
+  const { wallets, signals, isLoading } = useWalletSignals();
+  const { positions } = usePositions();
   const [selectedWallet, setSelectedWallet] = useState<TrackedWallet | null>(null);
 
+  const mergedWallets = useMemo(() => {
+    const map = new Map<string, TrackedWallet>();
+
+    wallets.forEach((wallet) => {
+      map.set(wallet.address, normalizeWalletLabel(wallet));
+    });
+
+    PRESET_TRACKED_WALLETS.forEach((preset) => {
+      if (!map.has(preset.address)) {
+        map.set(preset.address, normalizeWalletLabel(preset));
+      }
+    });
+
+    return Array.from(map.values());
+  }, [wallets]);
+
   // Enrich wallets with hardcoded Twitter data
-  const enrichedWallets = wallets.map(enrichWalletWithTwitterData);
+  const enrichedWallets = useMemo(
+    () => mergedWallets.map(enrichWalletWithTwitterData),
+    [mergedWallets]
+  );
 
   return (
     <>
@@ -598,12 +715,12 @@ export function TrackedWalletsPanel() {
           {/* Shiny animated title */}
           <div>
             <ShinyText
-              text="Smart Money"
+              text={tWallets("title")}
               className="text-xl font-bold tracking-tight"
               speed={4}
             />
             <p className="text-xs text-white/40 mt-0.5">
-              {enrichedWallets.length} tracked wallet{enrichedWallets.length !== 1 ? "s" : ""}
+              {enrichedWallets.length} {enrichedWallets.length !== 1 ? tWallets("trackedWallets") : tWallets("trackedWallet")}
             </p>
           </div>
         </div>
@@ -614,7 +731,7 @@ export function TrackedWalletsPanel() {
             </div>
           ) : enrichedWallets.length === 0 ? (
             <p className="text-sm text-white/50 text-center py-4">
-              No wallets tracked
+              {tWallets("noWallets")}
             </p>
           ) : (
             enrichedWallets.map((wallet) => (
@@ -622,6 +739,7 @@ export function TrackedWalletsPanel() {
                 key={wallet.id}
                 wallet={wallet}
                 onClick={() => setSelectedWallet(wallet)}
+                tCommon={tCommon}
               />
             ))
           )}
@@ -636,6 +754,10 @@ export function TrackedWalletsPanel() {
             signals={signals}
             positions={positions}
             onClose={() => setSelectedWallet(null)}
+            tWallets={tWallets}
+            tCommon={tCommon}
+            tSmartTrading={tSmartTrading}
+            tSignals={tSignals}
           />
         )}
       </AnimatePresence>

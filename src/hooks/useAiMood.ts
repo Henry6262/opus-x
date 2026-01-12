@@ -142,7 +142,7 @@ export function useAiMood({ tokens = [], isActive = true, isExecuting = false }:
       setReason(newReason);
       setIntensity(0.5);
     }
-  }, [tokens, isActive, isExecuting, lastActivityTime]);
+  }, [tokens, isActive, isExecuting]); // Removed lastActivityTime - it's set inside, creating infinite loop
 
   // Periodic check for sleep mode
   useEffect(() => {

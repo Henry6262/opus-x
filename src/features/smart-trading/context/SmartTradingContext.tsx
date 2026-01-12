@@ -10,7 +10,8 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { smartTradingService } from "../service";
+import { smartTradingService, fetchMigrationsFromDevprint } from "../service";
+import { useSharedWebSocket, type ConnectionStatus } from "../hooks/useWebSocket";
 import type {
   TradingConfig,
   DashboardStatsResponse,
@@ -20,7 +21,23 @@ import type {
   PortfolioSnapshot,
   RankedMigration,
   MigrationFeedStats,
+  MigrationFeedEvent,
+  Migration,
+  DashboardMigrationStats,
 } from "../types";
+
+// ============================================
+// Activity Feed Types
+// ============================================
+
+export interface ActivityItem {
+  id: string;
+  type: MigrationFeedEvent["type"];
+  message: string;
+  timestamp: Date;
+  data?: unknown;
+  color: "green" | "red" | "yellow" | "blue" | "purple" | "cyan";
+}
 
 // ============================================
 // Context State Types
@@ -40,6 +57,13 @@ interface SmartTradingState {
   rankedMigrations: RankedMigration[];
   migrationStats: MigrationFeedStats | null;
 
+  // WebSocket status
+  connectionStatus: ConnectionStatus;
+  clientId: string | null;
+
+  // Activity feed (recent events)
+  activityFeed: ActivityItem[];
+
   // Loading/error states
   isLoading: boolean;
   error: string | null;
@@ -56,9 +80,73 @@ interface SmartTradingContextValue extends SmartTradingState {
   analyzeMigration: (tokenMint: string) => Promise<void>;
   refreshMigrationData: (tokenMint: string) => Promise<void>;
   syncWalletTwitterProfile: (address: string) => Promise<void>;
+  clearActivityFeed: () => void;
 }
 
 const SmartTradingContext = createContext<SmartTradingContextValue | null>(null);
+
+// ============================================
+// Helper: Generate activity message
+// ============================================
+
+function generateActivityMessage(event: MigrationFeedEvent): { message: string; color: ActivityItem["color"] } {
+  const data = event.data as Record<string, unknown> | undefined;
+
+  switch (event.type) {
+    case "connected":
+      return { message: "Connected to live feed", color: "green" };
+
+    case "migration_detected": {
+      const symbol = data?.tokenSymbol || data?.tokenMint?.toString().slice(0, 8) || "Unknown";
+      return { message: `New migration: ${symbol}`, color: "cyan" };
+    }
+
+    case "market_data_updated": {
+      const symbol = data?.tokenSymbol || "Token";
+      const priceChange = data?.priceChange1h as number | undefined;
+      const changeStr = priceChange !== undefined ? `${priceChange >= 0 ? "+" : ""}${priceChange.toFixed(1)}%` : "";
+      return {
+        message: `Price update: ${symbol} ${changeStr}`,
+        color: priceChange !== undefined && priceChange >= 0 ? "green" : "red",
+      };
+    }
+
+    case "ai_analysis": {
+      const symbol = data?.tokenSymbol || "Token";
+      const decision = data?.decision as string | undefined;
+      const confidence = data?.confidence as number | undefined;
+      const confStr = confidence !== undefined ? ` (${Math.round(confidence * 100)}%)` : "";
+      return {
+        message: `AI: ${decision || "ANALYZED"} ${symbol}${confStr}`,
+        color: decision === "ENTER" ? "green" : decision === "PASS" ? "red" : "yellow",
+      };
+    }
+
+    case "wallet_signal": {
+      const label = data?.walletLabel || data?.walletAddress?.toString().slice(0, 8) || "Wallet";
+      const action = data?.action || "activity";
+      const symbol = data?.tokenSymbol || "";
+      return {
+        message: `${label}: ${action} ${symbol}`,
+        color: "purple",
+      };
+    }
+
+    case "migration_expired": {
+      const symbol = data?.tokenSymbol || "Token";
+      return { message: `Expired: ${symbol}`, color: "red" };
+    }
+
+    case "feed_update":
+      return { message: "Feed refreshed", color: "blue" };
+
+    case "stats_update":
+      return { message: "Stats updated", color: "blue" };
+
+    default:
+      return { message: `Event: ${event.type}`, color: "blue" };
+  }
+}
 
 // ============================================
 // Provider Props
@@ -66,27 +154,37 @@ const SmartTradingContext = createContext<SmartTradingContextValue | null>(null)
 
 interface SmartTradingProviderProps {
   children: ReactNode;
-  /** Main data refresh interval (default: 10s) */
-  refreshIntervalMs?: number;
-  /** Migration feed refresh interval (default: 5s) */
-  migrationRefreshIntervalMs?: number;
-  /** Whether to enable polling */
+  /** Fallback polling interval when WebSocket disconnected (default: 30s) */
+  fallbackRefreshIntervalMs?: number;
+  /** Whether to enable the provider */
   enabled?: boolean;
   /** Limit for migrations */
   migrationLimit?: number;
+  /** Max activity feed items (default: 50) */
+  maxActivityItems?: number;
 }
 
 // ============================================
-// Provider Component
+// Provider Component - WebSocket-First Architecture
 // ============================================
 
 export function SmartTradingProvider({
   children,
-  refreshIntervalMs = 10000,
-  migrationRefreshIntervalMs = 5000,
+  fallbackRefreshIntervalMs = 30000,
   enabled = true,
   migrationLimit = 20,
+  maxActivityItems = 50,
 }: SmartTradingProviderProps) {
+  // WebSocket connection (shared singleton)
+  const {
+    status: connectionStatus,
+    clientId,
+    on,
+    connect,
+  } = useSharedWebSocket({
+    autoConnect: enabled,
+  });
+
   // State
   const [state, setState] = useState<SmartTradingState>({
     config: null,
@@ -98,52 +196,87 @@ export function SmartTradingProvider({
     chartHistory: [],
     rankedMigrations: [],
     migrationStats: null,
+    connectionStatus: "disconnected",
+    clientId: null,
+    activityFeed: [],
     isLoading: true,
     error: null,
     lastUpdated: null,
   });
 
+  // Update connection status in state
+  useEffect(() => {
+    setState((prev) => ({
+      ...prev,
+      connectionStatus,
+      clientId,
+    }));
+  }, [connectionStatus, clientId]);
+
   // Prevent double-fetch in StrictMode
   const hasFetchedRef = useRef(false);
 
-  // Fetch main dashboard data (7 requests in parallel)
+  // Add activity item
+  const addActivity = useCallback((event: MigrationFeedEvent) => {
+    const { message, color } = generateActivityMessage(event);
+
+    const item: ActivityItem = {
+      id: `${event.type}-${event.timestamp}-${Math.random().toString(36).slice(2, 9)}`,
+      type: event.type,
+      message,
+      timestamp: new Date(event.timestamp),
+      data: event.data,
+      color,
+    };
+
+    setState((prev) => ({
+      ...prev,
+      activityFeed: [item, ...prev.activityFeed].slice(0, maxActivityItems),
+    }));
+  }, [maxActivityItems]);
+
+  // Clear activity feed
+  const clearActivityFeed = useCallback(() => {
+    setState((prev) => ({ ...prev, activityFeed: [] }));
+  }, []);
+
+  // ============================================
+  // SINGLE CONSOLIDATED API CALL - Replaces 7 parallel requests
+  // ============================================
   const fetchDashboard = useCallback(async () => {
     if (!enabled) return;
 
+    console.log("[SmartTrading] 🔄 Fetching dashboard data via consolidated endpoint...");
+
     try {
-      const [
-        dashboardStats,
-        config,
-        wallets,
-        signalsResponse,
-        positionsResponse,
-        historyResponse,
-        chartHistory,
-      ] = await Promise.all([
-        smartTradingService.getDashboardStats(),
-        smartTradingService.getConfig(),
-        smartTradingService.getWallets(),
-        smartTradingService.getSignals({ limit: 20 }),
-        smartTradingService.getPositions({ status: "OPEN", limit: 50 }),
-        smartTradingService.getPositions({ status: "CLOSED", limit: 50 }),
-        smartTradingService.getHistory(288),
-      ]);
+      // ONE API call instead of 7!
+      const response = await smartTradingService.getDashboardInit();
+
+      console.log("[SmartTrading] ✅ Dashboard init received:", {
+        config: { tradingEnabled: response.config?.tradingEnabled },
+        walletsCount: response.wallets?.length,
+        signalsCount: response.signals?.length,
+        openPositionsCount: response.positions?.open?.length,
+        closedPositionsCount: response.positions?.closed?.length,
+        migrationsCount: response.migrations?.length,
+      });
 
       setState((prev) => ({
         ...prev,
-        dashboardStats,
-        config,
-        wallets,
-        signals: signalsResponse.items,
-        positions: positionsResponse.items,
-        history: historyResponse.items,
-        chartHistory,
+        config: response.config,
+        dashboardStats: response.stats,
+        wallets: response.wallets,
+        signals: response.signals,
+        positions: response.positions.open,
+        history: response.positions.closed,
+        rankedMigrations: response.migrations,
+        migrationStats: mapDashboardStatsToFeedStats(response.migrationStats),
         isLoading: false,
         error: null,
         lastUpdated: new Date(),
       }));
     } catch (err) {
-      console.error("Failed to fetch smart trading data:", err);
+      console.error("[SmartTrading] ❌ Failed to fetch dashboard data:", err);
       setState((prev) => ({
         ...prev,
         isLoading: false,
@@ -152,67 +285,266 @@ export function SmartTradingProvider({
     }
   }, [enabled]);
 
-  // Fetch migration feed data (1 request)
+  // Fetch migration feed data from devprint API (fallback for persistent data)
   const fetchMigrations = useCallback(async () => {
     if (!enabled) return;
 
+    console.log("[SmartTrading] 🔄 Fetching migrations from devprint...");
+
     try {
-      const response = await smartTradingService.getRankedMigrations(migrationLimit);
+      // Use devprint API for persistent token data
+      const response = await fetchMigrationsFromDevprint(migrationLimit);
       setState((prev) => ({
         ...prev,
         rankedMigrations: response.items,
         migrationStats: response.stats,
       }));
     } catch (err) {
-      console.error("Failed to fetch migrations:", err);
+      console.error("[SmartTrading] ❌ Failed to fetch migrations:", err);
       // Don't set error for migrations - it's secondary data
     }
   }, [enabled, migrationLimit]);
 
+  // ============================================
+  // WebSocket Event Handlers - Surgical Updates
+  // ============================================
+  useEffect(() => {
+    if (!enabled) return;
+
+    const unsubscribes: (() => void)[] = [];
+
+    // Connected event
+    unsubscribes.push(
+      on("connected", (_data, event) => {
+        console.log("[SmartTrading] WebSocket connected");
+        addActivity(event);
+        // Refresh data on reconnect
+        fetchDashboard();
+      })
+    );
+
+    // Migration detected - add new migration to list
+    unsubscribes.push(
+      on<Migration>("migration_detected", (_migration, event) => {
+        addActivity(event);
+        // Refresh migrations to get proper ranking
+        fetchMigrations();
+      })
+    );
+
+    // Market data updated - update existing migration (surgical update)
+    unsubscribes.push(
+      on<{ tokenMint: string; priceUsd?: number; marketCap?: number; priceChange1h?: number }>(
+        "market_data_updated",
+        (data, event) => {
+          addActivity(event);
+
+          // Surgical update - no full refetch
+          setState((prev) => ({
+            ...prev,
+            rankedMigrations: prev.rankedMigrations.map((rm) => {
+              if (rm.tokenMint === data.tokenMint) {
+                return {
+                  ...rm,
+                  lastPriceUsd: data.priceUsd ?? rm.lastPriceUsd,
+                  lastMarketCap: data.marketCap ?? rm.lastMarketCap,
+                  lastPriceChange1h: data.priceChange1h ?? rm.lastPriceChange1h,
+                  lastUpdatedAt: new Date().toISOString(),
+                };
+              }
+              return rm;
+            }),
+          }));
+        }
+      )
+    );
+
+    // AI analysis completed - surgical update
+    unsubscribes.push(
+      on<{ tokenMint: string; decision: string; confidence: number; reasoning: string }>(
+        "ai_analysis",
+        (data, event) => {
+          addActivity(event);
+
+          setState((prev) => ({
+            ...prev,
+            rankedMigrations: prev.rankedMigrations.map((rm) => {
+              if (rm.tokenMint === data.tokenMint) {
+                return {
+                  ...rm,
+                  lastAiDecision: data.decision as Migration["lastAiDecision"],
+                  lastAiConfidence: data.confidence,
+                  lastAiReasoning: data.reasoning,
+                  lastAnalyzedAt: new Date().toISOString(),
+                };
+              }
+              return rm;
+            }),
+          }));
+        }
+      )
+    );
+
+    // Wallet signal received - surgical update
+    unsubscribes.push(
+      on<{ tokenMint: string; walletAddress: string; walletLabel?: string; action: string; amountSol?: number }>(
+        "wallet_signal",
+        (data, event) => {
+          addActivity(event);
+
+          setState((prev) => ({
+            ...prev,
+            rankedMigrations: prev.rankedMigrations.map((rm) => {
+              if (rm.tokenMint === data.tokenMint) {
+                return {
+                  ...rm,
+                  walletSignalCount: rm.walletSignalCount + 1,
+                  walletSignals: [
+                    {
+                      walletAddress: data.walletAddress,
+                      walletLabel: data.walletLabel,
+                      action: data.action as "BUY" | "SELL",
+                      amountSol: data.amountSol,
+                      timestamp: new Date().toISOString(),
+                    },
+                    ...rm.walletSignals.slice(0, 9),
+                  ],
+                  lastWalletSignalAt: new Date().toISOString(),
+                };
+              }
+              return rm;
+            }),
+          }));
+        }
+      )
+    );
+
+    // Migration expired - remove from list
+    unsubscribes.push(
+      on<{ tokenMint: string }>("migration_expired", (data, event) => {
+        addActivity(event);
+
+        setState((prev) => ({
+          ...prev,
+          rankedMigrations: prev.rankedMigrations.filter(
+            (rm) => rm.tokenMint !== data.tokenMint
+          ),
+        }));
+      })
+    );
+
+    // Full feed update (bulk update from server)
+    unsubscribes.push(
+      on<{ items: RankedMigration[]; stats: MigrationFeedStats }>("feed_update", (data, event) => {
+        addActivity(event);
+
+        setState((prev) => ({
+          ...prev,
+          rankedMigrations: data.items,
+          migrationStats: data.stats,
+        }));
+      })
+    );
+
+    // Stats update
+    unsubscribes.push(
+      on<MigrationFeedStats>("stats_update", (stats, event) => {
+        addActivity(event);
+
+        setState((prev) => ({
+          ...prev,
+          migrationStats: stats,
+        }));
+      })
+    );
+
+    return () => {
+      unsubscribes.forEach((unsub) => unsub());
+    };
+  }, [enabled, on, addActivity, fetchDashboard, fetchMigrations]);
+
   // Initial fetch (with StrictMode protection)
   useEffect(() => {
-    if (hasFetchedRef.current) return;
+    if (hasFetchedRef.current || !enabled) return;
     hasFetchedRef.current = true;
 
+    console.log("[SmartTrading] 🚀 Starting initial data fetch...");
     fetchDashboard();
-    fetchMigrations();
-  }, [fetchDashboard, fetchMigrations]);
+  }, [enabled, fetchDashboard]);
 
-  // Main data polling (10s interval)
+  // ============================================
+  // POLLING ONLY WHEN WEBSOCKET DISCONNECTED
+  // ============================================
   useEffect(() => {
-    if (!enabled || !refreshIntervalMs) return;
+    if (!enabled || !fallbackRefreshIntervalMs) return;
 
-    const interval = setInterval(fetchDashboard, refreshIntervalMs);
+    const interval = setInterval(() => {
+      // Only poll if WebSocket is not connected
+      if (connectionStatus !== "connected") {
+        console.log("[SmartTrading] 📡 Fallback polling (WebSocket disconnected)...");
+        fetchDashboard();
+      }
+    }, fallbackRefreshIntervalMs);
+
     return () => clearInterval(interval);
-  }, [enabled, refreshIntervalMs, fetchDashboard]);
+  }, [enabled, fallbackRefreshIntervalMs, connectionStatus, fetchDashboard]);
 
-  // Migration polling (5s interval - separate for faster updates)
+  // Reconnect on connection error after delay
   useEffect(() => {
-    if (!enabled || !migrationRefreshIntervalMs) return;
+    if (connectionStatus === "error" && enabled) {
+      const timeout = setTimeout(() => {
+        console.log("[SmartTrading] 🔌 Attempting to reconnect...");
+        connect();
+      }, 5000);
+      return () => clearTimeout(timeout);
+    }
+  }, [connectionStatus, enabled, connect]);
 
-    const interval = setInterval(fetchMigrations, migrationRefreshIntervalMs);
-    return () => clearInterval(interval);
-  }, [enabled, migrationRefreshIntervalMs, fetchMigrations]);
+  // ============================================
+  // Actions with Optimistic Updates
+  // ============================================
 
-  // Actions
   const toggleTrading = useCallback(async (tradingEnabled: boolean) => {
+    // Optimistic update
+    setState((prev) => ({
+      ...prev,
+      config: prev.config ? { ...prev.config, tradingEnabled } : null,
+    }));
+
     try {
       const updated = await smartTradingService.toggleTrading(tradingEnabled);
+      setState((prev) => ({ ...prev, config: updated }));
+    } catch (err) {
+      // Rollback on error
       setState((prev) => ({
         ...prev,
-        config: updated,
+        config: prev.config ? { ...prev.config, tradingEnabled: !tradingEnabled } : null,
       }));
-    } catch (err) {
       console.error("Failed to toggle trading:", err);
       throw err;
     }
   }, []);
 
   const closePosition = useCallback(async (positionId: string) => {
+    // Optimistic update - move position to history
+    setState((prev) => {
+      const position = prev.positions.find((p) => p.id === positionId);
+      if (!position) return prev;
+
+      return {
+        ...prev,
+        positions: prev.positions.filter((p) => p.id !== positionId),
+        history: [{ ...position, status: "CLOSED" as const }, ...prev.history],
+      };
+    });
+
     try {
       await smartTradingService.closePosition(positionId);
+      // Refresh to get accurate data
       await fetchDashboard();
     } catch (err) {
+      // Rollback on error
+      await fetchDashboard();
       console.error("Failed to close position:", err);
       throw err;
     }
@@ -231,32 +563,38 @@ export function SmartTradingProvider({
   const analyzeMigration = useCallback(async (tokenMint: string) => {
     try {
       await smartTradingService.analyzeMigration(tokenMint);
-      await fetchMigrations();
+      // WebSocket will send ai_analysis event, no need to refetch
     } catch (err) {
       console.error("Failed to analyze migration:", err);
       throw err;
     }
-  }, [fetchMigrations]);
+  }, []);
 
   const refreshMigrationData = useCallback(async (tokenMint: string) => {
     try {
       await smartTradingService.refreshMigrationMarketData(tokenMint);
-      await fetchMigrations();
+      // WebSocket will send market_data_updated event, no need to refetch
     } catch (err) {
       console.error("Failed to refresh migration data:", err);
       throw err;
     }
-  }, [fetchMigrations]);
+  }, []);
 
   const syncWalletTwitterProfile = useCallback(async (address: string) => {
     try {
-      await smartTradingService.syncWalletTwitterProfile(address);
-      await fetchDashboard();
+      const updated = await smartTradingService.syncWalletTwitterProfile(address);
+      // Optimistic update - update the wallet in state
+      setState((prev) => ({
+        ...prev,
+        wallets: prev.wallets.map((w) =>
+          w.address === address ? updated : w
+        ),
+      }));
     } catch (err) {
       console.error("Failed to sync wallet Twitter profile:", err);
       throw err;
     }
-  }, [fetchDashboard]);
+  }, []);
 
   // Memoize context value to prevent unnecessary re-renders
   const value = useMemo<SmartTradingContextValue>(
@@ -270,8 +608,20 @@ export function SmartTradingProvider({
       analyzeMigration,
       refreshMigrationData,
       syncWalletTwitterProfile,
+      clearActivityFeed,
     }),
-    [state, fetchDashboard, fetchMigrations, toggleTrading, closePosition, trackMigration, analyzeMigration, refreshMigrationData, syncWalletTwitterProfile]
+    [
+      state,
+      fetchDashboard,
+      fetchMigrations,
+      toggleTrading,
+      closePosition,
+      trackMigration,
+      analyzeMigration,
+      refreshMigrationData,
+      syncWalletTwitterProfile,
+      clearActivityFeed,
+    ]
   );
 
   return (
@@ -279,6 +629,21 @@ export function SmartTradingProvider({
       {children}
     </SmartTradingContext.Provider>
   );
+}
+
+// ============================================
+// Helper: Map dashboard migration stats to feed stats
+// ============================================
+function mapDashboardStatsToFeedStats(dashboardStats: DashboardMigrationStats | null): MigrationFeedStats | null {
+  if (!dashboardStats) return null;
+
+  return {
+    totalActive: dashboardStats.totalActive,
+    pendingAnalysis: dashboardStats.analysisQueueLength,
+    readyToTrade: dashboardStats.readyToTrade,
+    withWalletSignals: 0, // Not provided by dashboard stats
+    expiredToday: 0, // Not provided by dashboard stats
+  };
 }
 
 // ============================================
@@ -294,13 +659,13 @@ export function useSmartTradingContext(): SmartTradingContextValue {
 }
 
 // ============================================
-// Optional: Selective hooks for components that only need partial data
+// Selective hooks for components that only need partial data
 // ============================================
 
 /** Hook for components that only need dashboard stats */
 export function useDashboardStats() {
-  const { dashboardStats, isLoading, error, lastUpdated } = useSmartTradingContext();
-  return { dashboardStats, isLoading, error, lastUpdated };
+  const { dashboardStats, isLoading, error, lastUpdated, refresh } = useSmartTradingContext();
+  return { dashboardStats, isLoading, error, lastUpdated, refresh };
 }
 
 /** Hook for components that only need positions */
@@ -346,4 +711,16 @@ export function useMigrationFeedContext() {
     analyzeMigration,
     refreshMigrationData,
   };
+}
+
+/** Hook for connection status */
+export function useConnectionStatus() {
+  const { connectionStatus, clientId } = useSmartTradingContext();
+  return { connectionStatus, clientId, isConnected: connectionStatus === "connected" };
+}
+
+/** Hook for activity feed */
+export function useActivityFeed() {
+  const { activityFeed, clearActivityFeed } = useSmartTradingContext();
+  return { activityFeed, clearActivityFeed };
 }

@@ -7,7 +7,7 @@ import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { CountUp } from "@/components/animations";
 import type { PortfolioWalletProps, TimeFilter, PortfolioStats, WalletView, Position as UiPosition, Transaction, ChartHistoryEntry } from "./types";
-import { useRealTimeDashboardStats, useRealTimePositions } from "@/features/smart-trading";
+import { useDashboardStats, usePositions } from "@/features/smart-trading";
 
 // Generate mock chart data (placeholder until we have historical data API)
 function generateChartData(timeFilter: TimeFilter, isProfitable: boolean) {
@@ -53,9 +53,9 @@ function formatTimeAgo(dateInput: string | Date): string {
 }
 
 export function PortfolioWallet({ className }: PortfolioWalletProps) {
-  // Use real-time WebSocket context (live updates!)
-  const { dashboardStats } = useRealTimeDashboardStats();
-  const { positions, history } = useRealTimePositions();
+  // Use unified WebSocket-first context (live updates!)
+  const { dashboardStats } = useDashboardStats();
+  const { positions, history } = usePositions();
   const chartHistory: ChartHistoryEntry[] = []; // TODO: Add chartHistory to real-time context
 
   const [isExpanded, setIsExpanded] = useState(false);

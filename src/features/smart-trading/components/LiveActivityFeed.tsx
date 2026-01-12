@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Activity,
@@ -15,21 +16,23 @@ import {
   WifiOff,
   X,
 } from "lucide-react";
-import { useActivityFeed, useConnectionStatus } from "../context/RealTimeSmartTradingContext";
-import type { ActivityItem } from "../context/RealTimeSmartTradingContext";
+import { useActivityFeed, useConnectionStatus } from "../context";
+import type { ActivityItem } from "../context";
 
 // ============================================
 // Helper: Time ago format
 // ============================================
 
-function timeAgo(date: Date): string {
+type TimeTranslator = (key: string, params?: Record<string, unknown>) => string;
+
+function timeAgo(date: Date, t: TimeTranslator): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
 
-  if (seconds < 5) return "just now";
-  if (seconds < 60) return `${seconds}s ago`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
+  if (seconds < 5) return t("justNow");
+  if (seconds < 60) return t("secondsAgo", { count: seconds });
+  if (seconds < 3600) return t("minutesAgo", { count: Math.floor(seconds / 60) });
+  if (seconds < 86400) return t("hoursAgo", { count: Math.floor(seconds / 3600) });
+  return t("daysAgo", { count: Math.floor(seconds / 86400) });
 }
 
 // ============================================
@@ -75,9 +78,10 @@ function ActivityIcon({ type, color }: { type: string; color: ActivityItem["colo
 
 interface ActivityItemRowProps {
   item: ActivityItem;
+  tTime: TimeTranslator;
 }
 
-function ActivityItemRow({ item }: ActivityItemRowProps) {
+function ActivityItemRow({ item, tTime }: ActivityItemRowProps) {
   const colorClasses: Record<ActivityItem["color"], string> = {
     green: "border-green-500/30 bg-green-500/5",
     red: "border-red-500/30 bg-red-500/5",
@@ -111,7 +115,7 @@ function ActivityItemRow({ item }: ActivityItemRowProps) {
     >
       <ActivityIcon type={item.type} color={item.color} />
       <span className="flex-1 text-xs text-white/80 truncate">{item.message}</span>
-      <span className="text-[10px] text-white/40 whitespace-nowrap">{timeAgo(item.timestamp)}</span>
+      <span className="text-[10px] text-white/40 whitespace-nowrap">{timeAgo(item.timestamp, tTime)}</span>
     </motion.div>
   );
 }
@@ -121,6 +125,7 @@ function ActivityItemRow({ item }: ActivityItemRowProps) {
 // ============================================
 
 function ConnectionStatusBadge() {
+  const t = useTranslations("activity");
   const { connectionStatus, isConnected } = useConnectionStatus();
 
   return (
@@ -142,7 +147,7 @@ function ConnectionStatusBadge() {
             transition={{ duration: 2, repeat: Infinity }}
             className="w-1.5 h-1.5 rounded-full bg-green-400"
           />
-          <span>LIVE</span>
+          <span>{t("live")}</span>
         </>
       ) : connectionStatus === "connecting" ? (
         <>
@@ -152,12 +157,12 @@ function ConnectionStatusBadge() {
           >
             <RefreshCw className="w-3 h-3" />
           </motion.div>
-          <span>CONNECTING</span>
+          <span>{t("connecting")}</span>
         </>
       ) : (
         <>
           <WifiOff className="w-3 h-3" />
-          <span>OFFLINE</span>
+          <span>{t("offline")}</span>
         </>
       )}
     </div>
@@ -181,6 +186,8 @@ export function LiveActivityFeed({
   showHeader = true,
   autoScroll = true,
 }: LiveActivityFeedProps) {
+  const t = useTranslations("activity");
+  const tTime = useTranslations("time");
   const { activityFeed, clearActivityFeed } = useActivityFeed();
   const { isConnected } = useConnectionStatus();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -200,7 +207,7 @@ export function LiveActivityFeed({
         <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-[#c4f70e]" />
-            <span className="text-sm font-medium text-white">Live Activity</span>
+            <span className="text-sm font-medium text-white">{t("liveActivity")}</span>
           </div>
           <ConnectionStatusBadge />
         </div>
@@ -214,7 +221,7 @@ export function LiveActivityFeed({
         <AnimatePresence mode="popLayout">
           {displayItems.length > 0 ? (
             displayItems.map((item) => (
-              <ActivityItemRow key={item.id} item={item} />
+              <ActivityItemRow key={item.id} item={item} tTime={tTime} />
             ))
           ) : (
             <motion.div
@@ -230,12 +237,12 @@ export function LiveActivityFeed({
                   >
                     <Activity className="w-8 h-8 mb-2 opacity-50" />
                   </motion.div>
-                  <span className="text-xs">Waiting for activity...</span>
+                  <span className="text-xs">{t("waitingForActivity")}</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="w-8 h-8 mb-2 opacity-50" />
-                  <span className="text-xs">Connecting to live feed...</span>
+                  <span className="text-xs">{t("connectingToFeed")}</span>
                 </>
               )}
             </motion.div>
@@ -245,7 +252,7 @@ export function LiveActivityFeed({
 
       {activityFeed.length > maxItems && (
         <div className="px-3 py-1.5 text-center text-[10px] text-white/30 border-t border-white/10">
-          Showing {maxItems} of {activityFeed.length} events
+          {t("showingEvents", { shown: maxItems, total: activityFeed.length })}
         </div>
       )}
     </div>
@@ -262,6 +269,7 @@ interface CompactActivityFeedProps {
 }
 
 export function CompactActivityFeed({ maxItems = 5, className = "" }: CompactActivityFeedProps) {
+  const t = useTranslations("activity");
   const { activityFeed } = useActivityFeed();
   const { isConnected } = useConnectionStatus();
   const displayItems = activityFeed.slice(0, maxItems);
@@ -271,7 +279,7 @@ export function CompactActivityFeed({ maxItems = 5, className = "" }: CompactAct
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5">
           <Activity className="w-3.5 h-3.5 text-[#c4f70e]" />
-          <span className="text-xs font-medium text-white/70">Recent Activity</span>
+          <span className="text-xs font-medium text-white/70">{t("recentActivity")}</span>
         </div>
         <ConnectionStatusBadge />
       </div>
@@ -292,7 +300,7 @@ export function CompactActivityFeed({ maxItems = 5, className = "" }: CompactAct
           ))
         ) : (
           <div className="text-[10px] text-white/30 text-center py-2">
-            {isConnected ? "No recent activity" : "Connecting..."}
+            {isConnected ? t("noRecentActivity") : t("connecting")}
           </div>
         )}
       </AnimatePresence>

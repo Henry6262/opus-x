@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { CountUp } from "@/components/animations/CountUp";
 import { SmartMoneyAnimation } from "@/components/animations";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import type { DashboardStatsResponse, Position, TradingConfig } from "../types";
 
@@ -17,11 +19,6 @@ interface TraderProfileCardProps {
   activeView: ActiveView;
   onViewChange: (view: ActiveView) => void;
 }
-
-const tabs = [
-  { id: "smart-trading" as const, label: "SMART MONEY", iconType: "smart-money" as const },
-  { id: "simulation-twitter" as const, label: "TWITTER", iconType: "twitter" as const },
-];
 
 function calculateStreak(history: Position[]): { current: number; best: number; type: "win" | "loss" } {
   if (history.length === 0) return { current: 0, best: 0, type: "win" };
@@ -81,6 +78,10 @@ export function TraderProfileCard({
   activeView,
   onViewChange,
 }: TraderProfileCardProps) {
+  const t = useTranslations();
+  const tProfile = useTranslations("profile");
+  const tNav = useTranslations("nav");
+
   const streak = calculateStreak(history);
   const performance = stats?.performance;
 
@@ -91,6 +92,11 @@ export function TraderProfileCard({
   const netPnl = performance?.netPnlSol ?? 0;
   const isOnStreak = streak.current >= 2 && streak.type === "win";
 
+  const tabs = [
+    { id: "smart-trading" as const, label: tNav("smartMoney"), iconType: "smart-money" as const },
+    { id: "simulation-twitter" as const, label: tNav("twitter"), iconType: "twitter" as const },
+  ];
+
   return (
     <div className="relative pt-4 pb-16">
       {/* SUPER ROUTER floating title - above avatar */}
@@ -100,7 +106,17 @@ export function TraderProfileCard({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        <span className="super-router-title">SUPER ROUTER</span>
+        <span className="super-router-title">{tProfile("superRouter")}</span>
+      </motion.div>
+
+      {/* Language Switcher - top right */}
+      <motion.div
+        className="absolute -top-6 right-4 z-30"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+      >
+        <LanguageSwitcher />
       </motion.div>
 
       {/* X/Twitter Handle - below pill, right of avatar */}
@@ -128,7 +144,7 @@ export function TraderProfileCard({
 
           {/* ZONE 1: Hero P&L - The main attraction */}
           <div className="pr-6 border-r border-white/10">
-            <div className="text-[10px] text-white/50 uppercase tracking-wider font-medium">All-Time P&L</div>
+            <div className="text-[10px] text-white/50 uppercase tracking-wider font-medium">{tProfile("allTimePnl")}</div>
             <div className={`flex items-center gap-1.5 text-2xl font-bold font-mono tracking-tight ${netPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
               <CountUp to={netPnl} duration={1.2} decimals={2} prefix={netPnl >= 0 ? "+" : ""} />
               <Image src="/logos/solana.png" alt="SOL" width={18} height={18} className="opacity-80" />
@@ -171,7 +187,7 @@ export function TraderProfileCard({
                 <span className="text-sm font-bold text-white font-mono leading-none">
                   <CountUp to={winRate} duration={1} suffix="%" />
                 </span>
-                <span className="text-[7px] text-white/40 uppercase tracking-wide">Win</span>
+                <span className="text-[7px] text-white/40 uppercase tracking-wide">{tProfile("winRate")}</span>
               </div>
             </div>
           </div>
@@ -180,7 +196,7 @@ export function TraderProfileCard({
           <div className="flex items-center gap-6 pl-6">
             {/* Streak */}
             <div>
-              <div className="text-[9px] text-white/40 uppercase tracking-wider">Streak</div>
+              <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("streak")}</div>
               <div className="flex items-baseline gap-0.5">
                 <span className={`text-lg font-bold font-mono ${isOnStreak ? "text-orange-400" : "text-white"}`}>
                   {streak.current}
@@ -191,7 +207,7 @@ export function TraderProfileCard({
 
             {/* Trades */}
             <div>
-              <div className="text-[9px] text-white/40 uppercase tracking-wider">Trades</div>
+              <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("trades")}</div>
               <div className="flex items-baseline gap-1">
                 <span className="text-lg font-bold font-mono text-white">{totalTrades}</span>
                 <span className="text-xs text-green-400/70">({winningTrades}W)</span>
@@ -200,7 +216,7 @@ export function TraderProfileCard({
 
             {/* Best Trade */}
             <div>
-              <div className="text-[9px] text-white/40 uppercase tracking-wider">Best</div>
+              <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("bestTrade")}</div>
               <div className="flex items-center gap-1">
                 <span className="text-lg font-bold font-mono text-green-400">
                   +<CountUp to={largestWin} duration={0.8} decimals={2} />

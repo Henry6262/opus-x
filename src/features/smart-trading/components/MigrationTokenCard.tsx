@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { StatusPill } from "@/components/design-system";
@@ -18,7 +19,7 @@ import {
   BarChart3,
   Droplets,
 } from "lucide-react";
-import type { RankedMigration, AiDecision } from "../types";
+import type { RankedMigration, AiDecision, PriceHistoryPoint } from "../types";
 import { WalletSignalStack } from "./WalletSignalBadge";
 
 // ============================================
@@ -108,7 +109,7 @@ function TokenImage({ imageUrl, symbol, tokenMint, size = 44 }: TokenImageProps)
 // ============================================
 
 interface SparklineProps {
-  data: number[] | null;
+  data: PriceHistoryPoint[] | null;
   width?: number;
   height?: number;
   tokenMint: string;
@@ -117,12 +118,12 @@ interface SparklineProps {
 function Sparkline({ data, width = 60, height = 28, tokenMint }: SparklineProps) {
   const chartData = useMemo(() => {
     if (!data || data.length < 2) return null;
-    return data.map((value, i) => ({ value, index: i }));
+    return data.map((point, i) => ({ value: point.priceUsd, index: i }));
   }, [data]);
 
   const isPositive = useMemo(() => {
     if (!data || data.length < 2) return true;
-    return data[data.length - 1] >= data[0];
+    return data[data.length - 1].priceUsd >= data[0].priceUsd;
   }, [data]);
 
   if (!chartData) return null;
@@ -250,6 +251,9 @@ const AI_DECISION_CONFIG: Record<AiDecision, { color: string; bg: string; label:
 };
 
 export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTokenCardProps) {
+  const t = useTranslations("migration");
+  const tTime = useTranslations("time");
+
   const [expanded, setExpanded] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -290,8 +294,8 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
     }
   };
 
-  const timeSinceDetection = getTimeSince(ranked.detectedAt);
-  const expiresIn = ranked.expiresAt ? getTimeUntil(ranked.expiresAt) : null;
+  const timeSinceDetection = getTimeSince(ranked.detectedAt, tTime);
+  const expiresIn = ranked.expiresAt ? getTimeUntil(ranked.expiresAt, tTime) : null;
 
   return (
     <motion.div
@@ -336,7 +340,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-white truncate">
-                {ranked.tokenSymbol || "Unknown"}
+                {ranked.tokenSymbol || t("card.unknown")}
               </span>
               {isReadyToTrade && (
                 <motion.div
@@ -344,7 +348,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
                   transition={{ repeat: Infinity, duration: 1.5 }}
                 >
                   <StatusPill tone="live" className="text-[10px]">
-                    READY
+                    {t("card.ready")}
                   </StatusPill>
                 </motion.div>
               )}
@@ -376,7 +380,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
           <div className="grid grid-cols-4 gap-3 flex-1">
             {/* Price Change */}
             <div className="flex flex-col">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">1h</span>
+              <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.metrics.priceChange1h")}</span>
               <div className={`flex items-center gap-1 ${priceChange >= 0 ? "text-green-400" : "text-red-400"}`}>
                 {priceChange >= 0 ? (
                   <TrendingUp className="w-3.5 h-3.5" />
@@ -393,7 +397,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
 
             {/* Market Cap */}
             <div className="flex flex-col">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">MCap</span>
+              <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.metrics.mcap")}</span>
               <div className="flex items-center gap-1 text-white">
                 <BarChart3 className="w-3.5 h-3.5 text-white/40" />
                 <FlashValue
@@ -406,7 +410,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
 
             {/* Liquidity */}
             <div className="flex flex-col">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">Liq</span>
+              <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.metrics.liquidity")}</span>
               <div className="flex items-center gap-1 text-white">
                 <Droplets className="w-3.5 h-3.5 text-cyan-400" />
                 <FlashValue
@@ -419,7 +423,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
 
             {/* Priority Score */}
             <div className="flex flex-col">
-              <span className="text-[10px] text-white/40 uppercase tracking-wider">Score</span>
+              <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.metrics.score")}</span>
               <div className="flex items-center gap-1">
                 <Zap className="w-3.5 h-3.5 text-[#c4f70e]" />
                 <FlashValue
@@ -444,11 +448,11 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
           <div className="flex items-center gap-3 text-xs text-white/40">
             <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5" />
-              <span>{timeSinceDetection} ago</span>
+              <span>{timeSinceDetection}</span>
             </div>
             {expiresIn && (
               <div className="flex items-center gap-1 text-amber-400/70">
-                <span>Expires {expiresIn}</span>
+                <span>{expiresIn}</span>
               </div>
             )}
           </div>
@@ -459,7 +463,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
               onClick={handleRefresh}
               disabled={isRefreshing}
               className="p-1.5 rounded-md bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-50"
-              title="Refresh market data"
+              title={t("card.refreshData")}
             >
               <RefreshCw className={`w-4 h-4 text-white/60 ${isRefreshing ? "animate-spin" : ""}`} />
             </button>
@@ -469,7 +473,7 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
               onClick={handleAnalyze}
               disabled={isAnalyzing}
               className="p-1.5 rounded-md bg-[#c4f70e]/10 hover:bg-[#c4f70e]/20 transition-colors disabled:opacity-50"
-              title="Trigger AI analysis"
+              title={t("card.triggerAi")}
             >
               <Brain className={`w-4 h-4 text-[#c4f70e] ${isAnalyzing ? "animate-pulse" : ""}`} />
             </button>
@@ -502,26 +506,26 @@ export function MigrationTokenCard({ ranked, onAnalyze, onRefresh }: MigrationTo
                 {/* AI Reasoning */}
                 {ranked.lastAiReasoning && (
                   <div>
-                    <span className="text-[10px] text-white/40 uppercase tracking-wider">AI Reasoning</span>
+                    <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.aiReasoning")}</span>
                     <p className="text-sm text-white/70 mt-1">{ranked.lastAiReasoning}</p>
                   </div>
                 )}
 
                 {/* Signal Breakdown */}
                 <div>
-                  <span className="text-[10px] text-white/40 uppercase tracking-wider">Signal Breakdown</span>
+                  <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.signalBreakdown")}</span>
                   <div className="grid grid-cols-3 gap-2 mt-2">
-                    <SignalBar label="Age" value={breakdown.migrationAge} max={30} />
-                    <SignalBar label="Wallets" value={breakdown.walletSignals} max={50} />
-                    <SignalBar label="AI" value={breakdown.aiConfidence} max={25} />
-                    <SignalBar label="Momentum" value={breakdown.priceMomentum} max={15} />
-                    <SignalBar label="Multi-Wallet" value={breakdown.multipleWallets} max={10} />
+                    <SignalBar label={t("card.breakdown.age")} value={breakdown.migrationAge} max={30} />
+                    <SignalBar label={t("card.breakdown.wallets")} value={breakdown.walletSignals} max={50} />
+                    <SignalBar label={t("card.breakdown.ai")} value={breakdown.aiConfidence} max={25} />
+                    <SignalBar label={t("card.breakdown.momentum")} value={breakdown.priceMomentum} max={15} />
+                    <SignalBar label={t("card.breakdown.multiWallet")} value={breakdown.multipleWallets} max={10} />
                   </div>
                 </div>
 
                 {/* Token address */}
                 <div>
-                  <span className="text-[10px] text-white/40 uppercase tracking-wider">Token Mint</span>
+                  <span className="text-[10px] text-white/40 uppercase tracking-wider">{t("card.tokenMint")}</span>
                   <p className="text-xs text-white/50 font-mono mt-1 break-all">
                     {ranked.tokenMint}
                   </p>
@@ -567,28 +571,28 @@ function formatCompactNumber(num: number): string {
   return `$${num.toFixed(0)}`;
 }
 
-function getTimeSince(dateStr: string): string {
+function getTimeSince(dateStr: string, t: (key: string, params?: Record<string, unknown>) => string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
 
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m`;
+  if (diffMins < 1) return t("justNow");
+  if (diffMins < 60) return t("minutesAgo", { count: diffMins });
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h`;
-  return `${Math.floor(diffHours / 24)}d`;
+  if (diffHours < 24) return t("hoursAgo", { count: diffHours });
+  return t("daysAgo", { count: Math.floor(diffHours / 24) });
 }
 
-function getTimeUntil(dateStr: string): string {
+function getTimeUntil(dateStr: string, t: (key: string, params?: Record<string, unknown>) => string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = date.getTime() - now.getTime();
 
-  if (diffMs <= 0) return "expired";
+  if (diffMs <= 0) return t("expired");
 
   const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 60) return `in ${diffMins}m`;
+  if (diffMins < 60) return t("inMinutes", { count: diffMins });
   const diffHours = Math.floor(diffMins / 60);
-  return `in ${diffHours}h`;
+  return t("inHours", { count: diffHours });
 }

@@ -1,5 +1,13 @@
 // Smart Money Trading Types - Matches ponzinomics-api responses
 
+// Price history point for sparkline charts
+export interface PriceHistoryPoint {
+  timestamp: string;
+  priceUsd: number;
+  marketCap?: number;
+  liquidity?: number;
+}
+
 export interface TrackedWallet {
   id: string;
   address: string;
@@ -210,8 +218,8 @@ export interface Migration {
   lastPriceChange1h: number | null;
   lastUpdatedAt: string | null;
 
-  // Price history for sparkline (array of prices over time)
-  priceHistory: number[] | null;
+  // Price history for sparkline (array of price points over time)
+  priceHistory: PriceHistoryPoint[] | null;
 
   // AI analysis
   lastAiDecision: AiDecision | null;
@@ -298,6 +306,7 @@ export interface MigrationFeedEvent {
   type:
     | "connected"
     | "migration_detected"
+    | "token_added"
     | "market_data_updated"
     | "ai_analysis"
     | "wallet_signal"
@@ -307,4 +316,40 @@ export interface MigrationFeedEvent {
   data?: unknown;
   timestamp: number;
   clientId?: string;
+}
+
+// ============================================
+// DASHBOARD INIT - Consolidated Response
+// ============================================
+// This is the response from /smart-trading/dashboard/init
+// which returns ALL data needed for the smart-trading dashboard
+// in a single API call.
+
+/** Stats for migration feed (matches backend MigrationFeedStatsDto) */
+export interface DashboardMigrationStats {
+  totalActive: number;
+  readyToTrade: number;
+  avgScore: number;
+  cacheSize: number;
+  isPolling: boolean;
+  analyzerReady: boolean;
+  analysisQueueLength: number;
+}
+
+/** Positions grouped by status */
+export interface DashboardPositions {
+  open: Position[];
+  closed: Position[];
+}
+
+/** Consolidated dashboard init response - single API call for all data */
+export interface DashboardInitResponse {
+  config: TradingConfig;
+  stats: DashboardStatsResponse;
+  wallets: TrackedWallet[];
+  signals: TradingSignal[];
+  positions: DashboardPositions;
+  migrations: RankedMigration[];
+  migrationStats: DashboardMigrationStats;
+  serverTime: string;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Panel } from "@/components/design-system";
 import { Button } from "@/components/ui";
 import { useSmartTradingContext } from "./context";
@@ -35,7 +36,7 @@ function shortenAddress(address: string): string {
 }
 
 // Signal strength badge
-function SignalBadge({ strength }: { strength: string }) {
+function SignalBadge({ strength, t }: { strength: string; t: (key: string) => string }) {
   const colors: Record<string, string> = {
     STRONG: "bg-green-500/20 text-green-400 border-green-500/30",
     WEAK: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
@@ -43,17 +44,24 @@ function SignalBadge({ strength }: { strength: string }) {
     REJECTED: "bg-red-500/20 text-red-400 border-red-500/30",
   };
 
+  const labels: Record<string, string> = {
+    STRONG: t("strength.strong"),
+    WEAK: t("strength.weak"),
+    PENDING: t("status.pending"),
+    REJECTED: t("status.rejected"),
+  };
+
   return (
     <span
       className={`px-2 py-0.5 text-xs font-medium rounded border ${colors[strength] || colors.PENDING}`}
     >
-      {strength}
+      {labels[strength] || strength}
     </span>
   );
 }
 
 // Position status badge
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
   const colors: Record<string, string> = {
     OPEN: "bg-green-500/20 text-green-400 border-green-500/30",
     PARTIALLY_CLOSED: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -62,35 +70,43 @@ function StatusBadge({ status }: { status: string }) {
     PENDING: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   };
 
+  const labels: Record<string, string> = {
+    OPEN: t("status.open"),
+    PARTIALLY_CLOSED: t("status.partiallyClosed"),
+    CLOSED: t("status.closed"),
+    STOPPED_OUT: t("status.stoppedOut"),
+    PENDING: t("status.pending"),
+  };
+
   return (
     <span
       className={`px-2 py-0.5 text-xs font-medium rounded border ${colors[status] || colors.PENDING}`}
     >
-      {status.replace("_", " ")}
+      {labels[status] || status.replace("_", " ")}
     </span>
   );
 }
 
 // Signal row component
-function SignalRow({ signal }: { signal: TradingSignal }) {
+function SignalRow({ signal, t }: { signal: TradingSignal; t: (key: string) => string }) {
   return (
     <div className="flex items-center justify-between p-3 rounded bg-white/5 border border-white/10">
       <div className="flex items-center gap-3">
-        <SignalBadge strength={signal.signalStrength} />
+        <SignalBadge strength={signal.signalStrength} t={t} />
         <div>
           <p className="font-medium text-white font-mono">
             {signal.tokenSymbol || shortenAddress(signal.tokenMint)}
           </p>
           <p className="text-xs text-white/50">
-            from {signal.wallet?.label || "Unknown"} · {formatSol(signal.buyAmountSol)}
+            {t("from")} {signal.wallet?.label || t("unknown")} · {formatSol(signal.buyAmountSol)}
           </p>
         </div>
       </div>
       <div className="text-right">
         <p className="text-xs text-white/50">
           {signal.sentimentScore != null
-            ? `Sentiment: ${(signal.sentimentScore * 100).toFixed(0)}%`
-            : "Analyzing..."}
+            ? `${t("sentiment")}: ${(signal.sentimentScore * 100).toFixed(0)}%`
+            : t("analyzing")}
         </p>
         <p className="text-xs text-white/40">
           {new Date(signal.createdAt).toLocaleTimeString()}
@@ -104,9 +120,15 @@ function SignalRow({ signal }: { signal: TradingSignal }) {
 function PositionRow({
   position,
   onClose,
+  t,
+  tSignals,
+  tCommon,
 }: {
   position: Position;
   onClose: (id: string) => void;
+  t: (key: string) => string;
+  tSignals: (key: string) => string;
+  tCommon: (key: string) => string;
 }) {
   const pnlPercent = position.entryPriceSol
     ? ((position.currentPrice || position.entryPriceSol) / position.entryPriceSol - 1) * 100
@@ -116,15 +138,15 @@ function PositionRow({
   return (
     <div className="flex items-center justify-between p-3 rounded bg-white/5 border border-white/10">
       <div className="flex items-center gap-3">
-        <StatusBadge status={position.status} />
+        <StatusBadge status={position.status} t={tSignals} />
         <div>
           <p className="font-medium text-white font-mono">
             {position.tokenSymbol || shortenAddress(position.tokenMint)}
           </p>
           <div className="flex items-center gap-2 text-xs text-white/50">
-            <span>Entry: {formatSol(position.entryAmountSol)}</span>
+            <span>{t("position.entry")}: {formatSol(position.entryAmountSol)}</span>
             <span>•</span>
-            <span>Tokens: {position.remainingTokens.toFixed(2)}</span>
+            <span>{t("position.tokens")}: {position.remainingTokens.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -146,7 +168,7 @@ function PositionRow({
             onClick={() => onClose(position.id)}
             className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
           >
-            Close
+            {tCommon("close")}
           </Button>
         )}
       </div>
@@ -155,6 +177,11 @@ function PositionRow({
 }
 
 export function SmartTradingSection() {
+  const t = useTranslations("smartTrading");
+  const tSignals = useTranslations("signals");
+  const tMigration = useTranslations("migration");
+  const tCommon = useTranslations("common");
+
   // Use shared context instead of separate hook (prevents duplicate API calls!)
   const {
     config,
@@ -196,7 +223,7 @@ export function SmartTradingSection() {
       <section className="section-content">
         <Panel className="flex items-center justify-center py-12">
           <RefreshCw className="w-6 h-6 animate-spin text-white/50" />
-          <span className="ml-3 text-white/50">Loading smart trading data...</span>
+          <span className="ml-3 text-white/50">{t("loadingData")}</span>
         </Panel>
       </section>
     );
@@ -207,9 +234,9 @@ export function SmartTradingSection() {
       <section className="section-content">
         <Panel className="flex items-center justify-center py-12 text-red-400">
           <AlertCircle className="w-6 h-6" />
-          <span className="ml-3">Error: {error}</span>
+          <span className="ml-3">{tCommon("error")}: {error}</span>
           <Button variant="ghost" size="sm" onClick={refresh} className="ml-4">
-            Retry
+            {tCommon("retry")}
           </Button>
         </Panel>
       </section>
@@ -227,11 +254,11 @@ export function SmartTradingSection() {
           />
           <div>
             <h2 className="text-lg font-semibold text-white">
-              Smart Money Copy Trading
+              {t("title")}
             </h2>
             <p className="text-sm text-white/50">
-              {config?.tradingEnabled ? "Trading is LIVE" : "Trading is PAUSED"}
-              {lastUpdated && ` • Updated ${lastUpdated.toLocaleTimeString()}`}
+              {config?.tradingEnabled ? t("tradingLive") : t("tradingPaused")}
+              {lastUpdated && ` • ${t("updated", { time: lastUpdated.toLocaleTimeString() })}`}
             </p>
           </div>
         </div>
@@ -251,7 +278,7 @@ export function SmartTradingSection() {
             }
           >
             <Power className="w-4 h-4 mr-1" />
-            {config?.tradingEnabled ? "Stop Trading" : "Start Trading"}
+            {config?.tradingEnabled ? t("stopTrading") : t("startTrading")}
           </Button>
         </div>
       </Panel>
@@ -268,14 +295,14 @@ export function SmartTradingSection() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide flex items-center gap-2">
                 <Zap className="w-4 h-4" />
-                Recent Signals ({signals.length})
+                {t("recentSignals")} ({signals.length})
               </h3>
             </div>
             <div className="space-y-2 max-h-[300px] overflow-y-auto">
               {signals.length === 0 ? (
-                <p className="text-sm text-white/50 text-center py-4">No recent signals</p>
+                <p className="text-sm text-white/50 text-center py-4">{t("noRecentSignals")}</p>
               ) : (
-                signals.map((signal) => <SignalRow key={signal.id} signal={signal} />)
+                signals.map((signal) => <SignalRow key={signal.id} signal={signal} t={tSignals} />)
               )}
             </div>
           </Panel>
@@ -286,16 +313,16 @@ export function SmartTradingSection() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide flex items-center gap-2">
               <Target className="w-4 h-4" />
-              Open Positions ({positions.length})
+              {t("openPositions")} ({positions.length})
             </h3>
           </div>
           <div className="space-y-2 max-h-[540px] overflow-y-auto">
             {positions.length === 0 ? (
               <p className="text-sm text-white/50 text-center py-8">
-                No open positions
+                {t("noOpenPositions")}
                 <br />
                 <span className="text-xs">
-                  Positions will appear here when signals are executed
+                  {t("positionsWillAppear")}
                 </span>
               </p>
             ) : (
@@ -304,6 +331,9 @@ export function SmartTradingSection() {
                   key={position.id}
                   position={position}
                   onClose={handleClosePosition}
+                  t={t}
+                  tSignals={tSignals}
+                  tCommon={tCommon}
                 />
               ))
             )}
@@ -316,10 +346,10 @@ export function SmartTradingSection() {
         <div className="flex items-center gap-2 mb-3">
           <Activity className="w-4 h-4 text-[#c4f70e]" />
           <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide">
-            Migration Tracker
+            {tMigration("tracker")}
           </h3>
           <span className="text-xs text-white/30">
-            Real-time pump.fun → Raydium migrations
+            {tMigration("realtimePumpFun")}
           </span>
         </div>
         <MigrationFeedPanel
@@ -332,11 +362,11 @@ export function SmartTradingSection() {
       {/* Trading config summary */}
       {config && (
         <Panel className="text-xs text-white/40 flex flex-wrap gap-4">
-          <span>Target 1: +{config.target1Percent}% (sell {config.target1SellPercent}%)</span>
-          <span>Target 2: +{config.target2Percent}% (sell remaining)</span>
-          <span>Stop Loss: -{config.stopLossPercent}%</span>
-          <span>Max Slippage: {config.maxSlippageBps / 100}%</span>
-          <span>Min Tweets: {config.minTweetCount}</span>
+          <span>{t("config.target1")}: +{config.target1Percent}% ({t("config.sell", { percent: config.target1SellPercent })})</span>
+          <span>{t("config.target2")}: +{config.target2Percent}% ({t("config.sellRemaining")})</span>
+          <span>{t("config.stopLoss")}: -{config.stopLossPercent}%</span>
+          <span>{t("config.maxSlippage")}: {config.maxSlippageBps / 100}%</span>
+          <span>{t("config.minTweets")}: {config.minTweetCount}</span>
         </Panel>
       )}
     </section>

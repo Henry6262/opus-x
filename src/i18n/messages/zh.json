@@ -1,0 +1,248 @@
+{
+  "metadata": {
+    "title": "SuperRouter | AI 交易智能",
+    "titleTemplate": "{title} | SuperRouter",
+    "description": "Solana 代币的实时 AI 交易智能。追踪 pump.fun 迁移、Twitter 情绪和市场信号。观看 Vibr Coder 工作。",
+    "keywords": "Solana, 交易, AI, pump.fun, 代币, 加密货币, DeFi, 迁移, Twitter, 情绪"
+  },
+  "common": {
+    "loading": "加载中...",
+    "error": "错误",
+    "retry": "重试",
+    "save": "保存",
+    "cancel": "取消",
+    "close": "关闭",
+    "confirm": "确认",
+    "search": "搜索",
+    "noData": "暂无数据",
+    "viewAll": "查看全部",
+    "showMore": "显示更多",
+    "showLess": "收起",
+    "followers": "关注者",
+    "verified": "已验证",
+    "sol": "SOL",
+    "token": "代币",
+    "amount": "数量",
+    "time": "时间",
+    "status": "状态"
+  },
+  "nav": {
+    "smartMoney": "智能资金",
+    "twitter": "推特"
+  },
+  "profile": {
+    "superRouter": "SUPER ROUTER",
+    "allTimePnl": "历史总盈亏",
+    "winRate": "胜率",
+    "streak": "连胜",
+    "trades": "交易",
+    "bestTrade": "最佳"
+  },
+  "smartTrading": {
+    "title": "智能资金跟单",
+    "loadingData": "加载智能交易数据...",
+    "tradingLive": "交易已启动",
+    "tradingPaused": "交易已暂停",
+    "updated": "{time}更新",
+    "startTrading": "开始交易",
+    "stopTrading": "停止交易",
+    "recentSignals": "最新信号",
+    "noRecentSignals": "暂无信号",
+    "openPositions": "持仓中",
+    "noOpenPositions": "暂无持仓",
+    "positionsWillAppear": "执行信号后持仓将显示在这里",
+    "positionHistory": "历史持仓",
+    "noPositionHistory": "暂无历史",
+    "config": {
+      "title": "交易配置",
+      "maxPositionSize": "最大仓位",
+      "target1": "目标1",
+      "target2": "目标2",
+      "stopLoss": "止损",
+      "trailingStop": "移动止损",
+      "minConfidence": "最低置信度",
+      "autoTrade": "自动交易",
+      "maxSlippage": "最大滑点",
+      "minTweets": "最少推文",
+      "sell": "卖出 {percent}%",
+      "sellRemaining": "卖出剩余"
+    },
+    "position": {
+      "entry": "入场价",
+      "tokens": "代币数量",
+      "targetSl": "目标/止损",
+      "pnl": "盈亏",
+      "unrealizedPnl": "未实现盈亏",
+      "realizedPnl": "已实现盈亏"
+    }
+  },
+  "signals": {
+    "strength": {
+      "strong": "强势",
+      "weak": "弱势"
+    },
+    "status": {
+      "pending": "待定",
+      "rejected": "已拒绝",
+      "open": "持仓中",
+      "closed": "已平仓",
+      "stoppedOut": "已止损",
+      "partiallyClosed": "部分平仓"
+    },
+    "from": "来自",
+    "unknown": "未知",
+    "sentiment": "情绪",
+    "analyzing": "分析中...",
+    "notes": "备注"
+  },
+  "wallets": {
+    "title": "智能资金",
+    "trackedWallet": "个追踪钱包",
+    "trackedWallets": "个追踪钱包",
+    "noWallets": "未追踪任何钱包",
+    "noTwitterLinked": "未关联推特",
+    "tradingSignals": "交易信号",
+    "positionsTaken": "已开仓位",
+    "addWallet": "添加钱包",
+    "removeWallet": "移除钱包",
+    "noSignalsFound": "该钱包暂无近期信号",
+    "noPositionsFound": "该钱包暂无近期仓位",
+    "strength": "强度",
+    "bought": "已买入",
+    "sold": "已卖出",
+    "walletBought": "{count}个钱包买入",
+    "walletsBought": "{count}个钱包买入",
+    "moreWallets": "+{count}个"
+  },
+  "migration": {
+    "title": "迁移动态",
+    "tracker": "迁移追踪器",
+    "realtimePumpFun": "实时 pump.fun → Raydium 迁移",
+    "subtitle": "实时代币迁移追踪",
+    "loading": "加载迁移数据...",
+    "noMigrations": "暂无迁移追踪",
+    "addTokenHint": "在上方添加代币地址或等待系统检测迁移",
+    "readyToTrade": "可交易",
+    "monitoring": "监控中",
+    "track": "追踪",
+    "tracking": "追踪中...",
+    "enterMint": "输入代币地址...",
+    "stats": {
+      "active": "活跃",
+      "pendingAi": "待分析",
+      "ready": "就绪",
+      "withSignals": "有信号",
+      "expired": "已过期"
+    },
+    "updated": "{time}前更新",
+    "card": {
+      "ready": "就绪",
+      "unknown": "未知",
+      "ago": "前",
+      "expires": "过期于",
+      "refreshData": "刷新市场数据",
+      "triggerAi": "触发AI分析",
+      "aiReasoning": "AI推理",
+      "signalBreakdown": "信号分解",
+      "tokenMint": "代币地址",
+      "metrics": {
+        "priceChange1h": "1小时",
+        "mcap": "市值",
+        "liquidity": "流动性",
+        "score": "评分"
+      },
+      "breakdown": {
+        "age": "时长",
+        "wallets": "钱包",
+        "ai": "AI",
+        "momentum": "动量",
+        "multiWallet": "多钱包"
+      }
+    }
+  },
+  "ai": {
+    "title": "AI 分析",
+    "loading": "加载 AI 分析...",
+    "noAnalysis": "暂无 AI 分析",
+    "analysisWillAppear": "收集市场数据后将显示分析结果",
+    "history": "AI 分析历史",
+    "current": "当前: {decision}",
+    "reasoning": "推理过程",
+    "marketSnapshot": "市场快照",
+    "riskFactors": "风险因素",
+    "confidence": "置信度",
+    "triggers": {
+      "scheduled": "定时检查",
+      "walletSignal": "钱包信号",
+      "migration": "检测到迁移",
+      "priceSpike": "价格波动"
+    },
+    "metrics": {
+      "price": "价格",
+      "mcap": "市值",
+      "liquidity": "流动性",
+      "volume24h": "24小时量"
+    }
+  },
+  "filters": {
+    "searchPlaceholder": "搜索地址、代号或名称",
+    "linkType": {
+      "all": "所有类型",
+      "tweet": "推文",
+      "profile": "主页",
+      "retweet": "转推",
+      "reply": "回复",
+      "quote": "引用"
+    },
+    "labelStatus": {
+      "all": "所有标签",
+      "labeled": "已标记",
+      "unlabeled": "未标记",
+      "scam": "诈骗",
+      "legit": "可信",
+      "uncertain": "不确定"
+    }
+  },
+  "terminal": {
+    "title": "终端",
+    "connected": "已连接",
+    "disconnected": "已断开"
+  },
+  "activity": {
+    "live": "实时",
+    "connecting": "连接中",
+    "offline": "离线",
+    "liveActivity": "实时活动",
+    "recentActivity": "近期活动",
+    "waitingForActivity": "等待活动...",
+    "connectingToFeed": "正在连接实时数据...",
+    "noRecentActivity": "暂无近期活动",
+    "showingEvents": "显示 {shown}/{total} 条活动"
+  },
+  "dashboard": {
+    "activePositions": "活跃仓位",
+    "noOpenPositions": "暂无持仓",
+    "positionsAppear": "执行信号后仓位将显示在这里",
+    "recentSignals": "最新信号",
+    "noRecentSignals": "暂无近期信号",
+    "signalsAppear": "钱包交易后信号将显示在这里",
+    "migrationFeed": "迁移动态",
+    "tradingConfig": "交易配置",
+    "start": "启动",
+    "stop": "停止",
+    "entry": "入场",
+    "close": "关闭",
+    "from": "来自",
+    "unknown": "未知"
+  },
+  "time": {
+    "justNow": "刚刚",
+    "secondsAgo": "{count}秒前",
+    "minutesAgo": "{count}分钟前",
+    "hoursAgo": "{count}小时前",
+    "daysAgo": "{count}天前",
+    "expired": "已过期",
+    "inMinutes": "{count}分钟后",
+    "inHours": "{count}小时后"
+  }
+}
