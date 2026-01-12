@@ -41,6 +41,13 @@ interface DevprintToken {
   transaction_signature: string | null;
   creator: string | null;
   sol_amount: number | null;
+  // Market data (enriched from backend cache)
+  price_usd?: number | null;
+  market_cap?: number | null;
+  liquidity?: number | null;
+  volume_24h?: number | null;
+  price_change_24h_pct?: number | null;
+  market_data_age_secs?: number | null;
 }
 
 /** Devprint wallet response from /api/wallets */
@@ -170,12 +177,12 @@ function mapTokenToMigration(token: DevprintToken, index: number, total: number)
     expiresAt: null,
     priorityScore: total - index,
 
-    // Market data
-    lastPriceUsd: null,
-    lastMarketCap: null,
-    lastLiquidity: null,
-    lastVolume24h: null,
-    lastPriceChange1h: null,
+    // Market data (enriched from cache by backend)
+    lastPriceUsd: token.price_usd ?? null,
+    lastMarketCap: token.market_cap ?? null,
+    lastLiquidity: token.liquidity ?? null,
+    lastVolume24h: token.volume_24h ?? null,
+    lastPriceChange1h: token.price_change_24h_pct ?? null,
     lastUpdatedAt: token.updated_at,
     priceHistory: null,
 
