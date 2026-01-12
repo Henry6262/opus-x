@@ -539,10 +539,11 @@ export function SmartTradingProvider({
 
         // Don't add to activity feed - too noisy
         // Surgical update to positions
-        setState((prev) => ({
-          ...prev,
-          positions: prev.positions.map((pos) => {
+        console.log(`[SmartTrading] price_update for ${data.ticker}: ${data.pnl_pct.toFixed(2)}%, updating positions...`);
+        setState((prev) => {
+          const updatedPositions = prev.positions.map((pos) => {
             if (pos.tokenMint === data.mint) {
+              console.log(`[SmartTrading] Updating position ${pos.tokenSymbol}: currentPrice ${pos.currentPrice} → ${data.price}`);
               return {
                 ...pos,
                 currentPrice: data.price,
@@ -551,8 +552,13 @@ export function SmartTradingProvider({
               };
             }
             return pos;
-          }),
-        }));
+          });
+          console.log(`[SmartTrading] Updated ${updatedPositions.filter(p => p.tokenMint === data.mint).length} positions`);
+          return {
+            ...prev,
+            positions: updatedPositions,
+          };
+        });
       })
     );
 
