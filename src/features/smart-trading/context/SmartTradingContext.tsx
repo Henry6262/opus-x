@@ -400,21 +400,31 @@ export function SmartTradingProvider({
 
     // Market data updated - update existing migration (surgical update)
     unsubscribes.push(
-      on<{ tokenMint: string; priceUsd?: number; marketCap?: number; priceChange1h?: number }>(
+      on<{
+        mint: string;
+        price_usd?: number;
+        market_cap?: number;
+        liquidity?: number;
+        volume_24h?: number;
+        price_change_24h_pct?: number;
+      }>(
         "market_data_updated",
         (data, event) => {
+          console.log(`[SmartTrading] market_data_updated for ${data.mint}: price=$${data.price_usd}, mcap=$${data.market_cap}`);
           addActivity(event);
 
           // Surgical update - no full refetch
           setState((prev) => ({
             ...prev,
             rankedMigrations: prev.rankedMigrations.map((rm) => {
-              if (rm.tokenMint === data.tokenMint) {
+              if (rm.tokenMint === data.mint) {
                 return {
                   ...rm,
-                  lastPriceUsd: data.priceUsd ?? rm.lastPriceUsd,
-                  lastMarketCap: data.marketCap ?? rm.lastMarketCap,
-                  lastPriceChange1h: data.priceChange1h ?? rm.lastPriceChange1h,
+                  lastPriceUsd: data.price_usd ?? rm.lastPriceUsd,
+                  lastMarketCap: data.market_cap ?? rm.lastMarketCap,
+                  lastLiquidity: data.liquidity ?? rm.lastLiquidity,
+                  lastVolume24h: data.volume_24h ?? rm.lastVolume24h,
+                  lastPriceChange1h: data.price_change_24h_pct ?? rm.lastPriceChange1h,
                   lastUpdatedAt: new Date().toISOString(),
                 };
               }
