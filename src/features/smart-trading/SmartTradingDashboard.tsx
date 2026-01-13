@@ -670,32 +670,34 @@ export function SmartTradingDashboard() {
       {/* Header with connection status and controls */}
       <ConnectionHeader />
 
-      {/* Main content grid - panels side by side */}
-      <div className="flex flex-row gap-4 overflow-x-auto">
-        {/* Left: Collapsible Live Activity Feed */}
-        <div
-          className="h-[500px] flex-shrink-0"
-          style={getPanelFlexStyle("activity")}
-          ref={(el) => {
-            panelRefs.current.activity = el;
-          }}
-        >
-          <CollapsibleSidePanel
-            icon={<Activity className="w-5 h-5" />}
-            title={t("liveActivity")}
-            direction="left"
-            defaultCollapsed={true}
-            collapsedWidth={COLLAPSED_WIDTH}
-            expandedWidth={`${ACTIVITY_EXPANDED_WIDTH}px`}
-            className="h-full"
-            id="activity"
-            activeId={accordionActiveId}
-            onActivate={handlePanelActivate}
-            onCollapsedChange={handleDesktopCollapsedChange("activity")}
+      {/* Main content - Mobile: Stack vertically, Desktop: Side by side */}
+      <div className={isMobile ? "space-y-4" : "flex flex-row gap-4 overflow-x-auto"}>
+        {/* Live Activity Feed - Only show if active on mobile */}
+        {(!isMobile || activePanel === "activity") && (
+          <div
+            className={isMobile ? "w-full h-[500px]" : "h-[500px] flex-shrink-0"}
+            style={!isMobile ? getPanelFlexStyle("activity") : undefined}
+            ref={(el) => {
+              panelRefs.current.activity = el;
+            }}
           >
-            <LiveActivityFeed maxItems={30} />
-          </CollapsibleSidePanel>
-        </div>
+            <CollapsibleSidePanel
+              icon={<Activity className="w-5 h-5" />}
+              title={t("liveActivity")}
+              direction="left"
+              defaultCollapsed={!isMobile && true}
+              collapsedWidth={COLLAPSED_WIDTH}
+              expandedWidth={isMobile ? "100%" : `${ACTIVITY_EXPANDED_WIDTH}px`}
+              className="h-full"
+              id="activity"
+              activeId={accordionActiveId}
+              onActivate={handlePanelActivate}
+              onCollapsedChange={handleDesktopCollapsedChange("activity")}
+            >
+              <LiveActivityFeed maxItems={30} />
+            </CollapsibleSidePanel>
+          </div>
+        )}
 
         {/* Center: Migration Feed (grows to fill space) */}
         <div
@@ -722,35 +724,37 @@ export function SmartTradingDashboard() {
           </CollapsibleSidePanel>
         </div>
 
-        {/* Right: Positions + Signals */}
-        <div
-          className="w-[300px] flex-shrink-0 h-[500px]"
-          style={getPanelFlexStyle("positions")}
-          ref={(el) => {
-            panelRefs.current.positions = el;
-          }}
-        >
-          <CollapsibleSidePanel
-            icon={<Wallet className="w-5 h-5" />}
-            title="Positions & Signals"
-            direction="left"
-            collapsedWidth={COLLAPSED_WIDTH}
-            expandedWidth={`${POSITIONS_EXPANDED_WIDTH}px`}
-            className="h-full"
-            contentClassName="h-full flex flex-col gap-4"
-            id="positions"
-            activeId={accordionActiveId}
-            onActivate={handlePanelActivate}
-            onCollapsedChange={handleDesktopCollapsedChange("positions")}
+        {/* Positions & Signals - Only show if active on mobile */}
+        {(!isMobile || activePanel === "positions") && (
+          <div
+            className={isMobile ? "w-full h-[500px]" : "w-[300px] flex-shrink-0 h-[500px]"}
+            style={!isMobile ? getPanelFlexStyle("positions") : undefined}
+            ref={(el) => {
+              panelRefs.current.positions = el;
+            }}
           >
-            <div className="h-[230px]">
-              <PositionsPanel />
-            </div>
-            <div className="h-[230px]">
-              <SignalsPanel />
-            </div>
-          </CollapsibleSidePanel>
-        </div>
+            <CollapsibleSidePanel
+              icon={<Wallet className="w-5 h-5" />}
+              title="Positions & Signals"
+              direction="left"
+              collapsedWidth={COLLAPSED_WIDTH}
+              expandedWidth={isMobile ? "100%" : `${POSITIONS_EXPANDED_WIDTH}px`}
+              className="h-full"
+              contentClassName="h-full flex flex-col gap-4"
+              id="positions"
+              activeId={accordionActiveId}
+              onActivate={handlePanelActivate}
+              onCollapsedChange={handleDesktopCollapsedChange("positions")}
+            >
+              <div className="h-[230px]">
+                <PositionsPanel />
+              </div>
+              <div className="h-[230px]">
+                <SignalsPanel />
+              </div>
+            </CollapsibleSidePanel>
+          </div>
+        )}
       </div>
 
       {/* Bottom row: Wallets + Config */}
