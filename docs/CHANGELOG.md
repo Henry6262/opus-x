@@ -9,6 +9,8 @@ All notable changes to Opus-X are documented here.
 - Hero terminal toggle no longer sits over the video; the pill hides while the terminal is open and only returns when collapsed so the hero stays clean.
 - Mobile dashboard automatically scrolls the active live/migration/positions panel into view, ensuring phones always show one expanded section without manual sideways scrolling.
 - Accordion behavior for the Live Activity, Migration Feed, and Positions stack now only applies on mobile, restoring independent collapsible panels on desktop.
+- When a desktop panel collapses, its column now shrinks so neighboring panels slide over instead of leaving empty space.
+- Narrow desktops (<1300px) enforce a two-panel limit so opening a third column auto-collapses the oldest expanded one for better readability.
 - Language switcher now rewrites paths to the selected locale so the English/中文 toggle works consistently across the dashboard.
 - Language switching also persists by writing the `NEXT_LOCALE` cookie before routing, preventing the middleware from forcing a redirect back to the previous language.
 - Portfolio wallet pill sticks to the viewport, keeping balance stats visible as users scroll down the cockpit layout.

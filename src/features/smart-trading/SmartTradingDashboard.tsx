@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -512,6 +512,10 @@ function ConfigSummary() {
 
 type PanelId = "activity" | "migration" | "positions";
 
+const COLLAPSED_WIDTH = 56;
+const ACTIVITY_EXPANDED_WIDTH = 280;
+const POSITIONS_EXPANDED_WIDTH = 300;
+
 export function SmartTradingDashboard() {
   const t = useTranslations("activity");
   const tMigration = useTranslations("migration");
@@ -520,6 +524,13 @@ export function SmartTradingDashboard() {
   // Default to migration feed being active
   const [activePanel, setActivePanel] = useState<PanelId>("migration");
   const [isMobile, setIsMobile] = useState(false);
+  const [desktopPanelCollapsed, setDesktopPanelCollapsed] = useState<Record<PanelId, boolean>>({
+    activity: true,
+    migration: false,
+    positions: false,
+  });
+  const [isLimitedDesktop, setIsLimitedDesktop] = useState(false);
+  const panelOrderRef = useRef<PanelId[]>(["migration", "positions"]);
   const panelRefs = useRef<Record<PanelId, HTMLDivElement | null>>({
     activity: null,
     migration: null,
@@ -530,6 +541,19 @@ export function SmartTradingDashboard() {
     if (typeof window === "undefined") return;
     const media = window.matchMedia("(max-width: 768px)");
     const updateMatch = () => setIsMobile(media.matches);
+    updateMatch();
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", updateMatch);
+      return () => media.removeEventListener("change", updateMatch);
+    }
+    media.addListener(updateMatch);
+    return () => media.removeListener(updateMatch);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(max-width: 1300px)");
+    const updateMatch = () => setIsLimitedDesktop(media.matches);
     updateMatch();
     if (typeof media.addEventListener === "function") {
       media.addEventListener("change", updateMatch);
@@ -554,9 +578,92 @@ export function SmartTradingDashboard() {
   }, [activePanel, isMobile]);
 
   const accordionActiveId = isMobile ? activePanel : undefined;
+
+  // Mobile panel activation - cycle to next panel if clicking on active panel's collapse button
   const handlePanelActivate = isMobile
-    ? (panelId: string) => setActivePanel(panelId as PanelId)
+    ? (panelId: string) => {
+      const clickedId = panelId as PanelId;
+
+      // If clicking the currently active panel, cycle to the next one
+      if (clickedId === activePanel) {
+        const panels: PanelId[] = ["migration", "activity", "positions"];
+        const currentIndex = panels.indexOf(activePanel);
+        const nextIndex = (currentIndex + 1) % panels.length;
+        setActivePanel(panels[nextIndex]);
+      } else {
+        // Otherwise, activate the clicked panel
+        setActivePanel(clickedId);
+      }
+    }
     : undefined;
+
+  const handleDesktopCollapsedChange = (panel: PanelId) => (collapsed: boolean) => {
+    if (isMobile) return;
+    setDesktopPanelCollapsed((prev) => {
+      let nextState = { ...prev, [panel]: collapsed };
+      let order = panelOrderRef.current.filter((p) => p !== panel);
+      if (!collapsed) {
+        order = [...order, panel];
+        if (isLimitedDesktop && order.length > 2) {
+          const panelsToCollapse = order.slice(0, order.length - 2);
+          panelsToCollapse.forEach((p) => {
+            nextState[p] = true;
+          });
+          order = order.slice(order.length - 2);
+        }
+      }
+      panelOrderRef.current = order;
+      return nextState;
+    });
+  };
+
+  useEffect(() => {
+    if (!isLimitedDesktop || isMobile) return;
+    setDesktopPanelCollapsed((prev) => {
+      const openOrder = panelOrderRef.current.filter((panel) => !prev[panel]);
+      if (openOrder.length <= 2) return prev;
+      const panelsToCollapse = openOrder.slice(0, openOrder.length - 2);
+      if (panelsToCollapse.length === 0) return prev;
+      const next = { ...prev };
+      panelsToCollapse.forEach((panel) => {
+        next[panel] = true;
+      });
+      panelOrderRef.current = openOrder.slice(openOrder.length - 2);
+      return next;
+    });
+  }, [isLimitedDesktop, isMobile]);
+
+  const getPanelFlexStyle = (panel: PanelId): CSSProperties | undefined => {
+    if (isMobile) return undefined;
+    const collapsed = desktopPanelCollapsed[panel];
+    const transition = "flex-basis 0.4s cubic-bezier(0.32, 0.72, 0, 1), width 0.4s cubic-bezier(0.32, 0.72, 0, 1)";
+    if (collapsed) {
+      const width = `${COLLAPSED_WIDTH}px`;
+      return {
+        flex: `0 0 ${width}`,
+        width,
+        minWidth: width,
+        maxWidth: width,
+        transition,
+      };
+    }
+    if (panel === "migration") {
+      return {
+        flex: "1 1 0%",
+        minWidth: 0,
+        transition,
+      };
+    }
+    const widthPx = panel === "activity" ? ACTIVITY_EXPANDED_WIDTH : POSITIONS_EXPANDED_WIDTH;
+    const width = `${widthPx}px`;
+    return {
+      flex: `0 0 ${width}`,
+      width,
+      minWidth: width,
+      maxWidth: width,
+      transition,
+    };
+  };
 
   return (
     <div className="space-y-4">
@@ -568,6 +675,7 @@ export function SmartTradingDashboard() {
         {/* Left: Collapsible Live Activity Feed */}
         <div
           className="h-[500px] flex-shrink-0"
+          style={getPanelFlexStyle("activity")}
           ref={(el) => {
             panelRefs.current.activity = el;
           }}
@@ -577,12 +685,13 @@ export function SmartTradingDashboard() {
             title={t("liveActivity")}
             direction="left"
             defaultCollapsed={true}
-            collapsedWidth={48}
-            expandedWidth="280px"
+            collapsedWidth={COLLAPSED_WIDTH}
+            expandedWidth={`${ACTIVITY_EXPANDED_WIDTH}px`}
             className="h-full"
             id="activity"
             activeId={accordionActiveId}
             onActivate={handlePanelActivate}
+            onCollapsedChange={handleDesktopCollapsedChange("activity")}
           >
             <LiveActivityFeed maxItems={30} />
           </CollapsibleSidePanel>
@@ -591,6 +700,7 @@ export function SmartTradingDashboard() {
         {/* Center: Migration Feed (grows to fill space) */}
         <div
           className="flex-1 min-w-0 h-[500px]"
+          style={getPanelFlexStyle("migration")}
           ref={(el) => {
             panelRefs.current.migration = el;
           }}
@@ -599,13 +709,14 @@ export function SmartTradingDashboard() {
             icon={<Activity className="w-5 h-5" />}
             title={tMigration("title")}
             direction="left"
-            collapsedWidth={48}
+            collapsedWidth={COLLAPSED_WIDTH}
             expandedWidth="100%"
             className="h-full"
             contentClassName="h-full"
             id="migration"
             activeId={accordionActiveId}
             onActivate={handlePanelActivate}
+            onCollapsedChange={handleDesktopCollapsedChange("migration")}
           >
             <RealTimeMigrationPanel />
           </CollapsibleSidePanel>
@@ -614,6 +725,7 @@ export function SmartTradingDashboard() {
         {/* Right: Positions + Signals */}
         <div
           className="w-[300px] flex-shrink-0 h-[500px]"
+          style={getPanelFlexStyle("positions")}
           ref={(el) => {
             panelRefs.current.positions = el;
           }}
@@ -622,13 +734,14 @@ export function SmartTradingDashboard() {
             icon={<Wallet className="w-5 h-5" />}
             title="Positions & Signals"
             direction="left"
-            collapsedWidth={48}
-            expandedWidth="300px"
+            collapsedWidth={COLLAPSED_WIDTH}
+            expandedWidth={`${POSITIONS_EXPANDED_WIDTH}px`}
             className="h-full"
             contentClassName="h-full flex flex-col gap-4"
             id="positions"
             activeId={accordionActiveId}
             onActivate={handlePanelActivate}
+            onCollapsedChange={handleDesktopCollapsedChange("positions")}
           >
             <div className="h-[230px]">
               <PositionsPanel />

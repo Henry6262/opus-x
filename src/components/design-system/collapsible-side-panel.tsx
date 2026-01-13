@@ -46,17 +46,15 @@ export function CollapsibleSidePanel({
 
   const toggleCollapsed = useCallback(() => {
     if (isAccordionMode && id) {
-      // In accordion mode, clicking expands this panel (closes others)
-      if (isCollapsed) {
-        onActivate?.(id);
-      }
-      // Don't allow collapsing in accordion mode - one must always be open
+      // In accordion mode, always call onActivate with this panel's ID
+      // Parent will handle cycling to next panel if this one is already active
+      onActivate?.(id);
     } else {
       const newState = !localCollapsed;
       setLocalCollapsed(newState);
       onCollapsedChange?.(newState);
     }
-  }, [isAccordionMode, id, isCollapsed, localCollapsed, onActivate, onCollapsedChange]);
+  }, [isAccordionMode, id, localCollapsed, onActivate, onCollapsedChange]);
 
   const ChevronIcon = direction === "left"
     ? (isCollapsed ? ChevronRight : ChevronLeft)

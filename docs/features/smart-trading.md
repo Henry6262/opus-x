@@ -26,6 +26,8 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - 2026-01-12: Migration cards trimmed further—controls removed, copy action sits beside the ticker, and the detection timestamp lives in the top-right for a true single-row glance.
 - 2026-01-12: Mobile view now auto-scrolls the active live/migration/positions panel into view so there's always one expanded section visible without swiping around.
 - 2026-01-12: The accordion behavior for Live Activity / Migration Feed / Positions is now mobile-only; desktop keeps independent collapses so multiple panels can stay open.
+- 2026-01-12: Desktop collapsible panels now shrink their entire column when collapsed so adjacent panels slide over and fill the freed space.
+- 2026-01-12: On compact desktops (<1300px wide) only two panels can remain expanded simultaneously—opening another automatically collapses the oldest open column.
 - 2026-01-12: The hero terminal toggle no longer hovers over the video; the pill only appears when the terminal is collapsed, keeping the hero unobstructed while still making the reopen action obvious.
 - 2026-01-12: Shared button component now enforces a pointer cursor (and disabled cursor states) for consistent affordance cues.
 - 2026-01-12: Removed the floating “Super Router” tag from the trader card and increased spacing below the hero section so the dashboard content breathes more on all breakpoints.
