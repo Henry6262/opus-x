@@ -235,7 +235,10 @@
     "entry": "Entry",
     "close": "Close",
     "from": "from",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "recentTrades": "Recent Trades",
+    "noRecentTrades": "No recent trades",
+    "tradesAppearHere": "Completed trades will appear here"
   },
   "time": {
     "justNow": "just now",

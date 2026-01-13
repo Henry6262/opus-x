@@ -28,6 +28,7 @@ import { LiveActivityFeed } from "./components/LiveActivityFeed";
 import { MigrationTokenCard } from "./components/MigrationTokenCard";
 import { TrackedWalletsPanel } from "./components/TrackedWalletsPanel";
 import { WalletSignalStack } from "./components/WalletSignalBadge";
+import { RecentTradesPanel } from "./components/RecentTradesPanel";
 import type { Position, TradingSignal } from "./types";
 
 // ============================================
@@ -694,7 +695,14 @@ export function SmartTradingDashboard() {
               onActivate={handlePanelActivate}
               onCollapsedChange={handleDesktopCollapsedChange("activity")}
             >
-              <LiveActivityFeed maxItems={30} />
+              <div className="h-full flex flex-col gap-3 overflow-hidden">
+                <div className="flex-1 min-h-0">
+                  <LiveActivityFeed maxItems={30} />
+                </div>
+                <div className="flex-shrink-0">
+                  <RecentTradesPanel maxTrades={10} />
+                </div>
+              </div>
             </CollapsibleSidePanel>
           </div>
         )}
