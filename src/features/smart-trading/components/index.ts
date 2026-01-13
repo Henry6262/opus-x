@@ -4,3 +4,5 @@ export { AiReasoningPanel } from "./AiReasoningPanel";
 export { WalletSignalBadge, WalletSignalStack } from "./WalletSignalBadge";
 export { TraderProfileCard } from "./TraderProfileCard";
 export { LiveActivityFeed, CompactActivityFeed } from "./LiveActivityFeed";
+export { TrackedWalletsPanel } from "./TrackedWalletsPanel";
+export { RecentTradesPanel } from "./RecentTradesPanel";

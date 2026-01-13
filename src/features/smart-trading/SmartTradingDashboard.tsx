@@ -769,3 +769,5 @@ export function SmartTradingDashboard() {
     </div>
   );
 }
+// Add RecentTradesPanel import at top with other imports
+// import { RecentTradesPanel } from "./components/RecentTradesPanel";
