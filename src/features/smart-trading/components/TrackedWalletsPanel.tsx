@@ -101,13 +101,6 @@ const WALLET_TWITTER_MAP: Record<string, {
   twitterVerified?: boolean;
 }> = {
   // Cupsey
-  "6CPRX2qdoVHXyqJ43uDuMCTHmB63ZRXUHqCpzxqUxaWs": {
-    twitterUsername: "cupseyy",
-    twitterName: "Cupsey",
-    twitterAvatar: "https://pbs.twimg.com/profile_images/1878584793249583104/WMH0-IGY_400x400.jpg",
-    twitterFollowers: 183384,
-    twitterVerified: false,
-  },
   "2fg5QD1eD7rzNNCsvnhmXFm5hqNgwTTG8p7kQ6f3rx6f": {
     twitterUsername: "cupseyy",
     twitterName: "Cupsey",
@@ -629,11 +622,10 @@ function WalletModal({
                           </div>
                         </td>
                         <td
-                          className={`p-3 text-sm font-bold ${
-                            pos.realizedPnlSol >= 0
+                          className={`p-3 text-sm font-bold ${pos.realizedPnlSol >= 0
                               ? "text-green-400"
                               : "text-red-400"
-                          }`}
+                            }`}
                         >
                           {pos.realizedPnlSol >= 0 ? "+" : ""}
                           {formatSol(pos.realizedPnlSol)}

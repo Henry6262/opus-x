@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import type { MigrationAnalysis, AiDecision } from "../types";
 
-type TimeTranslator = (key: string, params?: Record<string, unknown>) => string;
+type TimeTranslator = (key: string, params?: Record<string, string | number | Date>) => string;
 
 interface AiReasoningPanelProps {
   analyses: MigrationAnalysis[];
@@ -257,10 +257,10 @@ export function AiReasoningPanel({
                             animate={{ width: `${analysis.confidence * 100}%` }}
                             transition={{ duration: 0.5 }}
                             className={`h-full rounded-full ${analysis.decision === "ENTER"
-                                ? "bg-gradient-to-r from-green-500 to-green-400"
-                                : analysis.decision === "WAIT"
-                                  ? "bg-gradient-to-r from-amber-500 to-amber-400"
-                                  : "bg-white/30"
+                              ? "bg-gradient-to-r from-green-500 to-green-400"
+                              : analysis.decision === "WAIT"
+                                ? "bg-gradient-to-r from-amber-500 to-amber-400"
+                                : "bg-white/30"
                               }`}
                           />
                         </div>

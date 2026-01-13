@@ -129,8 +129,8 @@ export function MigrationFeedPanel({
               <button
                 onClick={() => setShowTrackForm(!showTrackForm)}
                 className={`p-2 rounded-lg transition-colors ${showTrackForm
-                    ? "bg-[#c4f70e]/20 text-[#c4f70e]"
-                    : "bg-white/5 text-white/60 hover:bg-white/10"
+                  ? "bg-[#c4f70e]/20 text-[#c4f70e]"
+                  : "bg-white/5 text-white/60 hover:bg-white/10"
                   }`}
                 title="Track token manually"
               >
@@ -251,8 +251,6 @@ export function MigrationFeedPanel({
                   <MigrationTokenCard
                     key={ranked.tokenMint}
                     ranked={ranked}
-                    onAnalyze={handleAnalyze}
-                    onRefresh={handleRefreshToken}
                   />
                 ))}
               </AnimatePresence>
@@ -280,8 +278,6 @@ export function MigrationFeedPanel({
                   <MigrationTokenCard
                     key={ranked.tokenMint}
                     ranked={ranked}
-                    onAnalyze={handleAnalyze}
-                    onRefresh={handleRefreshToken}
                   />
                 ))}
               </AnimatePresence>

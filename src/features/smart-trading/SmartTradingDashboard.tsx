@@ -393,8 +393,6 @@ function RealTimeMigrationPanel() {
                 <MigrationTokenCard
                   key={ranked.tokenMint}
                   ranked={ranked}
-                  onAnalyze={analyzeMigration}
-                  onRefresh={refreshMigrationData}
                 />
               ))}
             </AnimatePresence>
@@ -416,8 +414,6 @@ function RealTimeMigrationPanel() {
                 <MigrationTokenCard
                   key={ranked.tokenMint}
                   ranked={ranked}
-                  onAnalyze={analyzeMigration}
-                  onRefresh={refreshMigrationData}
                 />
               ))}
             </AnimatePresence>
