@@ -33,6 +33,7 @@ import { WalletSignalStack } from "./components/WalletSignalBadge";
 import { RecentTradesPanel } from "./components/RecentTradesPanel";
 import { TransactionsPanel } from "./components/TransactionsPanel";
 import { ActivePositionsPanel } from "./components/ActivePositionsPanel";
+import { OnChainHoldingsPanel } from "./components/OnChainHoldingsPanel";
 import type { Position, TradingSignal } from "./types";
 
 // ============================================
@@ -863,10 +864,10 @@ export function SmartTradingDashboard() {
         )}
       </div>
 
-      {/* Bottom row: Active Positions + Smart Money + Config */}
+      {/* Bottom row: On-Chain Holdings + Smart Money + Config */}
       <div className="grid grid-cols-12 gap-4">
         <div className="col-span-12 lg:col-span-4 xl:col-span-4">
-          <ActivePositionsPanel maxPositions={10} />
+          <OnChainHoldingsPanel minValueUsd={0.5} />
         </div>
         <div className="col-span-12 lg:col-span-4 xl:col-span-5">
           <TrackedWalletsPanel />
