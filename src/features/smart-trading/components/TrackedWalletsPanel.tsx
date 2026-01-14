@@ -231,7 +231,7 @@ function WalletRow({
   return (
     <motion.div
       onClick={onClick}
-      className="relative flex flex-col gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 via-black/60 to-black/80 p-4 cursor-pointer overflow-hidden group"
+      className="relative flex flex-col gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 via-black/60 to-black/80 p-4 cursor-pointer overflow-hidden group min-h-[120px]"
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 320, damping: 26 }}

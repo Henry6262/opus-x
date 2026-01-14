@@ -592,9 +592,9 @@ export function SmartTradingDashboard() {
 
   // Mobile panel activation - explicit button press switches sections
   const handlePanelActivate = isMobile
-    ? (panelId: PanelId) => {
-      if (!ENABLED_PANELS.includes(panelId)) return;
-      setActivePanel(panelId);
+    ? (panelId: string) => {
+      if (!ENABLED_PANELS.includes(panelId as PanelId)) return;
+      setActivePanel(panelId as PanelId);
     }
     : undefined;
 
@@ -672,10 +672,10 @@ export function SmartTradingDashboard() {
   };
 
   const mobileSwitchOptions: { id: PanelId; label: string; icon: ReactNode }[] = [
-    { id: "activity", label: t("liveActivity"), icon: <Activity className="w-4 h-4" /> },
-    ...(SHOW_MIGRATION_PANEL ? [{ id: "migration", label: tMigration("title"), icon: <Activity className="w-4 h-4" /> }] : []),
-    { id: "transactions", label: tDashboard("recentTrades"), icon: <TrendingUp className="w-4 h-4" /> },
-    { id: "positions", label: tDashboard("activePositions"), icon: <Wallet className="w-4 h-4" /> },
+    { id: "activity" as PanelId, label: t("liveActivity"), icon: <Activity className="w-4 h-4" /> },
+    ...(SHOW_MIGRATION_PANEL ? [{ id: "migration" as PanelId, label: tMigration("title"), icon: <Activity className="w-4 h-4" /> }] : []),
+    { id: "transactions" as PanelId, label: tDashboard("recentTrades"), icon: <TrendingUp className="w-4 h-4" /> },
+    { id: "positions" as PanelId, label: tDashboard("activePositions"), icon: <Wallet className="w-4 h-4" /> },
   ];
   const switcherColsClass =
     mobileSwitchOptions.length === 4 ? "grid-cols-4" : mobileSwitchOptions.length === 3 ? "grid-cols-3" : "grid-cols-2";
@@ -863,9 +863,12 @@ export function SmartTradingDashboard() {
         )}
       </div>
 
-      {/* Bottom row: Smart Money + Config */}
+      {/* Bottom row: Active Positions + Smart Money + Config */}
       <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-12 lg:col-span-8 xl:col-span-9">
+        <div className="col-span-12 lg:col-span-4 xl:col-span-4">
+          <ActivePositionsPanel maxPositions={10} />
+        </div>
+        <div className="col-span-12 lg:col-span-4 xl:col-span-5">
           <TrackedWalletsPanel />
         </div>
         <div className="col-span-12 lg:col-span-4 xl:col-span-3">
@@ -875,5 +878,3 @@ export function SmartTradingDashboard() {
     </div>
   );
 }
-// Add RecentTradesPanel import at top with other imports
-// import { RecentTradesPanel } from "./components/RecentTradesPanel";
