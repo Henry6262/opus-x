@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -660,10 +660,10 @@ export function SmartTradingDashboard() {
     };
   };
 
-  const mobileSwitchOptions: { id: PanelId; label: string }[] = [
-    { id: "activity", label: t("liveActivity") },
-    ...(SHOW_MIGRATION_PANEL ? [{ id: "migration", label: tMigration("title") }] : []),
-    { id: "positions", label: tDashboard("activePositions") },
+  const mobileSwitchOptions: { id: PanelId; label: string; icon: ReactNode }[] = [
+    { id: "activity", label: t("liveActivity"), icon: <Activity className="w-4 h-4" /> },
+    ...(SHOW_MIGRATION_PANEL ? [{ id: "migration", label: tMigration("title"), icon: <Activity className="w-4 h-4" /> }] : []),
+    { id: "positions", label: tDashboard("activePositions"), icon: <Wallet className="w-4 h-4" /> },
   ];
   const switcherColsClass = mobileSwitchOptions.length === 3 ? "grid-cols-3" : "grid-cols-2";
   const activeMobileIndex = mobileSwitchOptions.findIndex((opt) => opt.id === activePanel);
@@ -677,14 +677,14 @@ export function SmartTradingDashboard() {
       {/* Mobile panel switcher */}
       {isMobile && (
         <div
-          className="relative flex items-center gap-1 p-1 rounded-full bg-white/5 border border-white/10"
+          className="relative flex items-center gap-1 p-1 rounded-full border border-white/10 bg-gradient-to-r from-white/5 via-white/0 to-white/5 backdrop-blur-lg shadow-[0_10px_40px_rgba(0,0,0,0.35)]"
           style={{ height: MOBILE_SWITCH_HEIGHT }}
         >
           {activeMobileIndex >= 0 && (
             <motion.div
-              layout
-              transition={{ duration: 0.25, ease: [0.22, 0.61, 0.36, 1] }}
-              className="absolute inset-y-1 rounded-full bg-[#c4f70e]/20 border border-[#c4f70e]/40 shadow-[0_0_20px_rgba(196,247,14,0.25)]"
+              layoutId="mobile-switch-highlight"
+              transition={{ duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
+              className="absolute inset-y-1 rounded-full bg-[#c4f70e]/15 border border-[#c4f70e]/40 shadow-[0_0_20px_rgba(196,247,14,0.3)]"
               style={{
                 width: `${segmentWidth}%`,
                 left: `${segmentWidth * activeMobileIndex}%`,
@@ -698,12 +698,25 @@ export function SmartTradingDashboard() {
                 key={id}
                 onClick={() => handlePanelActivate?.(id)}
                 className={cn(
-                  "relative z-10 flex-1 h-full rounded-full text-xs font-semibold transition-colors",
-                  "flex items-center justify-center px-2 uppercase tracking-wide",
-                  isActive ? "text-white" : "text-white/60 hover:text-white/80"
+                  "relative z-10 flex-1 h-full rounded-full text-[11px] font-semibold transition-colors",
+                  "flex items-center justify-center gap-1 px-3 uppercase tracking-wide",
+                  "active:scale-[0.98]",
+                  isActive ? "text-white" : "text-white/60 hover:text-white/85"
                 )}
               >
-                {label}
+                <span className={cn("transition-transform", isActive ? "scale-[1.02]" : "opacity-70")}>
+                  {label}
+                </span>
+                <motion.span
+                  layoutId={`mobile-switch-icon-${id}`}
+                  className={cn(
+                    "inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 p-1",
+                    isActive ? "text-[#c4f70e]" : "text-white/50"
+                  )}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                >
+                  {mobileSwitchOptions.find((opt) => opt.id === id)?.icon}
+                </motion.span>
               </button>
             );
           })}

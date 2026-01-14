@@ -12,6 +12,7 @@ All notable changes to Opus-X are documented here.
 - Fixed mobile panel switcher so only the selected section renders (no sideways-collapsing migration feed) and positions no longer stack beneath it.
 - Migration feed code is retained for reference but the panel is hidden from the Smart Trading dashboard UI.
 - Mobile section switcher restyled into a pill tab with a sliding highlight for Live Activity vs Active Positions.
+- Added animated glow + icons to the mobile pill switcher to echo the wallet badge styling.
 - When a desktop panel collapses, its column now shrinks so neighboring panels slide over instead of leaving empty space.
 - Narrow desktops (<1300px) enforce a two-panel limit so opening a third column auto-collapses the oldest expanded one for better readability.
 - Language switcher now rewrites paths to the selected locale so the English/中文 toggle works consistently across the dashboard.

@@ -38,5 +38,6 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - 2026-01-12: Migration feed now includes a header collapse toggle and the positions/signals sidebar lives in a combined collapsible card for quicker triage.
 - 2026-01-12: Migration feed remains in code for reference but is hidden from the Smart Trading dashboard UI.
 - 2026-01-12: Mobile section switcher now uses a branded pill-style tab with a sliding highlight for Live Activity vs Active Positions.
+- 2026-01-12: Mobile switcher pills now include animated glow + icons for each section to match the wallet badge style.
 - 2026-01-10: Added trader profile card with character art and compact metrics layout.
 - 2026-01-10: Refined trader card UI to stack metrics without individual containers and highlight the character card visually.

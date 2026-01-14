@@ -6,3 +6,5 @@ export { TraderProfileCard } from "./TraderProfileCard";
 export { LiveActivityFeed, CompactActivityFeed } from "./LiveActivityFeed";
 export { TrackedWalletsPanel } from "./TrackedWalletsPanel";
 export { RecentTradesPanel } from "./RecentTradesPanel";
+export { TransactionsPanel } from "./TransactionsPanel";
+
