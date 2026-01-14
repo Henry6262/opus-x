@@ -154,11 +154,11 @@ export function TransactionsPanel({ maxTransactions = 15 }: TransactionsPanelPro
     return (
         <div className="rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden">
             {/* Header */}
-            <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between px-4 py-3 border-b border-white/10 hover:bg-white/5 transition-colors"
-            >
-                <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                <div
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity flex-1"
+                >
                     <TrendingUp className="w-4 h-4 text-[#c4f70e]" />
                     <span className="text-sm font-medium text-white">Transaction History</span>
                     <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-[#c4f70e]/20 text-[#c4f70e]">
@@ -167,21 +167,23 @@ export function TransactionsPanel({ maxTransactions = 15 }: TransactionsPanelPro
                 </div>
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            fetchTransactions();
-                        }}
+                        onClick={() => fetchTransactions()}
                         className="p-1 hover:bg-white/10 rounded transition-colors"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 text-white/40 ${isLoading ? 'animate-spin' : ''}`} />
                     </button>
-                    {isExpanded ? (
-                        <ChevronUp className="w-4 h-4 text-white/40" />
-                    ) : (
-                        <ChevronDown className="w-4 h-4 text-white/40" />
-                    )}
+                    <div
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                    >
+                        {isExpanded ? (
+                            <ChevronUp className="w-4 h-4 text-white/40" />
+                        ) : (
+                            <ChevronDown className="w-4 h-4 text-white/40" />
+                        )}
+                    </div>
                 </div>
-            </button>
+            </div>
 
             {/* Transaction list */}
             <AnimatePresence>
@@ -260,8 +262,8 @@ function TransactionCard({ tx }: TransactionCardProps) {
                                 {tx.ticker}
                             </span>
                             <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${isBuy
-                                    ? "bg-green-500/20 text-green-400"
-                                    : "bg-red-500/20 text-red-400"
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-red-500/20 text-red-400"
                                 }`}>
                                 {isBuy ? "BUY" : "SELL"}
                             </span>
