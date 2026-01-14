@@ -32,6 +32,7 @@ import { TrackedWalletsPanel } from "./components/TrackedWalletsPanel";
 import { WalletSignalStack } from "./components/WalletSignalBadge";
 import { RecentTradesPanel } from "./components/RecentTradesPanel";
 import { TransactionsPanel } from "./components/TransactionsPanel";
+import { ActivePositionsPanel } from "./components/ActivePositionsPanel";
 import type { Position, TradingSignal } from "./types";
 
 // ============================================

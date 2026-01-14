@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Target, RefreshCw, Zap } from "lucide-react";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
-import { useSharedWebSocket } from "@/hooks/useWebSocket";
+import { useSharedWebSocket } from "../hooks/useWebSocket";
 import {
     PositionProgressCard,
     type PositionData,
@@ -35,11 +35,6 @@ interface ApiPosition {
     buy_signature?: string;
 }
 
-interface WsMessage {
-    type: string;
-    [key: string]: unknown;
-}
-
 // ============================================
 // Active Positions Panel
 // ============================================
@@ -53,8 +48,8 @@ export function ActivePositionsPanel({ maxPositions = 10 }: ActivePositionsPanel
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const wsUrl = buildDevprntApiUrl("/ws/trading").toString().replace("https", "wss").replace("http", "ws");
-    const { lastMessage, isConnected } = useSharedWebSocket(wsUrl);
+    const { status, onAny } = useSharedWebSocket({ path: "/ws/trading" });
+    const isConnected = status === "connected";
 
     const fetchPositions = useCallback(async () => {
         try {
@@ -100,33 +95,34 @@ export function ActivePositionsPanel({ maxPositions = 10 }: ActivePositionsPanel
         return () => clearInterval(interval);
     }, [fetchPositions]);
 
+    // Subscribe to all WebSocket events
     useEffect(() => {
-        if (!lastMessage) return;
-        try {
-            const event: WsMessage = JSON.parse(lastMessage);
+        const unsubscribe = onAny((_data, event) => {
             if (event.type === "price_update") {
-                const e = event as unknown as PriceUpdateEvent;
+                const e = event as unknown as { data: PriceUpdateEvent };
+                const update = e.data || event;
                 setPositions((prev) =>
                     prev.map((pos) =>
-                        pos.mint !== e.mint ? pos : {
+                        pos.mint !== (update as PriceUpdateEvent).mint ? pos : {
                             ...pos,
-                            current_price: e.price,
-                            multiplier: e.multiplier,
-                            pnl_pct: e.pnl_pct,
-                            pnl_sol: e.pnl_sol,
-                            peak_pnl_pct: e.peak_pnl_pct,
-                            next_target: e.next_target,
-                            target_progress: e.target_progress,
+                            current_price: (update as PriceUpdateEvent).price,
+                            multiplier: (update as PriceUpdateEvent).multiplier,
+                            pnl_pct: (update as PriceUpdateEvent).pnl_pct,
+                            pnl_sol: (update as PriceUpdateEvent).pnl_sol,
+                            peak_pnl_pct: (update as PriceUpdateEvent).peak_pnl_pct,
+                            next_target: (update as PriceUpdateEvent).next_target,
+                            target_progress: (update as PriceUpdateEvent).target_progress,
                         }
                     )
                 );
             } else if (event.type === "position_opened") {
                 fetchPositions();
             } else if (event.type === "position_closed") {
-                const c = event as { mint: string };
-                setPositions((prev) => prev.filter((p) => p.mint !== c.mint));
+                const closed = event as unknown as { mint?: string; data?: { mint: string } };
+                const mint = closed.mint || closed.data?.mint;
+                if (mint) setPositions((prev) => prev.filter((p) => p.mint !== mint));
             } else if (event.type === "take_profit_triggered") {
-                const tp = event as unknown as TakeProfitEvent;
+                const tp = (event as unknown as { data?: TakeProfitEvent }).data || event as unknown as TakeProfitEvent;
                 setPositions((prev) =>
                     prev.map((pos) =>
                         pos.mint !== tp.mint ? pos : {
@@ -136,10 +132,9 @@ export function ActivePositionsPanel({ maxPositions = 10 }: ActivePositionsPanel
                     )
                 );
             }
-        } catch (err) {
-            console.error("WS parse error:", err);
-        }
-    }, [lastMessage, fetchPositions]);
+        });
+        return unsubscribe;
+    }, [onAny, fetchPositions]);
 
     return (
         <div className="rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden">
