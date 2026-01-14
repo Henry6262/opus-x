@@ -17,6 +17,7 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - Trading config summary (targets, stop loss, slippage, limits)
 
 ## Changelog
+- 2026-01-12: Mobile dashboard now swaps Live Activity, Migration Feed, and Positions with a dedicated three-button switcher (no more per-card collapse toggles on phones).
 - 2026-01-12: Migration cards replaced the token name row with a minimalist inline stat strip (MCap · Liq · Score) separated by subtle dividers directly beneath the ticker.
 - 2026-01-12: Tracked wallet presets now include Orange, Dior, Jack Duval, and POW Twitter handles, falling back to the SuperRouter avatar whenever a profile image is missing.
 - 2026-01-12: Tracked wallet cards now render in a responsive two-column grid with compact gradient tiles so the list shows twice as many wallets without scrolling.
@@ -35,5 +36,7 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - 2026-01-12: Tracked wallet rows now show a single inline pill next to each name with the first four address characters and a copy action.
 - 2026-01-12: Seeded the Orange focus tracked wallets client-side, defaulting unnamed wallets to “Rando Router” so operators can fill in handles later.
 - 2026-01-12: Migration feed now includes a header collapse toggle and the positions/signals sidebar lives in a combined collapsible card for quicker triage.
+- 2026-01-12: Migration feed remains in code for reference but is hidden from the Smart Trading dashboard UI.
+- 2026-01-12: Mobile section switcher now uses a branded pill-style tab with a sliding highlight for Live Activity vs Active Positions.
 - 2026-01-10: Added trader profile card with character art and compact metrics layout.
 - 2026-01-10: Refined trader card UI to stack metrics without individual containers and highlight the character card visually.

@@ -9,6 +9,9 @@ All notable changes to Opus-X are documented here.
 - Hero terminal toggle no longer sits over the video; the pill hides while the terminal is open and only returns when collapsed so the hero stays clean.
 - Mobile dashboard automatically scrolls the active live/migration/positions panel into view, ensuring phones always show one expanded section without manual sideways scrolling.
 - Accordion behavior for the Live Activity, Migration Feed, and Positions stack now only applies on mobile, restoring independent collapsible panels on desktop.
+- Fixed mobile panel switcher so only the selected section renders (no sideways-collapsing migration feed) and positions no longer stack beneath it.
+- Migration feed code is retained for reference but the panel is hidden from the Smart Trading dashboard UI.
+- Mobile section switcher restyled into a pill tab with a sliding highlight for Live Activity vs Active Positions.
 - When a desktop panel collapses, its column now shrinks so neighboring panels slide over instead of leaving empty space.
 - Narrow desktops (<1300px) enforce a two-panel limit so opening a third column auto-collapses the oldest expanded one for better readability.
 - Language switcher now rewrites paths to the selected locale so the English/中文 toggle works consistently across the dashboard.
@@ -17,6 +20,7 @@ All notable changes to Opus-X are documented here.
 - Migration feed cards pack their stats into inline pills within the header row, reducing height so more items fit on screen.
 - Migration cards dropped their bottom controls, moved copy + timestamp into the header, and now show all metrics as inline labels beneath the ticker for the most compact layout yet.
 - Shared UI button component now forces a pointer cursor (with disabled overrides) so every button feels interactive.
+- Mobile smart trading stack replaces the accordion with a three-button switcher that flips between Live Activity, Migration Feed, and Positions, hiding the side toggles on phones.
 - Removed the floating “Super Router” text badge from the trader profile card and increased the margin between the hero video and dashboard content to reduce visual crowding.
 - Trader profile metrics on the Smart Trading card now keep streak/trade/best stats visible on mobile by shifting them below the main pill while retaining the inline desktop view.
 - Tracked wallet rows now surface a single inline address pill with copy state beside each name, showing the first four characters clearly.

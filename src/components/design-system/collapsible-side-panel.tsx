@@ -13,6 +13,7 @@ export interface CollapsibleSidePanelProps {
   collapsedWidth?: number;
   expandedWidth?: string;
   direction?: "left" | "right";
+  showToggle?: boolean;
   className?: string;
   contentClassName?: string;
   onCollapsedChange?: (collapsed: boolean) => void;
@@ -30,6 +31,7 @@ export function CollapsibleSidePanel({
   collapsedWidth = 48,
   expandedWidth = "100%",
   direction = "left",
+  showToggle = true,
   className,
   contentClassName,
   onCollapsedChange,
@@ -63,23 +65,25 @@ export function CollapsibleSidePanel({
   return (
     <div className="relative h-full">
       {/* Toggle button - positioned at the right edge of the panel */}
-      <motion.button
-        onClick={toggleCollapsed}
-        initial={false}
-        className={cn(
-          "absolute top-1/2 -translate-y-1/2 z-50",
-          "w-6 h-12 flex items-center justify-center",
-          "bg-black/80 border border-white/20 rounded-full",
-          "hover:bg-white/20 hover:border-[#c4f70e]/50",
-          "transition-colors duration-200",
-          "shadow-[0_0_20px_rgba(0,0,0,0.5)]",
-          // Position at the right edge of the panel content
-          direction === "left" ? "right-0 translate-x-1/2" : "left-0 -translate-x-1/2"
-        )}
-        title={isCollapsed ? "Expand" : "Collapse"}
-      >
-        <ChevronIcon className="w-4 h-4 text-white/80" />
-      </motion.button>
+      {showToggle && (
+        <motion.button
+          onClick={toggleCollapsed}
+          initial={false}
+          className={cn(
+            "absolute top-1/2 -translate-y-1/2 z-50",
+            "w-6 h-12 flex items-center justify-center",
+            "bg-black/80 border border-white/20 rounded-full",
+            "hover:bg-white/20 hover:border-[#c4f70e]/50",
+            "transition-colors duration-200",
+            "shadow-[0_0_20px_rgba(0,0,0,0.5)]",
+            // Position at the right edge of the panel content
+            direction === "left" ? "right-0 translate-x-1/2" : "left-0 -translate-x-1/2"
+          )}
+          title={isCollapsed ? "Expand" : "Collapse"}
+        >
+          <ChevronIcon className="w-4 h-4 text-white/80" />
+        </motion.button>
+      )}
 
       {/* Panel container */}
       <motion.div

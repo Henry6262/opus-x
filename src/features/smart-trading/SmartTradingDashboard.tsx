@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Panel, CollapsibleSidePanel } from "@/components/design-system";
 import { Button } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import {
   useDashboardStats,
   usePositions,
@@ -512,14 +513,21 @@ type PanelId = "activity" | "migration" | "positions";
 const COLLAPSED_WIDTH = 56;
 const ACTIVITY_EXPANDED_WIDTH = 280;
 const POSITIONS_EXPANDED_WIDTH = 300;
+const MOBILE_SWITCH_HEIGHT = 44;
+const SHOW_MIGRATION_PANEL = false;
+const ENABLED_PANELS: PanelId[] = SHOW_MIGRATION_PANEL
+  ? ["activity", "migration", "positions"]
+  : ["activity", "positions"];
+const INITIAL_ACTIVE_PANEL: PanelId = SHOW_MIGRATION_PANEL ? "migration" : "activity";
 
 export function SmartTradingDashboard() {
   const t = useTranslations("activity");
   const tMigration = useTranslations("migration");
+  const tDashboard = useTranslations("dashboard");
 
   // Accordion state - only one panel can be expanded at a time (mobile only)
   // Default to migration feed being active
-  const [activePanel, setActivePanel] = useState<PanelId>("migration");
+  const [activePanel, setActivePanel] = useState<PanelId>(INITIAL_ACTIVE_PANEL);
   const [isMobile, setIsMobile] = useState(false);
   const [desktopPanelCollapsed, setDesktopPanelCollapsed] = useState<Record<PanelId, boolean>>({
     activity: true,
@@ -527,7 +535,7 @@ export function SmartTradingDashboard() {
     positions: false,
   });
   const [isLimitedDesktop, setIsLimitedDesktop] = useState(false);
-  const panelOrderRef = useRef<PanelId[]>(["migration", "positions"]);
+  const panelOrderRef = useRef<PanelId[]>(ENABLED_PANELS.filter((p) => p !== "activity"));
   const panelRefs = useRef<Record<PanelId, HTMLDivElement | null>>({
     activity: null,
     migration: null,
@@ -576,21 +584,11 @@ export function SmartTradingDashboard() {
 
   const accordionActiveId = isMobile ? activePanel : undefined;
 
-  // Mobile panel activation - cycle to next panel if clicking on active panel's collapse button
+  // Mobile panel activation - explicit button press switches sections
   const handlePanelActivate = isMobile
-    ? (panelId: string) => {
-      const clickedId = panelId as PanelId;
-
-      // If clicking the currently active panel, cycle to the next one
-      if (clickedId === activePanel) {
-        const panels: PanelId[] = ["migration", "activity", "positions"];
-        const currentIndex = panels.indexOf(activePanel);
-        const nextIndex = (currentIndex + 1) % panels.length;
-        setActivePanel(panels[nextIndex]);
-      } else {
-        // Otherwise, activate the clicked panel
-        setActivePanel(clickedId);
-      }
+    ? (panelId: PanelId) => {
+      if (!ENABLED_PANELS.includes(panelId)) return;
+      setActivePanel(panelId);
     }
     : undefined;
 
@@ -662,10 +660,55 @@ export function SmartTradingDashboard() {
     };
   };
 
+  const mobileSwitchOptions: { id: PanelId; label: string }[] = [
+    { id: "activity", label: t("liveActivity") },
+    ...(SHOW_MIGRATION_PANEL ? [{ id: "migration", label: tMigration("title") }] : []),
+    { id: "positions", label: tDashboard("activePositions") },
+  ];
+  const switcherColsClass = mobileSwitchOptions.length === 3 ? "grid-cols-3" : "grid-cols-2";
+  const activeMobileIndex = mobileSwitchOptions.findIndex((opt) => opt.id === activePanel);
+  const segmentWidth = mobileSwitchOptions.length > 0 ? 100 / mobileSwitchOptions.length : 0;
+
   return (
     <div className="space-y-4">
       {/* Header with connection status and controls */}
       <ConnectionHeader />
+
+      {/* Mobile panel switcher */}
+      {isMobile && (
+        <div
+          className="relative flex items-center gap-1 p-1 rounded-full bg-white/5 border border-white/10"
+          style={{ height: MOBILE_SWITCH_HEIGHT }}
+        >
+          {activeMobileIndex >= 0 && (
+            <motion.div
+              layout
+              transition={{ duration: 0.25, ease: [0.22, 0.61, 0.36, 1] }}
+              className="absolute inset-y-1 rounded-full bg-[#c4f70e]/20 border border-[#c4f70e]/40 shadow-[0_0_20px_rgba(196,247,14,0.25)]"
+              style={{
+                width: `${segmentWidth}%`,
+                left: `${segmentWidth * activeMobileIndex}%`,
+              }}
+            />
+          )}
+          {mobileSwitchOptions.map(({ id, label }) => {
+            const isActive = activePanel === id;
+            return (
+              <button
+                key={id}
+                onClick={() => handlePanelActivate?.(id)}
+                className={cn(
+                  "relative z-10 flex-1 h-full rounded-full text-xs font-semibold transition-colors",
+                  "flex items-center justify-center px-2 uppercase tracking-wide",
+                  isActive ? "text-white" : "text-white/60 hover:text-white/80"
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Main content - Mobile: Stack vertically, Desktop: Side by side */}
       <div className={isMobile ? "space-y-4" : "flex flex-row gap-4 overflow-x-auto"}>
@@ -686,6 +729,7 @@ export function SmartTradingDashboard() {
               collapsedWidth={COLLAPSED_WIDTH}
               expandedWidth={isMobile ? "100%" : `${ACTIVITY_EXPANDED_WIDTH}px`}
               className="h-full"
+              showToggle={!isMobile}
               id="activity"
               activeId={accordionActiveId}
               onActivate={handlePanelActivate}
@@ -704,29 +748,32 @@ export function SmartTradingDashboard() {
         )}
 
         {/* Center: Migration Feed (grows to fill space) */}
-        <div
-          className="flex-1 min-w-0 h-[500px]"
-          style={getPanelFlexStyle("migration")}
-          ref={(el) => {
-            panelRefs.current.migration = el;
-          }}
-        >
-          <CollapsibleSidePanel
-            icon={<Activity className="w-5 h-5" />}
-            title={tMigration("title")}
-            direction="left"
-            collapsedWidth={COLLAPSED_WIDTH}
-            expandedWidth="100%"
-            className="h-full"
-            contentClassName="h-full"
-            id="migration"
-            activeId={accordionActiveId}
-            onActivate={handlePanelActivate}
-            onCollapsedChange={handleDesktopCollapsedChange("migration")}
+        {SHOW_MIGRATION_PANEL && (!isMobile || activePanel === "migration") && (
+          <div
+            className="flex-1 min-w-0 h-[500px]"
+            style={getPanelFlexStyle("migration")}
+            ref={(el) => {
+              panelRefs.current.migration = el;
+            }}
           >
-            <RealTimeMigrationPanel />
-          </CollapsibleSidePanel>
-        </div>
+            <CollapsibleSidePanel
+              icon={<Activity className="w-5 h-5" />}
+              title={tMigration("title")}
+              direction="left"
+              collapsedWidth={COLLAPSED_WIDTH}
+              expandedWidth="100%"
+              className="h-full"
+              contentClassName="h-full"
+              showToggle={!isMobile}
+              id="migration"
+              activeId={accordionActiveId}
+              onActivate={handlePanelActivate}
+              onCollapsedChange={handleDesktopCollapsedChange("migration")}
+            >
+              <RealTimeMigrationPanel />
+            </CollapsibleSidePanel>
+          </div>
+        )}
 
         {/* Positions & Signals - Only show if active on mobile */}
         {(!isMobile || activePanel === "positions") && (
@@ -745,6 +792,7 @@ export function SmartTradingDashboard() {
               expandedWidth={isMobile ? "100%" : `${POSITIONS_EXPANDED_WIDTH}px`}
               className="h-full"
               contentClassName="h-full flex flex-col gap-4"
+              showToggle={!isMobile}
               id="positions"
               activeId={accordionActiveId}
               onActivate={handlePanelActivate}
