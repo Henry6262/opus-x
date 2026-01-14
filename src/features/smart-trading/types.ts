@@ -193,6 +193,23 @@ export interface PortfolioSnapshot {
   openPositions: number;
 }
 
+export interface TradingLogItem {
+  id: string;
+  level: "INFO" | "WARN" | "ERROR";
+  category: "SIGNAL" | "TRADE" | "POSITION" | "WEBHOOK" | "TWITTER" | "JUPITER" | "HELIUS";
+  message: string;
+  data?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface TradingLogResponse {
+  items: TradingLogItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 // ============================================
 // MIGRATION FEED TYPES
 // ============================================

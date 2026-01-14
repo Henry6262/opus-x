@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Panel } from "@/components/design-system";
 import { Button } from "@/components/ui";
 import { useSmartTradingContext } from "./context";
+import { smartTradingService } from "./service";
 import { MigrationFeedPanel } from "./components/MigrationFeedPanel";
 import { TrackedWalletsPanel } from "./components/TrackedWalletsPanel";
-import type { Position, TradingSignal } from "./types";
+import type { Position, TradingSignal, TradingLogItem } from "./types";
 import {
   AlertCircle,
   RefreshCw,
@@ -28,6 +29,10 @@ function formatPercent(value: number | undefined | null): string {
   if (value === undefined || value === null) return "—";
   const sign = value >= 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;
+}
+
+function formatTime(value: string): string {
+  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
 // Shorten address
@@ -237,6 +242,34 @@ export function SmartTradingSection() {
   } = useSmartTradingContext();
 
   const [isToggling, setIsToggling] = useState(false);
+  const [tpSlLogs, setTpSlLogs] = useState<TradingLogItem[]>([]);
+  const [isLogsLoading, setIsLogsLoading] = useState(false);
+  const lastLogFetchRef = useRef(0);
+
+  const fetchTpSlLogs = async () => {
+    setIsLogsLoading(true);
+    try {
+      const response = await smartTradingService.getTradingLogs({
+        category: "POSITION",
+        limit: 40,
+      });
+      const items = response.items.filter((item) => item.message.includes("TP/SL"));
+      setTpSlLogs(items);
+    } catch (err) {
+      console.error("Failed to fetch TP/SL logs:", err);
+    } finally {
+      setIsLogsLoading(false);
+    }
+  };
+
+  const maybeFetchTpSlLogs = async () => {
+    const now = Date.now();
+    if (now - lastLogFetchRef.current < 8000) {
+      return;
+    }
+    lastLogFetchRef.current = now;
+    await fetchTpSlLogs();
+  };
 
   const handleToggleTrading = async () => {
     if (!config) return;
@@ -257,6 +290,20 @@ export function SmartTradingSection() {
       console.error("Failed to close position:", err);
     }
   };
+
+  useEffect(() => {
+    maybeFetchTpSlLogs();
+  }, []);
+
+  useEffect(() => {
+    if (!lastUpdated) return;
+    maybeFetchTpSlLogs();
+  }, [lastUpdated]);
+
+  useEffect(() => {
+    if (positions.length === 0) return;
+    maybeFetchTpSlLogs();
+  }, [positions]);
 
   if (isLoading && !dashboardStats) {
     return (
@@ -356,36 +403,76 @@ export function SmartTradingSection() {
         </div>
 
         {/* Right column: Open Positions */}
-        <Panel>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide flex items-center gap-2">
-              <Target className="w-4 h-4" />
-              {t("openPositions")} ({positions.length})
-            </h3>
-          </div>
-          <div className="space-y-2 max-h-[540px] overflow-y-auto">
-            {positions.length === 0 ? (
-              <p className="text-sm text-white/50 text-center py-8">
-                {t("noOpenPositions")}
-                <br />
-                <span className="text-xs">
-                  {t("positionsWillAppear")}
-                </span>
-              </p>
-            ) : (
-              positions.map((position) => (
-                <PositionRow
-                  key={position.id}
-                  position={position}
-                  onClose={handleClosePosition}
-                  t={t}
-                  tSignals={tSignals}
-                  tCommon={tCommon}
-                />
-              ))
-            )}
-          </div>
-        </Panel>
+        <div className="space-y-4">
+          <Panel>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide flex items-center gap-2">
+                <Target className="w-4 h-4" />
+                {t("openPositions")} ({positions.length})
+              </h3>
+            </div>
+            <div className="space-y-2 max-h-[380px] overflow-y-auto">
+              {positions.length === 0 ? (
+                <p className="text-sm text-white/50 text-center py-8">
+                  {t("noOpenPositions")}
+                  <br />
+                  <span className="text-xs">
+                    {t("positionsWillAppear")}
+                  </span>
+                </p>
+              ) : (
+                positions.map((position) => (
+                  <PositionRow
+                    key={position.id}
+                    position={position}
+                    onClose={handleClosePosition}
+                    t={t}
+                    tSignals={tSignals}
+                    tCommon={tCommon}
+                  />
+                ))
+              )}
+            </div>
+          </Panel>
+
+          <Panel className="bg-gradient-to-br from-white/5 to-white/[0.02]">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide flex items-center gap-2">
+                <Activity className="w-4 h-4 text-[#c4f70e]" />
+                TP/SL Decision Log
+              </h3>
+              <Button variant="ghost" size="sm" onClick={fetchTpSlLogs} disabled={isLogsLoading}>
+                <RefreshCw className={`w-4 h-4 ${isLogsLoading ? "animate-spin" : ""}`} />
+              </Button>
+            </div>
+            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+              {tpSlLogs.length === 0 ? (
+                <p className="text-sm text-white/50 text-center py-6">
+                  No TP/SL decisions logged yet.
+                </p>
+              ) : (
+                tpSlLogs.map((log) => (
+                  <div key={log.id} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+                    <div className="flex items-center justify-between text-xs text-white/50">
+                      <span className="font-mono">{formatTime(log.createdAt)}</span>
+                      <span className="uppercase">{log.level}</span>
+                    </div>
+                    <div className="text-sm text-white/80 mt-1">{log.message}</div>
+                    {log.data && (
+                      <div className="text-xs text-white/40 mt-1 font-mono">
+                        {log.data?.tokenMint ? shortenAddress(String(log.data.tokenMint)) : ""}
+                        {log.data?.action ? ` • ${String(log.data.action)}` : ""}
+                        {typeof log.data?.currentPrice === "number"
+                          ? ` • ${log.data.currentPrice.toFixed(6)}`
+                          : ""}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </Panel>
+        </div>
       </div>
 
       {/* Migration Feed Section */}
