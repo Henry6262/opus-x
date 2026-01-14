@@ -30,6 +30,7 @@ import { MigrationTokenCard } from "./components/MigrationTokenCard";
 import { TrackedWalletsPanel } from "./components/TrackedWalletsPanel";
 import { WalletSignalStack } from "./components/WalletSignalBadge";
 import { RecentTradesPanel } from "./components/RecentTradesPanel";
+import { TransactionsPanel } from "./components/TransactionsPanel";
 import type { Position, TradingSignal } from "./types";
 
 // ============================================
@@ -822,12 +823,15 @@ export function SmartTradingDashboard() {
         )}
       </div>
 
-      {/* Bottom row: Wallets + Config */}
+      {/* Bottom row: Transactions + Wallets + Config */}
       <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-12 lg:col-span-8">
+        <div className="col-span-12 xl:col-span-5">
+          <TransactionsPanel maxTransactions={15} />
+        </div>
+        <div className="col-span-12 lg:col-span-8 xl:col-span-4">
           <TrackedWalletsPanel />
         </div>
-        <div className="col-span-12 lg:col-span-4">
+        <div className="col-span-12 lg:col-span-4 xl:col-span-3">
           <ConfigSummary />
         </div>
       </div>

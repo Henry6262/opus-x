@@ -15,6 +15,7 @@ import { TraderProfileCard } from "@/features/smart-trading/components/TraderPro
 import { Terminal, TerminalProvider, useTerminalNarrator } from "@/features/terminal";
 import { useAiMood } from "@/hooks/useAiMood";
 import { VibrCoder } from "@/components/VibrCoder";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 // Map AI mood to VibrCoder animation state
 function getVibrCoderState(
@@ -82,7 +83,10 @@ function DashboardContent() {
     <>
       <main className={`cockpit-layout ai-mood ai-mood-${aiMood}`}>
         {/* ===== TOP SECTION: VIBR CODER VIDEO + TERMINAL ===== */}
-        <div className="hero-section">
+        <div className="hero-section relative">
+          <div className="absolute top-4 right-4 z-20">
+            <LanguageSwitcher className="shadow-[0_10px_30px_rgba(0,0,0,0.35)] border-white/15 bg-black/50 backdrop-blur-xl" />
+          </div>
           <VibrCoder
             state={getVibrCoderState(aiMood)}
             statusText={aiMood.toUpperCase()}

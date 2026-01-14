@@ -5,7 +5,6 @@ import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { CountUp } from "@/components/animations/CountUp";
 import { SmartMoneyAnimation } from "@/components/animations";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import type { DashboardStatsResponse, Position, TradingConfig } from "../types";
 
@@ -131,15 +130,6 @@ export function TraderProfileCard({
 
   return (
     <div className="relative pt-4 pb-16">
-      {/* Language Switcher - top right */}
-      <motion.div
-        className="absolute -top-6 right-4 z-30"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-      >
-        <LanguageSwitcher />
-      </motion.div>
 
       {/* X/Twitter Handle - below pill, right of avatar */}
       <motion.a
