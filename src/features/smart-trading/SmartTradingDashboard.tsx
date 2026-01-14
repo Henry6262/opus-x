@@ -10,6 +10,7 @@ import {
   Target,
   Zap,
   Wallet,
+  TrendingUp,
   ChevronDown,
   ChevronUp,
   AlertCircle,
@@ -509,16 +510,17 @@ function ConfigSummary() {
 // Main Dashboard Component
 // ============================================
 
-type PanelId = "activity" | "migration" | "positions";
+type PanelId = "activity" | "migration" | "transactions" | "positions";
 
 const COLLAPSED_WIDTH = 56;
 const ACTIVITY_EXPANDED_WIDTH = 280;
 const POSITIONS_EXPANDED_WIDTH = 300;
+const TRANSACTIONS_EXPANDED_WIDTH = 360;
 const MOBILE_SWITCH_HEIGHT = 44;
 const SHOW_MIGRATION_PANEL = false;
 const ENABLED_PANELS: PanelId[] = SHOW_MIGRATION_PANEL
-  ? ["activity", "migration", "positions"]
-  : ["activity", "positions"];
+  ? ["activity", "migration", "transactions", "positions"]
+  : ["activity", "transactions", "positions"];
 const INITIAL_ACTIVE_PANEL: PanelId = SHOW_MIGRATION_PANEL ? "migration" : "activity";
 
 export function SmartTradingDashboard() {
@@ -533,6 +535,7 @@ export function SmartTradingDashboard() {
   const [desktopPanelCollapsed, setDesktopPanelCollapsed] = useState<Record<PanelId, boolean>>({
     activity: true,
     migration: false,
+    transactions: false,
     positions: false,
   });
   const [isLimitedDesktop, setIsLimitedDesktop] = useState(false);
@@ -540,6 +543,7 @@ export function SmartTradingDashboard() {
   const panelRefs = useRef<Record<PanelId, HTMLDivElement | null>>({
     activity: null,
     migration: null,
+    transactions: null,
     positions: null,
   });
 
@@ -650,7 +654,12 @@ export function SmartTradingDashboard() {
         transition,
       };
     }
-    const widthPx = panel === "activity" ? ACTIVITY_EXPANDED_WIDTH : POSITIONS_EXPANDED_WIDTH;
+    const widthPx =
+      panel === "activity"
+        ? ACTIVITY_EXPANDED_WIDTH
+        : panel === "positions"
+          ? POSITIONS_EXPANDED_WIDTH
+          : TRANSACTIONS_EXPANDED_WIDTH;
     const width = `${widthPx}px`;
     return {
       flex: `0 0 ${width}`,
@@ -664,9 +673,11 @@ export function SmartTradingDashboard() {
   const mobileSwitchOptions: { id: PanelId; label: string; icon: ReactNode }[] = [
     { id: "activity", label: t("liveActivity"), icon: <Activity className="w-4 h-4" /> },
     ...(SHOW_MIGRATION_PANEL ? [{ id: "migration", label: tMigration("title"), icon: <Activity className="w-4 h-4" /> }] : []),
+    { id: "transactions", label: tDashboard("recentTrades"), icon: <TrendingUp className="w-4 h-4" /> },
     { id: "positions", label: tDashboard("activePositions"), icon: <Wallet className="w-4 h-4" /> },
   ];
-  const switcherColsClass = mobileSwitchOptions.length === 3 ? "grid-cols-3" : "grid-cols-2";
+  const switcherColsClass =
+    mobileSwitchOptions.length === 4 ? "grid-cols-4" : mobileSwitchOptions.length === 3 ? "grid-cols-3" : "grid-cols-2";
   const activeMobileIndex = mobileSwitchOptions.findIndex((opt) => opt.id === activePanel);
   const segmentWidth = mobileSwitchOptions.length > 0 ? 100 / mobileSwitchOptions.length : 0;
 
@@ -761,6 +772,34 @@ export function SmartTradingDashboard() {
           </div>
         )}
 
+        {/* Transaction History - Only show if active on mobile */}
+        {(!isMobile || activePanel === "transactions") && (
+          <div
+            className={isMobile ? "w-full h-[500px]" : "h-[500px] flex-shrink-0"}
+            style={!isMobile ? getPanelFlexStyle("transactions") : undefined}
+            ref={(el) => {
+              panelRefs.current.transactions = el;
+            }}
+          >
+            <CollapsibleSidePanel
+              icon={<TrendingUp className="w-5 h-5" />}
+              title={tDashboard("recentTrades")}
+              direction="left"
+              collapsedWidth={COLLAPSED_WIDTH}
+              expandedWidth={isMobile ? "100%" : `${TRANSACTIONS_EXPANDED_WIDTH}px`}
+              className="h-full"
+              contentClassName="h-full"
+              showToggle={!isMobile}
+              id="transactions"
+              activeId={accordionActiveId}
+              onActivate={handlePanelActivate}
+              onCollapsedChange={handleDesktopCollapsedChange("transactions")}
+            >
+              <TransactionsPanel maxTransactions={20} />
+            </CollapsibleSidePanel>
+          </div>
+        )}
+
         {/* Center: Migration Feed (grows to fill space) */}
         {SHOW_MIGRATION_PANEL && (!isMobile || activePanel === "migration") && (
           <div
@@ -823,12 +862,9 @@ export function SmartTradingDashboard() {
         )}
       </div>
 
-      {/* Bottom row: Transactions + Wallets + Config */}
+      {/* Bottom row: Smart Money + Config */}
       <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-12 xl:col-span-5">
-          <TransactionsPanel maxTransactions={15} />
-        </div>
-        <div className="col-span-12 lg:col-span-8 xl:col-span-4">
+        <div className="col-span-12 lg:col-span-8 xl:col-span-9">
           <TrackedWalletsPanel />
         </div>
         <div className="col-span-12 lg:col-span-4 xl:col-span-3">

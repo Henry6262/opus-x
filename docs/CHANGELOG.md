@@ -2,6 +2,10 @@
 
 All notable changes to Opus-X are documented here.
 
+## 2026-01-14
+- Transaction History now sits alongside Live Activity and Active Positions in the top desktop rail as its own collapsible column, eliminating the bottom-row copy.
+- Smart Money panel is fixed to roughly half-screen height with a single-column vertical list so each tracked wallet uses the full width.
+
 ## 2026-01-12
 - Migration cards replaced their token-name row with a minimalist inline stat strip (MCap · Liq · Score) separated by subtle dividers directly beneath the ticker.
 - Tracked wallet presets were enriched with Orange, Dior, Jack Duval, and POW Twitter handles, and they now default to the SuperRouter avatar whenever no profile image is provided.

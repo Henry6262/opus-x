@@ -235,7 +235,10 @@
     "entry": "入场",
     "close": "关闭",
     "from": "来自",
-    "unknown": "未知"
+    "unknown": "未知",
+    "recentTrades": "交易记录",
+    "noRecentTrades": "暂无交易",
+    "tradesAppearHere": "成交后会显示在这里"
   },
   "time": {
     "justNow": "刚刚",
