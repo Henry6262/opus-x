@@ -14,7 +14,6 @@ import type {
   MigrationFeedStats,
   RankedMigration,
   DashboardInitResponse,
-  TradingLogResponse,
 } from "./types";
 
 // ============================================
@@ -515,21 +514,6 @@ export const smartTradingService = {
   async getHistory(_limit?: number): Promise<import("./types").PortfolioSnapshot[]> {
     // Not implemented in devprint yet
     return [];
-  },
-
-  async getTradingLogs(params?: {
-    category?: string;
-    level?: string;
-    limit?: number;
-    page?: number;
-  }): Promise<TradingLogResponse> {
-    const query = new URLSearchParams();
-    if (params?.category) query.set("category", params.category);
-    if (params?.level) query.set("level", params.level);
-    if (params?.limit) query.set("limit", String(params.limit));
-    if (params?.page) query.set("page", String(params.page));
-    const suffix = query.toString();
-    return fetchDevprint(`/smart-trading/logs${suffix ? `?${suffix}` : ""}`);
   },
 
   // ============================================
