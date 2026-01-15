@@ -399,8 +399,15 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
 
       {/* Expanded State */}
       {isExpanded && (
-        <div className={`portfolio-wallet expanded ${className || ""}`}>
-          <div className="portfolio-wallet-expanded">
+        <>
+          {/* Backdrop overlay - darkens/blurs the background */}
+          <div
+            className="portfolio-wallet-backdrop"
+            onClick={() => setIsExpanded(false)}
+            aria-hidden="true"
+          />
+          <div className={`portfolio-wallet expanded ${className || ""}`}>
+            <div className="portfolio-wallet-expanded">
             {/* Header */}
             <div className="portfolio-wallet-header">
               <div className="portfolio-wallet-title">
@@ -664,8 +671,9 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                 )}
               </div>
             )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </>
   );

@@ -2862,10 +2862,33 @@ button:focus-visible {
 .portfolio-wallet {
   position: fixed;
   top: var(--space-4);
-  right: var(--space-4);
-  z-index: 9999;
+  left: var(--space-4);
+  z-index: 50;
   font-family: var(--font-mono);
-  transform-origin: top right;
+  transform-origin: top left;
+}
+
+/* Backdrop overlay when wallet is expanded */
+.portfolio-wallet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 99998;
+  animation: backdrop-fade-in 0.3s ease-out forwards;
+  cursor: pointer;
+}
+
+@keyframes backdrop-fade-in {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
 }
 
 /* Collapsed State - Compact Pill */
@@ -3578,6 +3601,7 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  z-index: 99999;
 }
 
 .portfolio-wallet-expanded {
@@ -4062,14 +4086,13 @@ button:focus-visible {
 @media (max-width: 768px) {
   .portfolio-wallet {
     top: var(--space-2);
-    right: var(--space-2);
-    left: auto;
+    left: var(--space-2);
   }
 
   .portfolio-wallet.expanded {
     width: calc(100vw - var(--space-4));
     max-width: 300px;
-    right: var(--space-2);
+    left: var(--space-2);
   }
 
   .portfolio-wallet-total-value {

@@ -9,6 +9,7 @@ import { buildDevprntApiUrl } from "@/lib/devprnt";
 import { useSearchParams } from "next/navigation";
 import { useBirdeyeWebSocket, type BirdeyeTokenStats } from "../hooks/useBirdeyeWebSocket";
 import { useSharedWebSocket } from "../hooks/useWebSocket";
+import { usePositions } from "../context/SmartTradingContext";
 import { TransactionDrawer } from "./TransactionDrawer";
 
 // ============================================
@@ -278,13 +279,15 @@ interface HoldingCardProps {
     livePrice: LivePriceData | null;
     solPrice: number;
     index: number;
+    positionEntryPrice?: number; // Entry price from position data (USD)
     onClick?: () => void;
 }
 
-function HoldingCard({ holding, livePrice, solPrice, index, onClick }: HoldingCardProps) {
+function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, onClick }: HoldingCardProps) {
     // Use live price if available, otherwise fallback to holding data
     const currentPriceUsd = livePrice?.price ?? holding.price_usd ?? 0;
-    const entryPriceUsd = livePrice?.entryPrice ?? holding.price_usd ?? 0;
+    // IMPORTANT: Use position entry price first (from database), then live data, then fallback
+    const entryPriceUsd = positionEntryPrice ?? livePrice?.entryPrice ?? holding.price_usd ?? 0;
     const valueUsd = holding.amount * currentPriceUsd;
     const entryValueUsd = holding.amount * entryPriceUsd;
     const valueSol = valueUsd / solPrice;
@@ -352,16 +355,29 @@ function HoldingCard({ holding, livePrice, solPrice, index, onClick }: HoldingCa
                                 CA
                             </button>
                         </div>
-                        {/* Buy value + Tokens (compact, horizontal) */}
-                        <div className="flex items-center gap-2 text-xs mt-0.5">
+                        {/* Token price + Entry price + Tokens (compact, horizontal) */}
+                        <div className="flex items-center gap-2 text-xs mt-0.5 flex-wrap">
+                            {/* Current Token Price */}
                             <div className="flex items-center gap-1">
-                                <span className="text-white/40 text-[10px]">Buy</span>
+                                <span className="text-white/40 text-[10px]">Price</span>
                                 <span className="font-mono font-semibold text-white/90">
-                                    {valueSol.toFixed(2)}
+                                    ${currentPriceUsd < 0.01 ? currentPriceUsd.toFixed(6) : currentPriceUsd < 1 ? currentPriceUsd.toFixed(4) : currentPriceUsd.toFixed(2)}
                                 </span>
-                                <Image src={SOLANA_ICON} alt="SOL" width={12} height={12} className="opacity-70" />
                             </div>
                             <span className="text-white/20">•</span>
+                            {/* Entry Price (if different from current) */}
+                            {entryPriceUsd > 0 && Math.abs(entryPriceUsd - currentPriceUsd) > 0.000001 && (
+                                <>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-white/40 text-[10px]">Entry</span>
+                                        <span className="font-mono font-semibold text-white/60">
+                                            ${entryPriceUsd < 0.01 ? entryPriceUsd.toFixed(6) : entryPriceUsd < 1 ? entryPriceUsd.toFixed(4) : entryPriceUsd.toFixed(2)}
+                                        </span>
+                                    </div>
+                                    <span className="text-white/20">•</span>
+                                </>
+                            )}
+                            {/* Token Amount */}
                             <div className="flex items-center gap-1">
                                 <Image
                                     src={holding.image_url || `https://dd.dexscreener.com/ds-data/tokens/solana/${holding.mint}.png`}
@@ -461,6 +477,21 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
     const effectiveWallet = useMemo(() => walletAddress ?? walletFromQuery, [walletAddress, walletFromQuery]);
     const subscribedRef = useRef(false);
     const { status: tradingWsStatus, on: onTradingEvent } = useSharedWebSocket({ path: "/ws/trading" });
+
+    // Get positions from context to access entry prices
+    const { positions } = usePositions();
+
+    // Create a map of mint -> entry price from positions
+    const positionEntryPrices = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const pos of positions) {
+            if (pos.tokenMint && pos.entryPriceSol > 0) {
+                // entryPriceSol is actually in USD (see service.ts:268 comment)
+                map.set(pos.tokenMint, pos.entryPriceSol);
+            }
+        }
+        return map;
+    }, [positions]);
 
     // Handle holding card click - open transaction drawer
     const handleHoldingClick = useCallback((holding: OnChainHolding) => {
@@ -693,6 +724,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
                             livePrice={livePrices.get(holding.mint) || null}
                             solPrice={solPrice}
                             index={index}
+                            positionEntryPrice={positionEntryPrices.get(holding.mint)}
                             onClick={() => handleHoldingClick(holding)}
                         />
                     ))}
