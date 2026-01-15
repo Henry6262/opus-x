@@ -252,16 +252,24 @@ export function TransactionDrawer({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [isOpen, onClose]);
 
-    // Calculate totals
-    const totalInvested = transactions
-        .filter(tx => tx.type === "entry")
-        .reduce((sum, tx) => sum + tx.solAmount, 0);
+    // Calculate totals with proper realized PnL
+    const entryTxs = transactions.filter(tx => tx.type === "entry");
+    const sellTxs = transactions.filter(tx => tx.type !== "entry");
 
-    const totalReturned = transactions
-        .filter(tx => tx.type !== "entry")
-        .reduce((sum, tx) => sum + tx.solAmount, 0);
+    const totalInvested = entryTxs.reduce((sum, tx) => sum + tx.solAmount, 0);
+    const totalReturned = sellTxs.reduce((sum, tx) => sum + tx.solAmount, 0);
 
-    const netPnl = totalReturned - totalInvested;
+    // Calculate tokens bought and sold to determine percentage sold
+    const totalTokensBought = entryTxs.reduce((sum, tx) => sum + tx.tokenAmount, 0);
+    const totalTokensSold = sellTxs.reduce((sum, tx) => sum + tx.tokenAmount, 0);
+
+    // Calculate REALIZED PnL: compare returns to proportional cost basis of sold tokens
+    // If you bought 100 tokens for 1 SOL and sold 50 tokens for 0.8 SOL:
+    // Cost basis of sold = 1 SOL * (50/100) = 0.5 SOL
+    // Realized PnL = 0.8 - 0.5 = +0.3 SOL profit
+    const percentageSold = totalTokensBought > 0 ? totalTokensSold / totalTokensBought : 0;
+    const costBasisOfSold = totalInvested * percentageSold;
+    const netPnl = totalReturned - costBasisOfSold;
 
     return (
         <>
@@ -318,10 +326,13 @@ export function TransactionDrawer({
                         <div className="transaction-drawer-summary">
                             <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
                                 <div className="text-center">
-                                    <div className="text-xs text-white/40 mb-1">Invested</div>
+                                    <div className="text-xs text-white/40 mb-1">Cost Basis</div>
                                     <div className="flex items-center gap-1 text-sm font-bold text-white">
-                                        <span>{totalInvested.toFixed(3)}</span>
+                                        <span>{costBasisOfSold.toFixed(3)}</span>
                                         <Image src={SOLANA_ICON} alt="SOL" width={14} height={14} />
+                                    </div>
+                                    <div className="text-[10px] text-white/30">
+                                        {(percentageSold * 100).toFixed(0)}% sold
                                     </div>
                                 </div>
                                 <div className="text-center">
@@ -332,7 +343,7 @@ export function TransactionDrawer({
                                     </div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-xs text-white/40 mb-1">Net PnL</div>
+                                    <div className="text-xs text-white/40 mb-1">Realized PnL</div>
                                     <div className={`flex items-center gap-1 text-sm font-bold ${netPnl >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}>
                                         <span>{netPnl >= 0 ? "+" : ""}{netPnl.toFixed(3)}</span>
                                         <Image src={SOLANA_ICON} alt="SOL" width={14} height={14} />
