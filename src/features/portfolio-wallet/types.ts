@@ -29,6 +29,10 @@ export interface Position {
   pnl: number;
   pnlPercent: number;
   entryTime: Date;
+  /** Whether position is validated against Birdeye on-chain data */
+  isValidated?: boolean;
+  /** USD value from Birdeye (blockchain validated) */
+  birdeyeValueUsd?: number | null;
 }
 
 export interface Transaction {
