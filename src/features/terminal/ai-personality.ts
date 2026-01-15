@@ -14,12 +14,22 @@ export type MessageCategory =
   | "rejection"
   | "position_opened"
   | "position_closed"
+  | "position_update"
   | "stop_loss"
   | "migration_detected"
   | "wallet_signal"
   | "ai_decision"
   | "idle"
-  | "insight";
+  | "insight"
+  // NEW: AI Reasoning Categories
+  | "ai_thinking"
+  | "ai_thinking_step"
+  | "ai_reasoning"
+  | "ai_market_analysis"
+  | "ai_trade_eval"
+  | "ai_risk"
+  | "ai_confidence"
+  | "ai_verdict";
 
 export interface MessageContext {
   tokenSymbol?: string;
@@ -138,6 +148,70 @@ const templates: Record<MessageCategory, string[]> = {
     "Interesting data point: {reason}",
     "Worth noting: {reason}",
   ],
+
+  // NEW: Position update template
+  position_update: [
+    "{tokenSymbol} now at {price} SOL ({pnl}% P&L)",
+    "Price movement on {tokenSymbol}: {price} SOL",
+    "{tokenSymbol} updated - current P&L: {pnl}%",
+  ],
+
+  // NEW: AI Reasoning Stream Templates
+  ai_thinking: [
+    "🧠 Initiating analysis on {tokenSymbol}...",
+    "🔬 Deep diving into {tokenSymbol}...",
+    "🎯 Targeting {tokenSymbol} for evaluation...",
+    "⚡ Neural network activating for {tokenSymbol}...",
+  ],
+
+  ai_thinking_step: [
+    "  ├─ {reason}",
+    "  │ {reason}",
+    "  ▸ {reason}",
+    "  → {reason}",
+  ],
+
+  ai_reasoning: [
+    "💭 {reason}",
+    "🔍 {reason}",
+    "📊 {reason}",
+    "{reason}",
+  ],
+
+  ai_market_analysis: [
+    "📈 Market Scan for {tokenSymbol}:",
+    "  ├─ Price: {price} | {reason}",
+    "📊 {tokenSymbol} market structure: {reason}",
+    "🔎 Evaluating {tokenSymbol} fundamentals... {reason}",
+  ],
+
+  ai_trade_eval: [
+    "⚖️ Trade Evaluation: {reason}",
+    "🎲 Risk/Reward on {tokenSymbol}: {reason}",
+    "📋 Entry criteria check: {reason}",
+    "🔄 Trade setup assessment: {reason}",
+  ],
+
+  ai_risk: [
+    "⚠️ Risk Assessment: {reason}",
+    "🛡️ Risk score: {score}/10 - {reason}",
+    "⚡ Danger level: {reason}",
+    "🔐 Safety check: {reason}",
+  ],
+
+  ai_confidence: [
+    "📊 Confidence: {score}% - {reason}",
+    "🎯 Conviction level: {score}%",
+    "💎 Signal strength: {score}/100 ({reason})",
+    "🔥 Hot score: {score}% - {reason}",
+  ],
+
+  ai_verdict: [
+    "⚡ VERDICT: {reason} ({score}% confidence)",
+    "🎯 FINAL CALL: {reason}",
+    "✅ Decision: {reason} | Confidence: {score}%",
+    "🚀 {reason} - {score}% conviction",
+  ],
 };
 
 // Track recently used templates to avoid repetition
@@ -244,6 +318,25 @@ export function getCategoryColor(category: MessageCategory): string {
       return "var(--text-tertiary)";
     case "insight":
       return "var(--solana-cyan)";
+    case "position_update":
+      return "var(--warning-amber)";
+    // NEW: AI Reasoning colors
+    case "ai_thinking":
+      return "var(--solana-purple)";
+    case "ai_thinking_step":
+      return "var(--text-secondary)";
+    case "ai_reasoning":
+      return "var(--matrix-green)";
+    case "ai_market_analysis":
+      return "var(--solana-cyan)";
+    case "ai_trade_eval":
+      return "var(--warning-amber)";
+    case "ai_risk":
+      return "var(--alert-red)";
+    case "ai_confidence":
+      return "var(--solana-purple)";
+    case "ai_verdict":
+      return "var(--matrix-green)";
     default:
       return "var(--text-primary)";
   }
@@ -255,7 +348,8 @@ export function getCategoryColor(category: MessageCategory): string {
 export function shouldStream(category: MessageCategory): boolean {
   // Most messages should stream for that AI feel
   // Only skip streaming for very short/system messages
-  return category !== "boot";
+  const noStreamCategories: MessageCategory[] = ["boot", "ai_thinking_step"];
+  return !noStreamCategories.includes(category);
 }
 
 /**
@@ -269,7 +363,17 @@ export function getTypingSpeed(category: MessageCategory): number {
     case "idle":
     case "insight":
       return 1.3; // Slower - contemplative
+    // AI Reasoning - faster streaming for real-time feel
+    case "ai_thinking":
+      return 0.6;
+    case "ai_thinking_step":
+      return 0.4; // Very fast thinking steps
+    case "ai_reasoning":
+      return 0.8;
+    case "ai_verdict":
+      return 0.9;
     default:
       return 1.0;
   }
 }
+

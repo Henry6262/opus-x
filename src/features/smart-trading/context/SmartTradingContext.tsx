@@ -1,5 +1,7 @@
 "use client";
 
+console.error("🔥🔥🔥 SMART TRADING CONTEXT MODULE LOADED 🔥🔥🔥");
+
 import {
   createContext,
   useContext,
@@ -12,6 +14,7 @@ import {
 } from "react";
 import { smartTradingService, fetchMigrationsFromDevprint } from "../service";
 import { useSharedWebSocket, type ConnectionStatus } from "../hooks/useWebSocket";
+import { dispatchTerminalEvent } from "../../terminal";
 import type {
   TradingConfig,
   DashboardStatsResponse,
@@ -256,6 +259,9 @@ export function SmartTradingProvider({
   migrationLimit = 20,
   maxActivityItems = 50,
 }: SmartTradingProviderProps) {
+  console.error("🚨🚨🚨 SMART TRADING PROVIDER RENDER START 🚨🚨🚨", { enabled });
+  console.log("[SmartTradingProvider] 🎬 Component rendering - enabled:", enabled);
+
   // WebSocket connection (shared singleton)
   const {
     status: connectionStatus,
@@ -265,6 +271,13 @@ export function SmartTradingProvider({
   } = useSharedWebSocket({
     autoConnect: enabled,
     path: "/ws/trading",
+  });
+
+  console.error("✅✅✅ useSharedWebSocket COMPLETED ✅✅✅", {
+    connectionStatus,
+    clientId,
+    hasOn: typeof on === 'function',
+    hasConnect: typeof connect === 'function'
   });
 
   // State
@@ -285,6 +298,7 @@ export function SmartTradingProvider({
     error: null,
     lastUpdated: null,
   });
+  console.error("🔵 useState COMPLETED");
 
   // Update connection status in state
   useEffect(() => {
@@ -294,9 +308,11 @@ export function SmartTradingProvider({
       clientId,
     }));
   }, [connectionStatus, clientId]);
+  console.error("🔵 connection status useEffect REGISTERED");
 
   // Prevent double-fetch in StrictMode
   const hasFetchedRef = useRef(false);
+  console.error("🔵 hasFetchedRef DECLARED");
 
   // Add activity item
   const addActivity = useCallback((event: MigrationFeedEvent) => {
@@ -316,25 +332,31 @@ export function SmartTradingProvider({
       activityFeed: [item, ...prev.activityFeed].slice(0, maxActivityItems),
     }));
   }, [maxActivityItems]);
+  console.error("🔵 addActivity DEFINED");
 
   // Clear activity feed
   const clearActivityFeed = useCallback(() => {
     setState((prev) => ({ ...prev, activityFeed: [] }));
   }, []);
+  console.error("🔵 clearActivityFeed DEFINED");
 
   // ============================================
   // SINGLE CONSOLIDATED API CALL - Replaces 7 parallel requests
   // ============================================
   const fetchDashboard = useCallback(async () => {
-    if (!enabled) return;
+    console.error("💎💎💎 fetchDashboard CALLED 💎💎💎", { enabled });
+    if (!enabled) {
+      console.error("❌ fetchDashboard EXITING - not enabled");
+      return;
+    }
 
-    console.log("[SmartTrading] 🔄 Fetching dashboard data via consolidated endpoint...");
+    console.error("[SmartTrading] 🔄 Fetching dashboard data via consolidated endpoint...");
 
     try {
       // ONE API call instead of 7!
       const response = await smartTradingService.getDashboardInit();
 
-      console.log("[SmartTrading] ✅ Dashboard init received:", {
+      console.error("[SmartTrading] ✅ Dashboard init received:", {
         config: { tradingEnabled: response.config?.tradingEnabled },
         walletsCount: response.wallets?.length,
         signalsCount: response.signals?.length,
@@ -342,6 +364,10 @@ export function SmartTradingProvider({
         closedPositionsCount: response.positions?.closed?.length,
         migrationsCount: response.migrations?.length,
       });
+
+      // DEBUG: Log stats object before setting state
+      console.error('[SmartTrading] 📊 Stats object from getDashboardInit:', response.stats);
+      console.error('[SmartTrading] 📊 Stats performance:', response.stats?.performance);
 
       setState((prev) => ({
         ...prev,
@@ -386,6 +412,7 @@ export function SmartTradingProvider({
       }));
     }
   }, [enabled]);
+  console.error("🔵 fetchDashboard DEFINED");
 
   // Fetch migration feed data from devprint API (fallback for persistent data)
   const fetchMigrations = useCallback(async () => {
@@ -406,10 +433,12 @@ export function SmartTradingProvider({
       // Don't set error for migrations - it's secondary data
     }
   }, [enabled, migrationLimit]);
+  console.error("🔵 fetchMigrations DEFINED");
 
   // ============================================
   // WebSocket Event Handlers - Surgical Updates
   // ============================================
+  console.error("🔵 ABOUT TO REGISTER WEBSOCKET EVENT HANDLERS");
   useEffect(() => {
     if (!enabled) return;
 
@@ -471,12 +500,21 @@ export function SmartTradingProvider({
       )
     );
 
-    // AI analysis completed - surgical update
+    // AI analysis completed - surgical update AND dispatch to terminal
     unsubscribes.push(
-      on<{ tokenMint: string; decision: string; confidence: number; reasoning: string }>(
+      on<{ tokenMint: string; tokenSymbol?: string; decision: string; confidence: number; reasoning: string }>(
         "ai_analysis",
         (data, event) => {
           addActivity(event);
+
+          // 🚀 Dispatch to terminal for live streaming AI reasoning
+          dispatchTerminalEvent("ai_analysis", {
+            tokenMint: data.tokenMint,
+            tokenSymbol: data.tokenSymbol || state.rankedMigrations.find(m => m.tokenMint === data.tokenMint)?.tokenSymbol,
+            decision: data.decision,
+            confidence: data.confidence,
+            reasoning: data.reasoning,
+          });
 
           setState((prev) => ({
             ...prev,
@@ -552,11 +590,15 @@ export function SmartTradingProvider({
       })
     );
 
-    // NEW: Position Opened
+    // NEW: Position Opened - Dispatch to terminal
     unsubscribes.push(
       on("position_opened", (data, event) => {
         const payload = (data ?? (event as unknown as Record<string, any>)) as Record<string, any>;
         addActivity({ ...event, data: payload });
+
+        // 🚀 Dispatch to terminal for live streaming position opened
+        dispatchTerminalEvent("position_opened", payload);
+
         // Definitely refetch to show new position
         console.log("[SmartTrading] Position opened:", payload);
         fetchDashboard();
@@ -651,6 +693,9 @@ export function SmartTradingProvider({
           },
         });
 
+        // 🚀 Dispatch to terminal for live streaming take profit
+        dispatchTerminalEvent("take_profit", payload);
+
         // Surgical update or refetch
         if (payload.is_final) {
           // Full exit - refetch to move to history
@@ -700,6 +745,9 @@ export function SmartTradingProvider({
           },
         });
 
+        // 🚀 Dispatch to terminal for live streaming position closed
+        dispatchTerminalEvent("position_closed", payload);
+
         // Refetch to update positions and history
         fetchDashboard();
       })
@@ -748,13 +796,24 @@ export function SmartTradingProvider({
       unsubscribes.forEach((unsub) => unsub());
     };
   }, [enabled, on, addActivity, fetchDashboard, fetchMigrations]);
+  console.error("🔵 WEBSOCKET EVENT HANDLERS REGISTERED");
+
+  console.error("📍📍📍 ABOUT TO REGISTER INITIAL FETCH useEffect 📍📍📍", {
+    hasFetchDashboard: typeof fetchDashboard === 'function',
+    enabled,
+    hasFetchedRefValue: hasFetchedRef.current
+  });
 
   // Initial fetch (with StrictMode protection)
   useEffect(() => {
-    if (hasFetchedRef.current || !enabled) return;
+    console.error("⚡⚡⚡ INITIAL FETCH useEffect TRIGGERED ⚡⚡⚡", { hasFetched: hasFetchedRef.current, enabled });
+    if (hasFetchedRef.current || !enabled) {
+      console.error("❌ SKIPPING FETCH:", { reason: hasFetchedRef.current ? "already fetched" : "disabled" });
+      return;
+    }
     hasFetchedRef.current = true;
 
-    console.log("[SmartTrading] 🚀 Starting initial data fetch...");
+    console.error("🚀🚀🚀 CALLING fetchDashboard() 🚀🚀🚀");
     fetchDashboard();
   }, [enabled, fetchDashboard]);
 

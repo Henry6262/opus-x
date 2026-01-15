@@ -189,9 +189,9 @@ function CelebrationOverlay({ show, pnlSol, targetHit, onComplete }: Celebration
                             <Sparkles className="w-12 h-12 text-[#c4f70e] mx-auto mb-2" />
                         </motion.div>
                         <div className="text-2xl font-bold text-white mb-1">
-                            TP{targetHit} HIT! 🎉
+                            TP{targetHit} HIT!
                         </div>
-                        <div className="text-lg font-mono text-[#c4f70e]">
+                        <div className="text-lg font-mono tabular-nums text-[#c4f70e]">
                             +{pnlSol.toFixed(4)} SOL
                         </div>
                         <div className="text-xs text-white/60 mt-1">
@@ -394,7 +394,7 @@ function TimeRemaining({ entryTime, maxHoldSeconds }: TimeRemainingProps) {
     return (
         <div className={`flex items-center gap-1 text-xs ${isUrgent ? "text-red-400" : "text-white/50"}`}>
             <Clock className="w-3 h-3" />
-            <span className="font-mono">
+            <span className="font-mono tabular-nums min-w-[4ch]">
                 {minutes}:{seconds.toString().padStart(2, "0")}
             </span>
             {isUrgent && (
@@ -527,14 +527,14 @@ export function PositionProgressCard({
                 {/* Current P&L */}
                 <div className="text-right">
                     <motion.div
-                        className={`text-2xl font-bold font-mono ${isPositive ? "text-green-400" : "text-red-400"}`}
+                        className={`text-2xl font-bold font-mono tabular-nums min-w-[5ch] ${isPositive ? "text-green-400" : "text-red-400"}`}
                         key={liveData.pnlPct}
                         initial={{ scale: 1.1 }}
                         animate={{ scale: 1 }}
                     >
                         {isPositive ? "+" : ""}{liveData.pnlPct.toFixed(1)}%
                     </motion.div>
-                    <div className={`text-xs font-mono ${isPositive ? "text-green-400/70" : "text-red-400/70"}`}>
+                    <div className={`text-xs font-mono tabular-nums ${isPositive ? "text-green-400/70" : "text-red-400/70"}`}>
                         {isPositive ? "+" : ""}{liveData.pnlSol.toFixed(4)} SOL
                     </div>
                 </div>
@@ -545,12 +545,12 @@ export function PositionProgressCard({
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1 text-white/50">
                         <span>Entry:</span>
-                        <span className="font-mono text-white/80">${formatPrice(position.entry_price)}</span>
+                        <span className="font-mono tabular-nums text-white/80">${formatPrice(position.entry_price)}</span>
                     </div>
                     <div className="flex items-center gap-1 text-white/50">
                         <span>Current:</span>
                         <motion.span
-                            className="font-mono text-white"
+                            className="font-mono tabular-nums text-white"
                             key={liveData.price}
                             initial={{ backgroundColor: isPositive ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)" }}
                             animate={{ backgroundColor: "transparent" }}
@@ -561,7 +561,7 @@ export function PositionProgressCard({
                     </div>
                     <div className="flex items-center gap-1 text-white/50">
                         <TrendingUp className="w-3 h-3" />
-                        <span className="font-mono text-[#c4f70e]">{liveData.peakPnlPct.toFixed(1)}%</span>
+                        <span className="font-mono tabular-nums text-[#c4f70e]">{liveData.peakPnlPct.toFixed(1)}%</span>
                     </div>
                 </div>
                 <TimeRemaining entryTime={position.entry_time} maxHoldSeconds={MAX_HOLD_SECONDS} />
@@ -581,12 +581,12 @@ export function PositionProgressCard({
                     <div className="flex items-center gap-2 text-white/60">
                         <Target className="w-3 h-3 text-[#c4f70e]" />
                         <span>
-                            At {liveData.nextTarget}x ({((liveData.nextTarget - 1) * 100).toFixed(0)}%):
+                            At <span className="tabular-nums">{liveData.nextTarget}x</span> (<span className="tabular-nums">{((liveData.nextTarget - 1) * 100).toFixed(0)}%</span>):
                         </span>
                     </div>
                     <div className="flex items-center gap-1">
                         <Zap className="w-3 h-3 text-[#c4f70e]" />
-                        <span className="font-mono font-bold text-[#c4f70e]">
+                        <span className="font-mono tabular-nums font-bold text-[#c4f70e]">
                             +{projectedPnl.toFixed(4)} SOL
                         </span>
                     </div>

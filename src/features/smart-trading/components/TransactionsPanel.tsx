@@ -159,7 +159,7 @@ export function TransactionsPanel({ maxTransactions = 15 }: TransactionsPanelPro
                 >
                     <TrendingUp className="w-5 h-5 text-[#c4f70e]" />
                     <span className="text-base font-semibold text-white">Transaction History</span>
-                    <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-[#c4f70e]/20 text-[#c4f70e]">
+                    <span className="px-2 py-0.5 text-[11px] font-bold tabular-nums rounded-full bg-[#c4f70e]/20 text-[#c4f70e]">
                         {transactions.length}
                     </span>
                 </div>
@@ -279,7 +279,7 @@ function TransactionCard({ tx }: TransactionCardProps) {
                         <span className="font-mono font-bold text-white text-sm">
                             {tx.ticker}
                         </span>
-                        <span className="text-[10px] text-white/50 font-mono">
+                        <span className="text-[10px] text-white/50 font-mono tabular-nums">
                             {formatTokenAmount(tokenAmount)} tokens
                         </span>
                     </div>
@@ -288,21 +288,21 @@ function TransactionCard({ tx }: TransactionCardProps) {
                 {/* Right side: Time, Action badge, P&L, tx link */}
                 <div className="flex flex-col items-end gap-0.5">
                     {/* Time ago */}
-                    <span className="text-[10px] text-white/40">{formatTimeAgo(tx.timestamp)}</span>
+                    <span className="text-[10px] font-mono tabular-nums text-white/40">{formatTimeAgo(tx.timestamp)}</span>
                     {/* Action badge - Swapped for buys, Sold for sells */}
                     {isBuy ? (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#c4f70e]/20 text-[#c4f70e] font-mono">
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#c4f70e]/20 text-[#c4f70e] font-mono tabular-nums">
                             Swapped {formatSol(solAmount)} SOL
                         </span>
                     ) : (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-green-500/20 text-green-400 font-mono">
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-green-500/20 text-green-400 font-mono tabular-nums">
                             Sold +{formatSol(solAmount)} SOL
                         </span>
                     )}
                     {/* P&L + tx link */}
                     <div className="flex items-center gap-2">
                         {pnlPercent !== null && (
-                            <span className={`flex items-center gap-0.5 text-[10px] ${pnlPercent >= 0 ? "text-green-400" : "text-red-400"}`}>
+                            <span className={`flex items-center gap-0.5 text-[10px] font-mono tabular-nums min-w-[4ch] ${pnlPercent >= 0 ? "text-green-400" : "text-red-400"}`}>
                                 {pnlPercent >= 0 ? (
                                     <TrendingUp className="w-3 h-3" />
                                 ) : (

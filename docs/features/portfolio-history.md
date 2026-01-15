@@ -3,6 +3,9 @@
 ## Overview
 We have implemented a real-time portfolio tracking system that moves away from simulated chart data to actual historical equity tracking. This allows the "VIBR WALLET" and Smart Money dashboard to display a real equity curve based on the user's trading wallet performance.
 
+### 2026-01-15
+- Pump-style wallet pill now sits at the absolute top of the stacking context so other dashboard overlays can never occlude it.
+
 ## Architecture
 
 ### 1. Database Schema (`@sypher/prisma`)

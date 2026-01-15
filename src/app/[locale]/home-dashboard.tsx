@@ -12,7 +12,7 @@ import {
   useWalletSignals,
 } from "@/features/smart-trading";
 import { TraderProfileCard } from "@/features/smart-trading/components/TraderProfileCard";
-import { Terminal, TerminalProvider, useTerminalNarrator } from "@/features/terminal";
+import { Terminal, TerminalProvider, useTerminalNarrator, useAiReasoningStream } from "@/features/terminal";
 import { useAiMood } from "@/hooks/useAiMood";
 import { VibrCoder } from "@/components/VibrCoder";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -52,6 +52,10 @@ function DashboardContent() {
   const { rankedMigrations } = useMigrationFeedContext();
   const { signals } = useWalletSignals();
 
+  // DEBUG: Log what dashboardStats contains before passing to TraderProfileCard
+  console.log('[HomeDashboard] dashboardStats from context:', dashboardStats);
+  console.log('[HomeDashboard] dashboardStats.performance:', dashboardStats?.performance);
+
   // Memoize narrator state to prevent infinite re-renders (object reference stability)
   const narratorState = useMemo(
     () => ({
@@ -70,6 +74,14 @@ function DashboardContent() {
     throttleMs: 5000,
     idleIntervalMs: 20000,
     enabled: true,
+  });
+
+  // 🚀 NEW: AI Reasoning Stream - bridges WebSocket events directly to terminal
+  // This enables live streaming of AI analysis, decisions, and reasoning
+  useAiReasoningStream({
+    enabled: true,
+    maxThinkingSteps: 6,
+    throttleMs: 800, // Faster than narrator for real-time feel
   });
 
   // AI Mood System - dynamically calculates mood based on migration data

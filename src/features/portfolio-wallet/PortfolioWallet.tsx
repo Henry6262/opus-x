@@ -492,31 +492,31 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                 <div className="portfolio-wallet-stats">
                   <div className="portfolio-wallet-stat">
                     <span className="portfolio-wallet-stat-label">Win Rate</span>
-                    <span className="portfolio-wallet-stat-value text-matrix-green">{portfolioStats.winRate.toFixed(1)}%</span>
+                    <span className="portfolio-wallet-stat-value tabular-nums text-matrix-green">{portfolioStats.winRate.toFixed(1)}%</span>
                   </div>
                   <div className="portfolio-wallet-stat">
                     <span className="portfolio-wallet-stat-label">Avg Trade</span>
-                    <span className={`portfolio-wallet-stat-value ${portfolioStats.avgPnL >= 0 ? "text-matrix-green" : "text-terminal-red"}`}>
+                    <span className={`portfolio-wallet-stat-value tabular-nums ${portfolioStats.avgPnL >= 0 ? "text-matrix-green" : "text-terminal-red"}`}>
                       {portfolioStats.avgPnL >= 0 ? "+" : ""}{portfolioStats.avgPnL.toFixed(2)} SOL
                     </span>
                   </div>
                   <div className="portfolio-wallet-stat">
                     <span className="portfolio-wallet-stat-label">Best</span>
-                    <span className="portfolio-wallet-stat-value text-matrix-green">
+                    <span className="portfolio-wallet-stat-value tabular-nums text-matrix-green">
                       +{portfolioStats.topPerformer?.pnlPercent || 0}%
                     </span>
                   </div>
                   <div className="portfolio-wallet-stat">
                     <span className="portfolio-wallet-stat-label">Trades</span>
-                    <span className="portfolio-wallet-stat-value">{portfolioStats.totalTrades}</span>
+                    <span className="portfolio-wallet-stat-value tabular-nums">{portfolioStats.totalTrades}</span>
                   </div>
                   <div className="portfolio-wallet-stat">
                     <span className="portfolio-wallet-stat-label">Winners</span>
-                    <span className="portfolio-wallet-stat-value text-matrix-green">{portfolioStats.winnersCount}</span>
+                    <span className="portfolio-wallet-stat-value tabular-nums text-matrix-green">{portfolioStats.winnersCount}</span>
                   </div>
                   <div className="portfolio-wallet-stat">
                     <span className="portfolio-wallet-stat-label">Losers</span>
-                    <span className="portfolio-wallet-stat-value text-terminal-red">{portfolioStats.losersCount}</span>
+                    <span className="portfolio-wallet-stat-value tabular-nums text-terminal-red">{portfolioStats.losersCount}</span>
                   </div>
                 </div>
               </>
@@ -549,20 +549,20 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                               <span className="portfolio-wallet-position-name text-[10px] text-white/40">{position.name}</span>
                             </div>
                           </div>
-                          <div className={`portfolio-wallet-position-pnl ${position.pnlPercent >= 0 ? "positive" : "negative"}`}>
+                          <div className={`portfolio-wallet-position-pnl tabular-nums min-w-[4ch] ${position.pnlPercent >= 0 ? "positive" : "negative"}`}>
                             {position.pnlPercent >= 0 ? "+" : ""}{position.pnlPercent.toFixed(0)}%
                           </div>
                         </div>
                         <div className="portfolio-wallet-position-details">
                           <div className="portfolio-wallet-position-detail">
                             <span className="label">Value</span>
-                            <span className="value">
+                            <span className="value tabular-nums">
                               {position.value.toFixed(2)} SOL
                             </span>
                           </div>
                           <div className="portfolio-wallet-position-detail">
                             <span className="label">PnL</span>
-                            <span className={`value ${position.pnl >= 0 ? "text-matrix-green" : "text-terminal-red"}`}>
+                            <span className={`value tabular-nums ${position.pnl >= 0 ? "text-matrix-green" : "text-terminal-red"}`}>
                               {position.pnl >= 0 ? "+" : ""}{position.pnl.toFixed(4)} SOL
                             </span>
                           </div>
@@ -616,13 +616,13 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                             <span className="portfolio-wallet-transaction-time text-[10px]">{formatTimeAgo(tx.timestamp)}</span>
                           </div>
                           {tx.pnlPercent !== undefined && (
-                            <div className={`portfolio-wallet-transaction-pnl ${tx.pnlPercent >= 0 ? "positive" : "negative"}`}>
+                            <div className={`portfolio-wallet-transaction-pnl tabular-nums min-w-[4ch] ${tx.pnlPercent >= 0 ? "positive" : "negative"}`}>
                               {tx.pnlPercent >= 0 ? "+" : ""}{tx.pnlPercent.toFixed(0)}%
                             </div>
                           )}
                         </div>
                         <div className="portfolio-wallet-transaction-details">
-                          <div className="portfolio-wallet-transaction-value">
+                          <div className="portfolio-wallet-transaction-value tabular-nums">
                             {tx.value.toFixed(2)} SOL
                           </div>
                           {tx.txHash && (

@@ -106,6 +106,42 @@ main {
   min-height: 100vh;
 }
 
+/* ===== NUMERIC STABILITY: PREVENT LAYOUT SHIFT ===== */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fixed-width numeric containers */
+.num-stable {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Min-width containers for common number patterns */
+.num-pnl { /* e.g., +999.99% */
+  font-variant-numeric: tabular-nums;
+  min-width: 6ch;
+  text-align: right;
+}
+
+.num-price { /* e.g., $0.000001234 */
+  font-variant-numeric: tabular-nums;
+  min-width: 8ch;
+  text-align: right;
+}
+
+.num-sol { /* e.g., 123.4567 SOL */
+  font-variant-numeric: tabular-nums;
+  min-width: 7ch;
+  text-align: right;
+}
+
+.num-percent { /* e.g., 99.9% */
+  font-variant-numeric: tabular-nums;
+  min-width: 4ch;
+  text-align: right;
+}
+
 /* ===== CRT SCANLINE EFFECT ===== */
 .crt-effect {
   position: relative;
@@ -3068,7 +3104,7 @@ button:focus-visible {
   position: fixed;
   top: var(--space-4);
   left: var(--space-4);
-  z-index: 10000;
+  z-index: 2147483647;
   /* TWO-TONE CAPSULE: Black to green gradient */
   background: linear-gradient(
     135deg,

@@ -47,7 +47,7 @@ export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
                 <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-[#c4f70e]" />
                     <span className="text-sm font-medium text-white">{t("recentTrades")}</span>
-                    <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-[#c4f70e]/20 text-[#c4f70e]">
+                    <span className="px-1.5 py-0.5 text-[10px] font-semibold tabular-nums rounded bg-[#c4f70e]/20 text-[#c4f70e]">
                         {closedTrades.length}
                     </span>
                 </div>
@@ -144,10 +144,10 @@ function TradeCard({ trade, t }: TradeCardProps) {
                     </a>
                 </div>
                 <div className="text-right">
-                    <div className={`font-mono font-bold text-sm ${isProfit ? "text-green-400" : "text-red-400"}`}>
+                    <div className={`font-mono font-bold tabular-nums text-sm ${isProfit ? "text-green-400" : "text-red-400"}`}>
                         {formatPnL(trade.realizedPnlSol ?? 0)}
                     </div>
-                    <div className={`text-xs ${isProfit ? "text-green-400/60" : "text-red-400/60"}`}>
+                    <div className={`text-xs font-mono tabular-nums min-w-[5ch] ${isProfit ? "text-green-400/60" : "text-red-400/60"}`}>
                         {formatPercent(pnlPercent)}
                     </div>
                 </div>
@@ -156,13 +156,13 @@ function TradeCard({ trade, t }: TradeCardProps) {
             {/* Bottom row: Details */}
             <div className="flex items-center justify-between text-[10px] text-white/50">
                 <div className="flex items-center gap-3">
-                    <span>
+                    <span className="font-mono tabular-nums">
                         {t("entry")}: {formatSol(trade.entryAmountSol)}
                     </span>
                     <span>•</span>
                     <span className="text-white/35">{exitReason}</span>
                 </div>
-                <span>{timeHeld}</span>
+                <span className="font-mono tabular-nums">{timeHeld}</span>
             </div>
         </motion.div>
     );

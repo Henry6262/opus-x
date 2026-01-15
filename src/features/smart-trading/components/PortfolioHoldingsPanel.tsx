@@ -164,8 +164,8 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
     const showMcapBadge = currentMarketCap !== undefined && currentMarketCap > 0;
 
     return (
-        <div className="mt-3 pt-6 border-t border-white/10 flex items-center gap-3">
-            {/* Progress Track - extra pt-6 to make room for floating MCap badge */}
+        <div className="mt-2 pt-4 flex items-center gap-3">
+            {/* Progress Track - extra pt for floating MCap badge */}
             <div className="flex-1 relative">
                 <div className="relative h-3 rounded-full bg-white/10 overflow-hidden">
                     {/* Progress Fill - Always lime green (progress toward TP target) */}
@@ -205,7 +205,7 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
                         <div className="relative">
                             {/* Compact pill */}
                             <div className="px-1.5 py-0.5 rounded bg-black/95 border border-[#c4f70e]/60 whitespace-nowrap">
-                                <span className="text-[10px] font-mono font-bold text-[#c4f70e]">
+                                <span className="text-[10px] font-mono font-bold tabular-nums text-[#c4f70e]">
                                     {formatMarketCap(currentMarketCap)}
                                 </span>
                             </div>
@@ -223,21 +223,16 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
                 )}
             </div>
 
-            {/* Target MCap + Multiplier Badge */}
-            <div className="relative min-w-[60px]">
-                {targetMarketCap !== undefined && targetMarketCap > 0 ? (
-                    <>
-                        <span className={`text-base font-bold font-mono ${isCloseToGoal ? "text-[#c4f70e]" : "text-white/90"}`}>
-                            {formatMarketCap(targetMarketCap)}
-                        </span>
-                        {/* Small multiplier badge */}
-                        <span className="absolute -top-2 -right-1 px-1 py-0.5 text-[8px] font-bold font-mono rounded bg-white/10 text-white/50">
-                            {goal.toFixed(1)}x
-                        </span>
-                    </>
-                ) : (
-                    <span className={`text-lg font-bold font-mono ${isCloseToGoal ? "text-[#c4f70e]" : "text-white/80"}`}>
-                        {goal.toFixed(1)}x
+            {/* Target: Multiplier + MCap */}
+            <div className="flex items-center gap-2 min-w-[80px]">
+                {/* Multiplier Badge */}
+                <span className={`px-2 py-1 rounded-lg text-sm font-bold font-mono tabular-nums ${isCloseToGoal ? "bg-[#c4f70e]/20 text-[#c4f70e]" : "bg-white/10 text-white/80"}`}>
+                    {goal.toFixed(1)}x
+                </span>
+                {/* Target MCap */}
+                {targetMarketCap !== undefined && targetMarketCap > 0 && (
+                    <span className={`text-sm font-bold font-mono tabular-nums ${isCloseToGoal ? "text-[#c4f70e]" : "text-white/60"}`}>
+                        {formatMarketCap(targetMarketCap)}
                     </span>
                 )}
             </div>
@@ -262,7 +257,7 @@ function SolValue({ solAmount, size = "lg" }: SolValueProps) {
     };
 
     return (
-        <span className={`inline-flex items-center gap-1 font-mono ${size === "lg" ? "text-xl font-bold" : "text-sm"}`}>
+        <span className={`inline-flex items-center gap-1 font-mono tabular-nums ${size === "lg" ? "text-xl font-bold" : "text-sm"}`}>
             {formatSol(solAmount)}
             <Image src={SOLANA_ICON} alt="SOL" width={size === "lg" ? 18 : 14} height={size === "lg" ? 18 : 14} />
         </span>
@@ -308,9 +303,6 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
         ? currentMarketCap / currentMultiplier
         : undefined;
 
-    // Twitter search link
-    const twitterSearchUrl = `https://twitter.com/search?q=$${holding.symbol}&src=typed_query&f=live`;
-
     // Check if we have live data (updated within last 10 seconds)
     const hasLiveData = Boolean(livePrice && (Date.now() - livePrice.lastUpdated) < 10000);
 
@@ -321,7 +313,7 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ delay: index * 0.05, type: "spring", stiffness: 200, damping: 20 }}
-            className="relative p-5 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden hover:border-[#c4f70e]/30 transition-all group cursor-pointer"
+            className="relative p-4 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden hover:border-[#c4f70e]/30 transition-all group cursor-pointer"
             onClick={onClick}
             role="button"
             tabIndex={0}
@@ -332,95 +324,95 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                 <div className="absolute inset-0 bg-gradient-to-r from-[#c4f70e]/5 to-transparent" />
             </div>
 
-            {/* Row 1: Token Identity + PnL % */}
-            <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
+            {/* Main Layout: Large Image Left | Content Right */}
+            <div className="flex gap-4">
+                {/* LEFT: Large Token Avatar - fills full height */}
+                <div className="flex-shrink-0 self-stretch flex items-center">
                     <TokenAvatar
                         imageUrl={holding.image_url}
                         symbol={holding.symbol}
                         mint={holding.mint}
-                        size={40}
+                        size={100}
                     />
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="font-bold text-white text-base">{holding.symbol}</span>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigator.clipboard.writeText(holding.mint);
-                                }}
-                                className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-white/10 text-white/60 hover:bg-white/20 transition-colors"
-                                title="Copy Contract Address"
-                            >
-                                CA
-                            </button>
-                        </div>
-                        {/* Token Amount */}
-                        <div className="flex items-center gap-1 text-xs mt-0.5">
-                            <Image
-                                src={holding.image_url || `https://dd.dexscreener.com/ds-data/tokens/solana/${holding.mint}.png`}
-                                alt={holding.symbol}
-                                width={14}
-                                height={14}
-                                className="rounded-full"
-                                unoptimized
-                            />
-                            <span className="font-mono font-semibold text-white/80">
-                                {holding.amount >= 1_000_000
-                                    ? `${(holding.amount / 1_000_000).toFixed(1)}M`
-                                    : holding.amount >= 1_000
-                                        ? `${(holding.amount / 1_000).toFixed(1)}K`
-                                        : holding.amount.toFixed(0)
-                                }
-                            </span>
-                        </div>
-                    </div>
                 </div>
 
-                {/* PnL Section (right side) - Percentage + SOL below */}
-                <div className="flex flex-col items-end">
-                    {/* PnL Percentage - Hero */}
-                    <motion.div
-                        className={`text-2xl font-bold font-mono ${pnlPct >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}
-                        style={{
-                            textShadow: pnlPct >= 0
-                                ? "0 0 10px rgba(196,247,14,0.35)"
-                                : "0 0 10px rgba(239,68,68,0.35)",
-                        }}
-                    >
-                        <CountUp
-                            to={pnlPct}
-                            duration={0.8}
-                            decimals={0}
-                            prefix={pnlPct >= 0 ? "+" : ""}
-                            suffix="%"
-                        />
-                    </motion.div>
-                    {/* SOL Profit - Smaller, below percentage */}
-                    <div className={`flex items-center gap-1 text-sm font-mono ${pnlSol >= 0 ? "text-green-400/80" : "text-red-400/80"}`}>
-                        <span>{pnlSol >= 0 ? "+" : ""}{pnlSol.toFixed(2)}</span>
-                        <Image
-                            src="/logos/solana.png"
-                            alt="SOL"
-                            width={14}
-                            height={14}
-                            className="opacity-70"
-                        />
-                        {hasLiveData && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse ml-1" />
-                        )}
+                {/* RIGHT: All Content */}
+                <div className="flex-1 min-w-0">
+                    {/* Row 1: Token Info + PnL */}
+                    <div className="flex items-start justify-between mb-2">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-white text-base">{holding.symbol}</span>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(holding.mint);
+                                    }}
+                                    className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-white/10 text-white/60 hover:bg-white/20 transition-colors"
+                                    title="Copy Contract Address"
+                                >
+                                    CA
+                                </button>
+                            </div>
+                            {/* Token Amount */}
+                            <div className="flex items-center gap-1 text-xs mt-1">
+                                <span className="font-mono font-semibold tabular-nums text-white/60">
+                                    {holding.amount >= 1_000_000
+                                        ? `${(holding.amount / 1_000_000).toFixed(1)}M`
+                                        : holding.amount >= 1_000
+                                            ? `${(holding.amount / 1_000).toFixed(1)}K`
+                                            : holding.amount.toFixed(0)
+                                    } tokens
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* PnL Section (right side) - Percentage + SOL below */}
+                        <div className="flex flex-col items-end">
+                            {/* PnL Percentage - Hero */}
+                            <motion.div
+                                className={`text-2xl font-bold font-mono tabular-nums min-w-[5ch] ${pnlPct >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}
+                                style={{
+                                    textShadow: pnlPct >= 0
+                                        ? "0 0 10px rgba(196,247,14,0.35)"
+                                        : "0 0 10px rgba(239,68,68,0.35)",
+                                }}
+                            >
+                                <CountUp
+                                    to={pnlPct}
+                                    duration={0.8}
+                                    decimals={0}
+                                    prefix={pnlPct >= 0 ? "+" : ""}
+                                    suffix="%"
+                                />
+                            </motion.div>
+                            {/* SOL Profit - Smaller, below percentage */}
+                            <div className={`flex items-center gap-1 text-sm font-mono tabular-nums ${pnlSol >= 0 ? "text-green-400/80" : "text-red-400/80"}`}>
+                                <span>{pnlSol >= 0 ? "+" : ""}{pnlSol.toFixed(2)}</span>
+                                <Image
+                                    src="/logos/solana.png"
+                                    alt="SOL"
+                                    width={14}
+                                    height={14}
+                                    className="opacity-70"
+                                />
+                                {hasLiveData && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse ml-1" />
+                                )}
+                            </div>
+                        </div>
                     </div>
+
+                    {/* Progress Bar for Take Profit */}
+                    <ProgressBar
+                        currentMultiplier={currentMultiplier}
+                        progressOverride={livePrice?.targetProgress}
+                        goalMultiplier={goalMultiplier}
+                        currentMarketCap={currentMarketCap}
+                        entryMarketCap={entryMarketCap}
+                    />
                 </div>
             </div>
-
-            {/* Progress Bar for Take Profit */}
-            <ProgressBar
-                currentMultiplier={currentMultiplier}
-                progressOverride={livePrice?.targetProgress}
-                goalMultiplier={goalMultiplier}
-                currentMarketCap={currentMarketCap}
-                entryMarketCap={entryMarketCap}
-            />
         </motion.div>
     );
 }

@@ -2,6 +2,9 @@
 
 All notable changes to Opus-X are documented here.
 
+## 2026-01-15
+- Pump.fun wallet pill received a max z-index so the balance badge always floats above overlapping feeds on the dashboard.
+
 ## 2026-01-14
 - Transaction History now sits alongside Live Activity and Active Positions in the top desktop rail as its own collapsible column, eliminating the bottom-row copy.
 - Smart Money panel is fixed to roughly half-screen height with a single-column vertical list so each tracked wallet uses the full width.

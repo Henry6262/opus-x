@@ -200,7 +200,11 @@ function TerminalLine({
 
 export function Terminal() {
   const { logs } = useTerminal();
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  // Start open on desktop (md breakpoint = 768px), collapsed on mobile
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.innerWidth < 768;
+  });
   const [animationComplete, setAnimationComplete] = useState(false);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const [isFirstRender, setIsFirstRender] = useState(true);

@@ -21,6 +21,8 @@ export type TerminalEventType =
   | "position:closed"
   | "position:profit"
   | "position:stop_loss"
+  | "position:price_update"
+  | "position:take_profit"
   // Migration events
   | "migration:detected"
   | "migration:analyzing"
@@ -32,7 +34,16 @@ export type TerminalEventType =
   // AI events
   | "ai:analyzing"
   | "ai:decision"
-  | "ai:insight";
+  | "ai:insight"
+  // NEW: AI Reasoning Stream Events
+  | "ai:thinking_start"
+  | "ai:thinking_step"
+  | "ai:reasoning_stream"
+  | "ai:market_analysis"
+  | "ai:trade_evaluation"
+  | "ai:risk_assessment"
+  | "ai:confidence_score"
+  | "ai:final_verdict";
 
 // ============================================
 // Event Payload Types
@@ -159,6 +170,86 @@ const eventMappings: Record<TerminalEventType, EventMapping> = {
     category: "insight",
     contextMapper: (data) => ({
       reason: data?.message as string | undefined,
+    }),
+  },
+
+  // NEW: AI Reasoning Stream Events
+  "ai:thinking_start": {
+    category: "ai_thinking",
+    contextMapper: (data) => ({
+      tokenSymbol: data?.tokenSymbol as string | undefined,
+      reason: "Initiating deep analysis...",
+    }),
+  },
+  "ai:thinking_step": {
+    category: "ai_thinking_step",
+    contextMapper: (data) => ({
+      tokenSymbol: data?.tokenSymbol as string | undefined,
+      reason: data?.step as string | undefined,
+    }),
+  },
+  "ai:reasoning_stream": {
+    category: "ai_reasoning",
+    contextMapper: (data) => ({
+      tokenSymbol: data?.tokenSymbol as string | undefined,
+      reason: data?.reasoning as string | undefined,
+    }),
+  },
+  "ai:market_analysis": {
+    category: "ai_market_analysis",
+    contextMapper: (data) => ({
+      tokenSymbol: data?.tokenSymbol as string | undefined,
+      price: data?.price as number | undefined,
+      reason: data?.analysis as string | undefined,
+    }),
+  },
+  "ai:trade_evaluation": {
+    category: "ai_trade_eval",
+    contextMapper: (data) => ({
+      tokenSymbol: data?.tokenSymbol as string | undefined,
+      reason: data?.evaluation as string | undefined,
+    }),
+  },
+  "ai:risk_assessment": {
+    category: "ai_risk",
+    contextMapper: (data) => ({
+      tokenSymbol: data?.tokenSymbol as string | undefined,
+      score: data?.riskScore as number | undefined,
+      reason: data?.assessment as string | undefined,
+    }),
+  },
+  "ai:confidence_score": {
+    category: "ai_confidence",
+    contextMapper: (data) => ({
+      tokenSymbol: data?.tokenSymbol as string | undefined,
+      score: data?.confidence as number | undefined,
+      reason: data?.factors as string | undefined,
+    }),
+  },
+  "ai:final_verdict": {
+    category: "ai_verdict",
+    contextMapper: (data) => ({
+      tokenSymbol: data?.tokenSymbol as string | undefined,
+      score: data?.confidence as number | undefined,
+      reason: data?.verdict as string | undefined,
+    }),
+  },
+
+  // Position events (extended)
+  "position:price_update": {
+    category: "position_update",
+    contextMapper: (data) => ({
+      tokenSymbol: data?.tokenSymbol as string | undefined,
+      price: data?.price as number | undefined,
+      pnl: data?.pnl as number | undefined,
+    }),
+  },
+  "position:take_profit": {
+    category: "success",
+    contextMapper: (data) => ({
+      tokenSymbol: data?.tokenSymbol as string | undefined,
+      pnl: data?.realized as number | undefined,
+      reason: `${data?.multiplier}x target hit!`,
     }),
   },
 };

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
-import { Copy } from "lucide-react";
+import { Copy, Wallet } from "lucide-react";
 import { CountUp } from "@/components/animations/CountUp";
 import { SmartMoneyAnimation } from "@/components/animations";
 import { cn } from "@/lib/utils";
@@ -55,6 +55,12 @@ function XIcon({ className }: { className?: string }) {
   );
 }
 
+function Skeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn("animate-pulse bg-black/40 rounded", className)} />
+  );
+}
+
 function TabIcon({ type, className }: { type: "smart-money" | "twitter"; className?: string }) {
   if (type === "smart-money") {
     // Smart money lottie is wider than tall, use larger size with constrained container
@@ -78,11 +84,19 @@ export function TraderProfileCard({
   const streak = calculateStreak(history);
   const performance = stats?.performance;
 
+  // DEBUG: Log stats to trace data issue
+  console.log('[TraderProfileCard] stats:', stats);
+  console.log('[TraderProfileCard] performance:', performance);
+
+  // Determine loading state - stats is null when data hasn't loaded yet
+  const isLoading = stats === null;
+
   const winRate = performance?.winRate ?? 0;
   const totalTrades = performance?.totalTrades ?? 0;
   const winningTrades = performance?.winningTrades ?? 0;
   const largestWinPercent = performance?.largestWin ?? 0;
   const netPnl = performance?.netPnlSol ?? 0;
+
   const isOnStreak = streak.current >= 2 && streak.type === "win";
   const walletAddress = config?.wallet_address || "N/A";
   const shortWallet =
@@ -94,172 +108,170 @@ export function TraderProfileCard({
     <div className="flex flex-col gap-1 text-center md:text-left">
       <div className="text-[9px] md:text-[11px] text-white/40 uppercase tracking-wider">{tProfile("streak")}</div>
       <div className="flex items-baseline gap-0.5 justify-center md:justify-start">
-        <span className={`text-lg md:text-2xl font-bold font-mono ${isOnStreak ? "text-orange-400" : "text-white"}`}>
+        <span className={`text-lg md:text-2xl font-bold font-mono tabular-nums ${isOnStreak ? "text-orange-400" : "text-white"}`}>
           {streak.current}
         </span>
-        <span className="text-xs md:text-sm text-white/30">/{streak.best}</span>
+        <span className="text-xs md:text-sm text-white/30 tabular-nums">/{streak.best}</span>
       </div>
     </div>
   );
 
   const StatTrades = () => (
-    <div className="flex flex-col gap-1 text-center md:text-left">
-      <div className="text-[9px] md:text-[11px] text-white/40 uppercase tracking-wider">{tProfile("trades")}</div>
-      <div className="flex items-baseline gap-1 justify-center md:justify-start">
-        <span className="text-lg md:text-2xl font-bold font-mono text-white">{totalTrades}</span>
-        <span className="text-xs md:text-sm text-green-400/70">({winningTrades}W)</span>
-      </div>
+    <div className="flex items-baseline gap-2 min-w-[140px]">
+      <span className="text-[10px] md:text-xs text-white/40 uppercase tracking-wider">{tProfile("trades")}:</span>
+      {isLoading ? (
+        <Skeleton className="h-5 w-16" />
+      ) : (
+        <>
+          <span className="text-sm md:text-lg font-bold font-mono tabular-nums text-white">{totalTrades}</span>
+          <span className="text-[10px] md:text-xs text-green-400/70 tabular-nums">({winningTrades}W)</span>
+        </>
+      )}
     </div>
   );
 
   const StatBest = () => (
-    <div className="flex flex-col gap-1 text-center md:text-left">
-      <div className="text-[9px] md:text-[11px] text-white/40 uppercase tracking-wider">{tProfile("bestTrade")}</div>
-      <div className="flex items-center gap-1 justify-center md:justify-start">
-        <span className="text-lg md:text-2xl font-bold font-mono text-green-400">
-          +{Number.isFinite(largestWinPercent) ? Math.round(largestWinPercent) : 0}
+    <div className="flex items-baseline gap-2 min-w-[140px]">
+      <span className="text-[10px] md:text-xs text-white/40 uppercase tracking-wider">{tProfile("bestTrade")}:</span>
+      {isLoading ? (
+        <Skeleton className="h-5 w-14" />
+      ) : (
+        <span className="text-sm md:text-lg font-bold font-mono tabular-nums text-green-400">
+          +{Number.isFinite(largestWinPercent) ? Math.round(largestWinPercent) : 0}%
         </span>
-        <span className="text-xs md:text-base text-green-400/70">%</span>
-        <span
-          className="text-[10px] md:text-xs text-white/50 border border-white/10 rounded-full px-2 py-0.5 cursor-help"
-          title="Best realized trade percentage (performance.best_trade_pct from trading stats)"
-        >
-          ?
-        </span>
-      </div>
+      )}
     </div>
   );
 
   return (
     <div className="relative pt-20 md:pt-12 pb-16 overflow-hidden md:overflow-visible">
 
-      {/* Wallet address badge - Desktop only (absolute positioned) */}
-      <div className="hidden md:flex absolute left-[200px] top-3 items-center gap-2 text-xs font-mono text-white/85">
-        <span>{shortWallet}</span>
-        {walletAddress !== "N/A" && (
-          <button
-            onClick={() => navigator.clipboard.writeText(walletAddress)}
-            className="text-white/60 hover:text-white transition-colors"
-            aria-label="Copy wallet address"
-            type="button"
-          >
-            <Copy className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
       {/* Main pill container */}
-      <div className="relative rounded-full bg-black/50 backdrop-blur-xl border border-white/10 h-16 md:h-28 ml-16 md:ml-20 mr-2 md:mr-4 max-w-[1100px] mx-auto overflow-visible flex items-center">
+      <div className="relative rounded-full bg-black/50 backdrop-blur-xl border-2 border-[#c4f70e]/30 h-16 md:h-28 ml-16 md:ml-20 mr-2 md:mr-4 max-w-[1100px] mx-auto overflow-visible flex items-center shadow-[0_0_20px_rgba(196,247,14,0.1)] mt-4 md:mt-6">
         {/* Subtle glow effects */}
         <div className="absolute -top-20 right-1/4 w-48 h-48 bg-[#c4f70e]/5 rounded-full blur-3xl pointer-events-none" />
 
         {/* Content grid - 3 zones */}
-        <div className="relative h-full flex items-center pl-16 md:pl-40 pr-3 md:pr-8 w-full">
+        <div className="relative h-full flex items-center pl-14 md:pl-36 pr-3 md:pr-8 w-full">
 
           {/* ZONE 1: Hero P&L - The main attraction */}
-          <div className="pr-4 md:pr-8 border-r border-white/10">
-            <div className="text-[9px] md:text-xs text-white/50 uppercase tracking-wider font-medium">{tProfile("allTimePnl")}</div>
-            <div className={`flex items-center gap-1.5 md:gap-2 text-xl md:text-4xl font-bold font-mono tracking-tight ${netPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
-              <CountUp to={netPnl} duration={1.2} decimals={2} prefix={netPnl >= 0 ? "+" : ""} />
-              <Image src="/logos/solana.png" alt="SOL" width={16} height={16} className="opacity-80 md:w-[28px] md:h-[28px]" />
-            </div>
+          <div className="pr-4 md:pr-10 border-r border-white/10 min-w-[100px] md:min-w-[160px]">
+            <div className="text-[9px] md:text-[11px] text-white/50 uppercase tracking-wider font-medium">{tProfile("allTimePnl")}</div>
+            {isLoading ? (
+              <div className="flex items-center gap-1 md:gap-1.5 h-[28px] md:h-[36px]">
+                <Skeleton className="h-6 md:h-8 w-20 md:w-28" />
+                <Skeleton className="h-[14px] w-[14px] md:h-[22px] md:w-[22px] rounded-full" />
+              </div>
+            ) : (
+              <div className={`flex items-center gap-1 md:gap-1.5 text-lg md:text-3xl font-bold font-mono tabular-nums tracking-tight ${netPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                <CountUp to={netPnl} duration={1.2} decimals={2} prefix={netPnl >= 0 ? "+" : ""} />
+                <Image src="/logos/solana.png" alt="SOL" width={14} height={14} className="opacity-80 md:w-[22px] md:h-[22px]" />
+              </div>
+            )}
           </div>
 
           {/* ZONE 2: Win Rate Ring - Visual anchor */}
-          <div className="flex items-center justify-center px-4 md:px-8">
+          <div className="flex items-center justify-center px-5 md:px-10">
             <div className="relative w-12 h-12 md:w-20 md:h-20 flex items-center justify-center">
-              <svg viewBox="0 0 56 56" className="w-full h-full transform -rotate-90">
-                <circle
-                  cx={28}
-                  cy={28}
-                  r={24}
-                  fill="transparent"
-                  stroke="rgba(255,255,255,0.08)"
-                  strokeWidth={4}
-                />
-                <motion.circle
-                  cx={28}
-                  cy={28}
-                  r={24}
-                  fill="transparent"
-                  stroke="url(#winRateGradient)"
-                  strokeWidth={4}
-                  strokeLinecap="round"
-                  strokeDasharray={150.8}
-                  initial={{ strokeDashoffset: 150.8 }}
-                  animate={{ strokeDashoffset: 150.8 - (winRate / 100) * 150.8 }}
-                  transition={{ duration: 1.2, ease: "easeOut" }}
-                />
-                <defs>
-                  <linearGradient id="winRateGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#c4f70e" />
-                    <stop offset="100%" stopColor="#22d3ee" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xs md:text-xl font-bold text-white font-mono leading-none">
-                  {Number.isFinite(winRate) ? Math.round(winRate) : 0}%
-                </span>
-                <span className="text-[5px] md:text-[9px] text-white/40 uppercase tracking-wide">{tProfile("winRate")}</span>
-              </div>
+              {isLoading ? (
+                <Skeleton className="w-full h-full rounded-full" />
+              ) : (
+                <>
+                  <svg viewBox="0 0 56 56" className="w-full h-full transform -rotate-90">
+                    <circle
+                      cx={28}
+                      cy={28}
+                      r={24}
+                      fill="transparent"
+                      stroke="rgba(255,255,255,0.08)"
+                      strokeWidth={4}
+                    />
+                    <motion.circle
+                      cx={28}
+                      cy={28}
+                      r={24}
+                      fill="transparent"
+                      stroke="url(#winRateGradient)"
+                      strokeWidth={4}
+                      strokeLinecap="round"
+                      strokeDasharray={150.8}
+                      initial={{ strokeDashoffset: 150.8 }}
+                      animate={{ strokeDashoffset: 150.8 - (winRate / 100) * 150.8 }}
+                      transition={{ duration: 1.2, ease: "easeOut" }}
+                    />
+                    <defs>
+                      <linearGradient id="winRateGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#c4f70e" />
+                        <stop offset="100%" stopColor="#22d3ee" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-xs md:text-xl font-bold text-white font-mono tabular-nums leading-none">
+                      {Number.isFinite(winRate) ? Math.round(winRate) : 0}%
+                    </span>
+                    <span className="text-[5px] md:text-[9px] text-white/40 uppercase tracking-wide">{tProfile("winRate")}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          {/* ZONE 3: Secondary stats - Clean labels and values (desktop only) */}
-          <div className="hidden md:flex items-center gap-8 pl-8 border-l border-white/10">
+          {/* ZONE 3: Secondary stats - Stacked vertically (desktop only) */}
+          <div className="hidden md:flex flex-col justify-center gap-1 pl-6 pr-4 border-l border-white/10">
             <StatTrades />
             <StatBest />
           </div>
         </div>
       </div>
 
-      {/* X/Twitter Handle - Desktop: below pill, centered under avatar */}
-      <motion.a
-        href="https://x.com/SuperRouterSol"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="hidden md:flex mt-3 ml-20 items-center gap-2 text-base font-medium text-white/70 hover:text-white transition-colors"
+      {/* Wallet & Twitter - Below pill, proper flow layout */}
+      <motion.div
+        className="mt-3 ml-28 md:ml-52 flex items-center gap-3 md:gap-4 h-5"
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.3 }}
-        whileHover={{ scale: 1.02 }}
       >
-        <XIcon className="w-5 h-5 text-white/60" />
-        <span>@SuperRouterSol</span>
-      </motion.a>
+        {/* Wallet address */}
+        <div className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono text-white/60 min-w-[100px]">
+          <Wallet className="w-3 h-3 md:w-4 md:h-4 text-white/50" />
+          {config === null ? (
+            <Skeleton className="h-3 w-16" />
+          ) : (
+            <>
+              <span>{shortWallet}</span>
+              {walletAddress !== "N/A" && (
+                <button
+                  onClick={() => navigator.clipboard.writeText(walletAddress)}
+                  className="text-white/40 hover:text-white transition-colors"
+                  aria-label="Copy wallet address"
+                  type="button"
+                >
+                  <Copy className="w-3 h-3 md:w-4 md:h-4" />
+                </button>
+              )}
+            </>
+          )}
+        </div>
 
-      {/* Mobile: X handle & wallet below pill */}
-      <div className="md:hidden mt-4 px-6 flex flex-col items-center gap-2">
+        {/* Divider */}
+        <span className="text-white/20">•</span>
+
         {/* X/Twitter Handle */}
         <a
           href="https://x.com/SuperRouterSol"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono text-white/60 hover:text-white transition-colors"
         >
-          <XIcon className="w-4 h-4 text-white/60" />
+          <XIcon className="w-3 h-3 md:w-4 md:h-4 text-white/50" />
           <span>@SuperRouterSol</span>
         </a>
-        {/* Wallet address */}
-        <div className="flex items-center gap-2 text-[11px] font-mono text-white/60">
-          <span>{shortWallet}</span>
-          {walletAddress !== "N/A" && (
-            <button
-              onClick={() => navigator.clipboard.writeText(walletAddress)}
-              className="text-white/40 hover:text-white transition-colors"
-              aria-label="Copy wallet address"
-              type="button"
-            >
-              <Copy className="w-3 h-3" />
-            </button>
-          )}
-        </div>
-      </div>
+      </motion.div>
 
-      {/* Avatar with animated glow rings */}
+      {/* Avatar with animated glow rings - offset on mobile to avoid overlapping fixed wallet pill */}
       <motion.div
-        className="absolute left-0 top-[48%] md:top-[calc(50%)] -translate-y-1/2 w-28 h-28 md:w-44 md:h-44 z-20"
+        className="absolute left-0 top-[44%] md:top-[45%] -translate-y-1/2 w-28 h-28 md:w-44 md:h-44 z-10"
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.4 }}

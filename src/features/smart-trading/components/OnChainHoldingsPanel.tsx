@@ -91,19 +91,19 @@ function HoldingCard({ holding }: HoldingCardProps) {
 
             {/* Amount */}
             <div className="text-right">
-                <div className="text-sm font-medium text-white">{formatAmount(holding.amount)}</div>
-                <div className="text-[10px] text-white/40">
+                <div className="text-sm font-medium font-mono tabular-nums text-white">{formatAmount(holding.amount)}</div>
+                <div className="text-[10px] font-mono tabular-nums text-white/40">
                     {holding.price_usd ? `@$${holding.price_usd.toFixed(6)}` : "No price"}
                 </div>
             </div>
 
             {/* Value */}
             <div className="text-right min-w-[70px]">
-                <div className={`text-sm font-bold ${isPositive ? "text-green-400" : "text-red-400"}`}>
+                <div className={`text-sm font-bold font-mono tabular-nums ${isPositive ? "text-green-400" : "text-red-400"}`}>
                     {formatValue(holding.value_usd)}
                 </div>
                 {holding.liquidity && (
-                    <div className="text-[10px] text-white/30">
+                    <div className="text-[10px] font-mono tabular-nums text-white/30">
                         Liq: {formatValue(holding.liquidity)}
                     </div>
                 )}
@@ -193,11 +193,11 @@ export function OnChainHoldingsPanel({ walletAddress, minValueUsd = 0.1 }: OnCha
                 <div className="flex items-center gap-2">
                     <Wallet className="w-4 h-4 text-[#c4f70e]" />
                     <span className="text-sm font-medium text-white">On-Chain Holdings</span>
-                    <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-[#c4f70e]/20 text-[#c4f70e]">
+                    <span className="px-1.5 py-0.5 text-[10px] font-semibold tabular-nums rounded bg-[#c4f70e]/20 text-[#c4f70e]">
                         {holdings.length}
                     </span>
                     {totalValue > 0 && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-green-500/20 text-green-400">
+                        <span className="px-2 py-0.5 text-[10px] font-bold font-mono tabular-nums rounded bg-green-500/20 text-green-400">
                             ${totalValue.toFixed(2)}
                         </span>
                     )}
