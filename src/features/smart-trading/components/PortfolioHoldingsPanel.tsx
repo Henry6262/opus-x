@@ -129,13 +129,23 @@ function TokenAvatar({ imageUrl, symbol, mint, size = 48 }: TokenAvatarProps) {
 // Progress Bar for Take Profit Targets
 // ============================================
 
+// Format market cap for display (no decimals)
+function formatMarketCap(mcap: number): string {
+    if (mcap >= 1_000_000_000) return `$${Math.round(mcap / 1_000_000_000)}B`;
+    if (mcap >= 1_000_000) return `$${Math.round(mcap / 1_000_000)}M`;
+    if (mcap >= 1_000) return `$${Math.round(mcap / 1_000)}K`;
+    return `$${Math.round(mcap)}`;
+}
+
 interface ProgressBarProps {
     currentMultiplier: number;
     goalMultiplier?: number;
     progressOverride?: number | null;
+    currentMarketCap?: number;
+    entryMarketCap?: number;
 }
 
-function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride }: ProgressBarProps) {
+function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, currentMarketCap, entryMarketCap }: ProgressBarProps) {
     const goal = Math.max(goalMultiplier, 1.01);
 
     let progressRaw = progressOverride ?? null;
@@ -147,16 +157,15 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride }
     const isPositive = currentMultiplier >= 1;
     const isCloseToGoal = progress > 0.8;
 
-    // Calculate milestone positions (as percentage of goal)
-    const milestones = TP_TARGETS.map((tp) => ({
-        ...tp,
-        position: Math.min((tp.multiplier / goal) * 100, 100),
-        hit: currentMultiplier >= tp.multiplier,
-    }));
+    // Calculate target market cap (entry mcap × goal multiplier)
+    const targetMarketCap = entryMarketCap ? entryMarketCap * goal : undefined;
+
+    // Show market cap badge if we have data
+    const showMcapBadge = currentMarketCap !== undefined && currentMarketCap > 0;
 
     return (
-        <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-3">
-            {/* Progress Track */}
+        <div className="mt-3 pt-6 border-t border-white/10 flex items-center gap-3">
+            {/* Progress Track - extra pt-6 to make room for floating MCap badge */}
             <div className="flex-1 relative">
                 <div className="relative h-3 rounded-full bg-white/10 overflow-hidden">
                     {/* Progress Fill */}
@@ -172,20 +181,7 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride }
                         transition={{ type: "spring", stiffness: 120, damping: 18 }}
                     />
 
-                    {/* Milestone Markers */}
-                    {milestones.map((milestone) => (
-                        <div
-                            key={milestone.label}
-                            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center"
-                            style={{ left: `${milestone.position}%` }}
-                        >
-                            <div
-                                className={`w-0.5 h-4 rounded-full transition-colors ${milestone.hit ? "bg-[#c4f70e]" : "bg-white/30"}`}
-                            />
-                        </div>
-                    ))}
-
-                    {/* Current Position Indicator */}
+                    {/* Current Position Indicator (pulsing dot) */}
                     <motion.div
                         className="absolute w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full"
                         style={{
@@ -199,25 +195,53 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride }
                     />
                 </div>
 
-                {/* Milestone Labels Below */}
-                <div className="relative h-4 mt-1">
-                    {milestones.map((milestone) => (
-                        <span
-                            key={`label-${milestone.label}`}
-                            className={`absolute text-[9px] font-mono -translate-x-1/2 ${milestone.hit ? "text-[#c4f70e]" : "text-white/40"}`}
-                            style={{ left: `${milestone.position}%` }}
-                        >
-                            {milestone.label}
-                        </span>
-                    ))}
-                </div>
+                {/* Floating MCap Badge at Progress Tip - Speech bubble with arrow */}
+                {showMcapBadge && (
+                    <motion.div
+                        className="absolute -translate-x-1/2 pointer-events-none"
+                        style={{ left: `${progress * 100}%`, top: "-22px" }}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                    >
+                        <div className="relative">
+                            {/* Compact pill */}
+                            <div className="px-1.5 py-0.5 rounded bg-black/95 border border-[#c4f70e]/60 whitespace-nowrap">
+                                <span className="text-[10px] font-mono font-bold text-[#c4f70e]">
+                                    {formatMarketCap(currentMarketCap)}
+                                </span>
+                            </div>
+                            {/* Arrow pointing down - more visible */}
+                            <div
+                                className="absolute left-1/2 -translate-x-1/2 -bottom-[5px] w-0 h-0"
+                                style={{
+                                    borderLeft: "4px solid transparent",
+                                    borderRight: "4px solid transparent",
+                                    borderTop: "5px solid #c4f70e",
+                                }}
+                            />
+                        </div>
+                    </motion.div>
+                )}
             </div>
 
-            {/* Goal Badge - Clean, no border/background */}
-            <div className="flex items-center justify-center min-w-[40px]">
-                <span className={`text-lg font-bold font-mono ${isCloseToGoal ? "text-[#c4f70e]" : "text-white/80"}`}>
-                    {goal.toFixed(1)}x
-                </span>
+            {/* Target MCap + Multiplier Badge */}
+            <div className="relative min-w-[60px]">
+                {targetMarketCap !== undefined && targetMarketCap > 0 ? (
+                    <>
+                        <span className={`text-base font-bold font-mono ${isCloseToGoal ? "text-[#c4f70e]" : "text-white/90"}`}>
+                            {formatMarketCap(targetMarketCap)}
+                        </span>
+                        {/* Small multiplier badge */}
+                        <span className="absolute -top-2 -right-1 px-1 py-0.5 text-[8px] font-bold font-mono rounded bg-white/10 text-white/50">
+                            {goal.toFixed(1)}x
+                        </span>
+                    </>
+                ) : (
+                    <span className={`text-lg font-bold font-mono ${isCloseToGoal ? "text-[#c4f70e]" : "text-white/80"}`}>
+                        {goal.toFixed(1)}x
+                    </span>
+                )}
             </div>
         </div>
     );
@@ -274,6 +298,15 @@ function HoldingCard({ holding, livePrice, solPrice, index, onClick }: HoldingCa
 
     const currentMultiplier = livePrice?.multiplier ?? (entryPriceUsd > 0 ? currentPriceUsd / entryPriceUsd : 1);
     const goalMultiplier = livePrice?.nextTarget ?? 2;
+
+    // Market cap data for progress bar
+    // Priority: Birdeye live > holding.market_cap > estimated from price (assumes 1B supply for meme tokens)
+    const estimatedMcap = currentPriceUsd > 0 ? currentPriceUsd * 1_000_000_000 : undefined;
+    const currentMarketCap = livePrice?.marketCap ?? holding.market_cap ?? estimatedMcap;
+    // Calculate entry market cap: currentMCap / multiplier (if we have both)
+    const entryMarketCap = currentMarketCap && currentMultiplier > 0
+        ? currentMarketCap / currentMultiplier
+        : undefined;
 
     // Twitter search link
     const twitterSearchUrl = `https://twitter.com/search?q=$${holding.symbol}&src=typed_query&f=live`;
@@ -368,7 +401,7 @@ function HoldingCard({ holding, livePrice, solPrice, index, onClick }: HoldingCa
                         <CountUp
                             to={pnlPct}
                             duration={0.8}
-                            decimals={2}
+                            decimals={0}
                             prefix={pnlPct >= 0 ? "+" : ""}
                             suffix="%"
                         />
@@ -395,6 +428,8 @@ function HoldingCard({ holding, livePrice, solPrice, index, onClick }: HoldingCa
                 currentMultiplier={currentMultiplier}
                 progressOverride={livePrice?.targetProgress}
                 goalMultiplier={goalMultiplier}
+                currentMarketCap={currentMarketCap}
+                entryMarketCap={entryMarketCap}
             />
         </motion.div>
     );
