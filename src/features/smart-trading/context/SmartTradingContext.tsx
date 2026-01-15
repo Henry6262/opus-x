@@ -336,6 +336,7 @@ export function SmartTradingProvider({
             wallet_address: response.config.wallet_address || DEFAULT_TRADING_WALLET,
           }
           : {
+            id: "default",
             tradingEnabled: false,
             maxPositionPercent: 0,
             maxOpenPositions: 0,
