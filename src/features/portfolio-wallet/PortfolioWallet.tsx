@@ -53,6 +53,18 @@ function formatTimeAgo(dateInput: string | Date): string {
   return `${days}d ago`;
 }
 
+// On-chain holding from Helius API
+interface OnChainHolding {
+  mint: string;
+  symbol: string;
+  name: string;
+  amount: number;
+  decimals: number;
+  image_url?: string;
+  price_usd?: number;
+  value_usd?: number;
+}
+
 export function PortfolioWallet({ className }: PortfolioWalletProps) {
   // Use unified WebSocket-first context (live updates!)
   const { dashboardStats } = useDashboardStats();
@@ -60,6 +72,10 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   const chartHistory: ChartHistoryEntry[] = []; // TODO: Add chartHistory to real-time context
   const [fetchedTransactions, setFetchedTransactions] = useState<Transaction[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  // On-chain holdings for reconciliation (TRUE source of truth)
+  const [onChainHoldings, setOnChainHoldings] = useState<Map<string, OnChainHolding>>(new Map());
+  const [isLoadingHoldings, setIsLoadingHoldings] = useState(false);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeView, setActiveView] = useState<WalletView>("overview");
@@ -112,6 +128,47 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     }
   }, []);
 
+  // Fetch on-chain holdings (TRUE source of truth for what we actually hold)
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchOnChainHoldings = async () => {
+      setIsLoadingHoldings(true);
+      try {
+        const url = buildDevprntApiUrl("/api/trading/holdings");
+        const response = await fetch(url.toString());
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const result = await response.json();
+
+        if (result.success && Array.isArray(result.data)) {
+          const holdingsMap = new Map<string, OnChainHolding>();
+          for (const holding of result.data as OnChainHolding[]) {
+            // Only include holdings with non-zero balance
+            if (holding.amount > 0) {
+              holdingsMap.set(holding.mint, holding);
+            }
+          }
+          if (!cancelled) {
+            setOnChainHoldings(holdingsMap);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch on-chain holdings", err);
+      } finally {
+        if (!cancelled) setIsLoadingHoldings(false);
+      }
+    };
+
+    fetchOnChainHoldings();
+    // Refresh holdings every 30 seconds
+    const interval = setInterval(fetchOnChainHoldings, 30000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
   // Compute UI Data
   const portfolioStats: PortfolioStats = {
     totalValue,
@@ -126,19 +183,40 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     totalTrades: dashboardStats?.performance.totalTrades || 0,
   };
 
-  // Map API positions to UI positions
-  const uiPositions: UiPosition[] = positions.map(p => ({
-    id: p.id,
-    symbol: p.tokenSymbol || "TOKEN",
-    name: p.tokenSymbol || "Unknown Token",
-    entryPrice: p.entryPriceSol,
-    currentPrice: p.currentPrice || p.entryPriceSol,
-    quantity: p.remainingTokens,
-    value: p.remainingTokens * (p.currentPrice || p.entryPriceSol),
-    pnl: p.unrealizedPnl || 0,
-    pnlPercent: p.entryPriceSol > 0 ? ((p.currentPrice || p.entryPriceSol) - p.entryPriceSol) / p.entryPriceSol * 100 : 0,
-    entryTime: new Date(p.createdAt),
-  }));
+  // Map API positions to UI positions - RECONCILED with on-chain holdings
+  // Only show positions where we still have on-chain balance (filters out tokens sold externally)
+  const uiPositions: UiPosition[] = useMemo(() => {
+    return positions
+      .filter(p => {
+        // If we haven't loaded holdings yet, show all positions (better UX than empty)
+        if (onChainHoldings.size === 0 && isLoadingHoldings) {
+          return true;
+        }
+        // Once holdings loaded, only show positions with actual on-chain balance
+        const holding = onChainHoldings.get(p.tokenMint);
+        return holding && holding.amount > 0;
+      })
+      .map(p => {
+        // Use on-chain balance for quantity if available (more accurate)
+        const onChainHolding = onChainHoldings.get(p.tokenMint);
+        const quantity = onChainHolding?.amount ?? p.remainingTokens;
+        const currentPrice = p.currentPrice || p.entryPriceSol;
+
+        return {
+          id: p.id,
+          mint: p.tokenMint,
+          symbol: p.tokenSymbol || onChainHolding?.symbol || "TOKEN",
+          name: p.tokenSymbol || onChainHolding?.name || "Unknown Token",
+          entryPrice: p.entryPriceSol,
+          currentPrice,
+          quantity,
+          value: quantity * currentPrice,
+          pnl: p.unrealizedPnl || 0,
+          pnlPercent: p.entryPriceSol > 0 ? (currentPrice - p.entryPriceSol) / p.entryPriceSol * 100 : 0,
+          entryTime: new Date(p.createdAt),
+        };
+      });
+  }, [positions, onChainHoldings, isLoadingHoldings]);
 
   type EnrichedTransaction = {
     id: string;
@@ -160,6 +238,7 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     () =>
       history.map((p) => ({
         id: p.id,
+        mint: p.tokenMint,
         type: "sell" as const,
         symbol: p.tokenSymbol || "TOKEN",
         price: p.currentPrice || p.entryPriceSol || 0,
@@ -183,6 +262,7 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
 
     return {
       id: tx.id || tx.signature,
+      mint: tx.mint,
       type: tx.tx_type,
       symbol: tx.ticker || tx.token_name || tx.mint?.slice(0, 4) || "TOKEN",
       price: tx.price || 0,
@@ -478,20 +558,28 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                       <div key={position.id} className="portfolio-wallet-position">
                         <div className="portfolio-wallet-position-header">
                           <div className="portfolio-wallet-position-symbol">
-                            <span className="portfolio-wallet-position-ticker">{position.symbol}</span>
-                            <span className="portfolio-wallet-position-name">{position.name}</span>
+                            <Image
+                              src={`https://dd.dexscreener.com/ds-data/tokens/solana/${position.mint}.png`}
+                              alt={position.symbol}
+                              width={28}
+                              height={28}
+                              className="rounded-lg flex-shrink-0"
+                              unoptimized
+                            />
+                            <div className="flex flex-col">
+                              <span className="portfolio-wallet-position-ticker">{position.symbol}</span>
+                              <span className="portfolio-wallet-position-name text-[10px] text-white/40">{position.name}</span>
+                            </div>
                           </div>
                           <div className={`portfolio-wallet-position-pnl ${position.pnlPercent >= 0 ? "positive" : "negative"}`}>
-                            {position.pnlPercent >= 0 ? "+" : ""}{position.pnlPercent.toFixed(1)}%
+                            {position.pnlPercent >= 0 ? "+" : ""}{position.pnlPercent.toFixed(0)}%
                           </div>
                         </div>
                         <div className="portfolio-wallet-position-details">
                           <div className="portfolio-wallet-position-detail">
                             <span className="label">Value</span>
-                            {/* Display value in SOL, then converted to USD approx */}
                             <span className="value">
                               {position.value.toFixed(2)} SOL
-                              {/* <span className="text-xs text-white/40 ml-1">(${formatValue(position.value * 150)})</span> */}
                             </span>
                           </div>
                           <div className="portfolio-wallet-position-detail">
@@ -530,28 +618,46 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                     {transactions.map((tx) => (
                       <div key={tx.id} className="portfolio-wallet-transaction">
                         <div className="portfolio-wallet-transaction-header">
-                          <div className={`portfolio-wallet-transaction-type ${tx.type}`}>
-                            {tx.type === "buy" ? "BUY" : "SELL"}
+                          {tx.mint && (
+                            <Image
+                              src={`https://dd.dexscreener.com/ds-data/tokens/solana/${tx.mint}.png`}
+                              alt={tx.symbol}
+                              width={24}
+                              height={24}
+                              className="rounded-md flex-shrink-0"
+                              unoptimized
+                            />
+                          )}
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="portfolio-wallet-transaction-symbol font-semibold">{tx.symbol}</span>
+                              <div className={`portfolio-wallet-transaction-type ${tx.type}`}>
+                                {tx.type === "buy" ? "BUY" : "SELL"}
+                              </div>
+                            </div>
+                            <span className="portfolio-wallet-transaction-time text-[10px]">{formatTimeAgo(tx.timestamp)}</span>
                           </div>
-                          <span className="portfolio-wallet-transaction-symbol">{tx.symbol}</span>
-                          <span className="portfolio-wallet-transaction-time">{formatTimeAgo(tx.timestamp)}</span>
-                        </div>
-                        <div className="portfolio-wallet-transaction-details">
-                          <div className="portfolio-wallet-transaction-value">
-                            {/* Value in SOL */}
-                            {tx.value.toFixed(2)} SOL
-                          </div>
-                          {tx.type === "sell" && tx.pnlPercent !== undefined && (
+                          {tx.pnlPercent !== undefined && (
                             <div className={`portfolio-wallet-transaction-pnl ${tx.pnlPercent >= 0 ? "positive" : "negative"}`}>
-                              {tx.pnlPercent >= 0 ? "+" : ""}{tx.pnlPercent.toFixed(1)}%
+                              {tx.pnlPercent >= 0 ? "+" : ""}{tx.pnlPercent.toFixed(0)}%
                             </div>
                           )}
                         </div>
-                        {tx.txHash && (
-                          <div className="portfolio-wallet-transaction-hash">
-                            {tx.txHash.substring(0, 8)}...
+                        <div className="portfolio-wallet-transaction-details">
+                          <div className="portfolio-wallet-transaction-value">
+                            {tx.value.toFixed(2)} SOL
                           </div>
-                        )}
+                          {tx.txHash && (
+                            <a
+                              href={`https://solscan.io/tx/${tx.txHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="portfolio-wallet-transaction-hash hover:text-[#c4f70e] transition-colors"
+                            >
+                              {tx.txHash.substring(0, 6)}...
+                            </a>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

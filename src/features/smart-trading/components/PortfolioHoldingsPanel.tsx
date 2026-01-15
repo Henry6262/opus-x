@@ -154,7 +154,6 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
     }
     const clamped = Math.min(Math.max(progressRaw, 0), 1);
     const progress = clamped > 0 && clamped < 0.02 ? 0.02 : clamped;
-    const isPositive = currentMultiplier >= 1;
     const isCloseToGoal = progress > 0.8;
 
     // Calculate target market cap (entry mcap × goal multiplier)
@@ -168,27 +167,25 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
             {/* Progress Track - extra pt-6 to make room for floating MCap badge */}
             <div className="flex-1 relative">
                 <div className="relative h-3 rounded-full bg-white/10 overflow-hidden">
-                    {/* Progress Fill */}
+                    {/* Progress Fill - Always lime green (progress toward TP target) */}
                     <motion.div
                         className="absolute inset-y-0 left-0 rounded-full"
                         style={{
-                            background: isPositive
-                                ? "linear-gradient(90deg, #22c55e, #c4f70e)"
-                                : "linear-gradient(90deg, #ef4444, #f97316)",
+                            background: "linear-gradient(90deg, #22c55e, #c4f70e)",
                         }}
                         initial={{ width: 0 }}
                         animate={{ width: `${progress * 100}%` }}
                         transition={{ type: "spring", stiffness: 120, damping: 18 }}
                     />
 
-                    {/* Current Position Indicator (pulsing dot) */}
+                    {/* Current Position Indicator (pulsing dot) - Always lime */}
                     <motion.div
                         className="absolute w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full"
                         style={{
                             top: "50%",
                             left: `${progress * 100}%`,
-                            background: isPositive ? "#c4f70e" : "#ef4444",
-                            boxShadow: `0 0 10px ${isPositive ? "#c4f70e" : "#ef4444"}`,
+                            background: "#c4f70e",
+                            boxShadow: "0 0 10px #c4f70e",
                         }}
                         animate={{ scale: [0.95, 1.08, 0.95] }}
                         transition={{ duration: 1.6, repeat: Infinity }}

@@ -143,21 +143,20 @@ main {
   flex-direction: row;
   width: 100%;
   position: relative;
+  overflow-x: hidden;
 }
 
 /* ===== VIBR CODER VIDEO CONTAINER ===== */
 .vibr-coder-container {
   position: relative;
   width: 100%;
-  max-height: 500px;
   background: var(--void-black);
   overflow: hidden;
 }
 
 .vibr-coder-video {
   width: 100%;
-  height: 100%;
-  max-height: 500px;
+  height: auto;
   display: block;
   object-fit: cover;
   object-position: center;
@@ -550,14 +549,25 @@ main {
 
 /* Desktop: terminal below in dashboard or hidden */
 @media (min-width: 769px) {
+  .hero-section {
+    padding: 0 10%;
+  }
+
   .vibr-coder-container {
     width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    border-radius: var(--radius-xl);
+  }
+
+  .vibr-coder-video {
+    border-radius: var(--radius-xl);
   }
 
   .hero-terminal {
     display: flex;
     position: absolute;
-    right: var(--space-4);
+    right: calc(10% + var(--space-4));
     bottom: var(--space-6);
     width: 400px;
     max-height: 280px;
@@ -584,11 +594,33 @@ main {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  margin-top: 96px !important;
-  padding: 0 15% var(--space-4) 15% !important;
+  /* Default for standard desktop (1201px-1299px) */
+  margin-top: -280px !important;
+  padding: 0 12% var(--space-4) 12% !important;
   padding-bottom: var(--space-12) !important;
   position: relative;
   z-index: 10;
+}
+
+/* Mid-large desktop (1300px-1500px) - less overlap */
+@media (min-width: 1300px) {
+  .dashboard-panel {
+    margin-top: -60px !important;
+  }
+}
+
+/* Wide desktop (1501px+) - even less overlap */
+@media (min-width: 1501px) {
+  .dashboard-panel {
+    margin-top: -80px !important;
+  }
+}
+
+/* Ultra-wide screens (1921px+) - minimal overlap */
+@media (min-width: 1921px) {
+  .dashboard-panel {
+    margin-top: -40px !important;
+  }
 }
 
 /* ===== CAPSULE TAB BUTTONS (Inside the chin) ===== */

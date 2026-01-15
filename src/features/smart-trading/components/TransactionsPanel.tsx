@@ -10,7 +10,6 @@ import {
     ChevronDown,
     ChevronUp,
     ExternalLink,
-    Globe,
     RefreshCw,
 } from "lucide-react";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
@@ -254,9 +253,22 @@ function TransactionCard({ tx }: TransactionCardProps) {
             exit={{ opacity: 0, x: 10 }}
             className="p-3 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
         >
-            {/* Top row: Token + Type badge */}
-            <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
+            {/* Main row: Token info left, Time + SOL right */}
+            <div className="flex items-center justify-between">
+                {/* Left side: X icon (if twitter) + Avatar + Token info */}
+                <div className="flex items-center gap-2">
+                    {/* X icon - top left if has twitter */}
+                    {tx.twitter_url && (
+                        <a
+                            href={tx.twitter_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 hover:bg-white/10 rounded transition-colors"
+                            title="View on X"
+                        >
+                            <XIcon className="w-4 h-4 text-white/50" />
+                        </a>
+                    )}
                     <TokenAvatar
                         imageUrl={tx.image_url}
                         symbol={tx.ticker}
@@ -264,95 +276,45 @@ function TransactionCard({ tx }: TransactionCardProps) {
                         size={32}
                     />
                     <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-white text-sm">
-                                {tx.ticker}
-                            </span>
-                            <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${isBuy
-                                ? "bg-green-500/20 text-green-400"
-                                : "bg-red-500/20 text-red-400"
-                                }`}>
-                                {isBuy ? "BUY" : "SELL"}
-                            </span>
-                        </div>
-                        <span className="text-[10px] text-white/40 truncate max-w-[120px]">
-                            {tx.token_name}
+                        <span className="font-mono font-bold text-white text-sm">
+                            {tx.ticker}
+                        </span>
+                        <span className="text-[10px] text-white/50 font-mono">
+                            {formatTokenAmount(tokenAmount)} tokens
                         </span>
                     </div>
                 </div>
 
-                {/* Social links */}
-                <div className="flex items-center gap-1">
-                    {tx.twitter_url && (
+                {/* Right side: Time, SOL amount, P&L, tx link */}
+                <div className="flex flex-col items-end gap-0.5">
+                    {/* Time ago */}
+                    <span className="text-[10px] text-white/40">{formatTimeAgo(tx.timestamp)}</span>
+                    {/* SOL amount */}
+                    <span className={`font-mono font-semibold text-sm ${isBuy ? "text-red-400" : "text-green-400"}`}>
+                        {isBuy ? "-" : "+"}{formatSol(solAmount)} SOL
+                    </span>
+                    {/* P&L + tx link */}
+                    <div className="flex items-center gap-2">
+                        {pnlPercent !== null && (
+                            <span className={`flex items-center gap-0.5 text-[10px] ${pnlPercent >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                {pnlPercent >= 0 ? (
+                                    <TrendingUp className="w-3 h-3" />
+                                ) : (
+                                    <TrendingDown className="w-3 h-3" />
+                                )}
+                                {pnlPercent >= 0 ? "+" : ""}{pnlPercent.toFixed(0)}%
+                            </span>
+                        )}
                         <a
-                            href={tx.twitter_url}
+                            href={`https://solscan.io/tx/${tx.signature}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 hover:bg-white/10 rounded transition-colors"
-                            title="View on X"
+                            className="flex items-center gap-1 text-[10px] text-white/40 hover:text-[#c4f70e] transition-colors"
                         >
-                            <XIcon className="w-4 h-4 text-white/70" />
+                            <span>tx</span>
+                            <ExternalLink className="w-3 h-3" />
                         </a>
-                    )}
-                    {tx.website_url && (
-                        <a
-                            href={tx.website_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 hover:bg-white/10 rounded transition-colors"
-                        >
-                            <Globe className="w-3.5 h-3.5 text-white/60" />
-                        </a>
-                    )}
-                    <a
-                        href={`https://solscan.io/tx/${tx.signature}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1.5 hover:bg-white/10 rounded transition-colors"
-                    >
-                        <ExternalLink className="w-3.5 h-3.5 text-white/40" />
-                    </a>
-                </div>
-            </div>
-
-            {/* Middle row: Amounts */}
-            <div className="flex items-center justify-between text-xs mb-2">
-                <div className="flex items-center gap-3 text-white/60">
-                    <span className="font-mono">{formatTokenAmount(tokenAmount)} tokens</span>
-                    <span className="text-white/30">→</span>
-                    <span className="font-mono">{formatSol(solAmount)} SOL</span>
-                </div>
-                <span className="font-mono text-white/80">
-                    @ ${formatPrice(tx.price)}
-                </span>
-            </div>
-
-            {/* Bottom row: Market data */}
-            <div className="flex items-center justify-between text-[10px] text-white/50">
-                <div className="flex items-center gap-3">
-                    {tx.market_cap && (
-                        <span>MCap: {formatCompact(tx.market_cap)}</span>
-                    )}
-                    {tx.liquidity && (
-                        <span>Liq: {formatCompact(tx.liquidity)}</span>
-                    )}
-                    {tx.volume_24h && (
-                        <span>Vol: {formatCompact(tx.volume_24h)}</span>
-                    )}
-                </div>
-                <div className="flex items-center gap-2">
-                    {pnlPercent !== null && (
-                        <span className={`flex items-center gap-1 ${pnlPercent >= 0 ? "text-green-400" : "text-red-400"
-                            }`}>
-                            {pnlPercent >= 0 ? (
-                                <TrendingUp className="w-3 h-3" />
-                            ) : (
-                                <TrendingDown className="w-3 h-3" />
-                            )}
-                            {pnlPercent >= 0 ? "+" : ""}{pnlPercent.toFixed(1)}%
-                        </span>
-                    )}
-                    <span className="text-white/40">{formatTimeAgo(tx.timestamp)}</span>
+                    </div>
                 </div>
             </div>
         </motion.div>

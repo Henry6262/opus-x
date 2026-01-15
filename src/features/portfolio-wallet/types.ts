@@ -19,6 +19,7 @@ export interface PortfolioStats {
 
 export interface Position {
   id: string;
+  mint: string;
   symbol: string;
   name: string;
   entryPrice: number;
@@ -32,6 +33,7 @@ export interface Position {
 
 export interface Transaction {
   id: string;
+  mint?: string;
   type: "buy" | "sell";
   symbol: string;
   price: number;
