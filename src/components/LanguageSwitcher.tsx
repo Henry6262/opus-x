@@ -2,7 +2,7 @@
 
 import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
-import { locales, localeNames, defaultLocale, type Locale } from "@/i18n/config";
+import { locales, defaultLocale, type Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
 
 interface LanguageSwitcherProps {
@@ -13,6 +13,10 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const locale = useLocale() as Locale;
   const router = useRouter();
   const pathname = usePathname();
+  const displayLabels: Record<Locale, string> = {
+    en: "EN",
+    zh: "文",
+  };
 
   const handleLocaleChange = (newLocale: Locale) => {
     if (!pathname || newLocale === locale) return;
@@ -37,19 +41,25 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   };
 
   return (
-    <div className={cn("flex items-center gap-1 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 p-1", className)}>
+    <div
+      className={cn(
+        "flex flex-col items-center gap-2 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 p-1",
+        className
+      )}
+    >
       {locales.map((loc) => (
         <button
           key={loc}
           onClick={() => handleLocaleChange(loc)}
           className={cn(
-            "px-3 py-1 text-xs font-medium rounded-full transition-all duration-200",
+            "w-9 h-9 flex items-center justify-center rounded-full text-xs font-semibold transition-all duration-200",
             locale === loc
-              ? "bg-[#c4f70e] text-black"
-              : "text-white/60 hover:text-white hover:bg-white/10"
+              ? "bg-[#c4f70e] text-black shadow-[0_0_12px_rgba(196,247,14,0.35)]"
+              : "text-white/70 hover:text-white hover:bg-white/10"
           )}
+          aria-label={`Switch to ${displayLabels[loc]}`}
         >
-          {localeNames[loc]}
+          {displayLabels[loc]}
         </button>
       ))}
     </div>

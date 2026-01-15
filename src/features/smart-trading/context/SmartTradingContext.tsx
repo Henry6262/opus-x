@@ -91,7 +91,7 @@ const DEFAULT_TRADING_WALLET = "FXP5NMdrC4qHQbtBy8dduLbryVmevCkjd25mmLBKVA7x";
 // ============================================
 
 function generateActivityMessage(event: MigrationFeedEvent): { message: string; color: ActivityItem["color"] } {
-  const data = event.data as Record<string, unknown> | undefined;
+  const data = (event.data ?? (event as unknown as Record<string, unknown>)) as Record<string, unknown> | undefined;
 
   switch (event.type) {
     case "connected":
@@ -157,18 +157,33 @@ function generateActivityMessage(event: MigrationFeedEvent): { message: string; 
     }
 
     case "position_opened": {
-      const pos = data?.position as Record<string, any> | undefined;
-      const symbol = pos?.symbol || pos?.token_name || "Token";
-      const price = pos?.entry_price ? `$${(pos.entry_price as number).toFixed(6)}` : "";
+      const pos = (data?.position as Record<string, any> | undefined) ?? data;
+      const symbol =
+        pos?.symbol ||
+        pos?.ticker ||
+        pos?.tokenSymbol ||
+        pos?.token_name ||
+        pos?.tokenName ||
+        pos?.mint?.toString().slice(0, 8) ||
+        "Token";
+      const price = pos?.entry_price ?? pos?.entryPrice;
+      const priceStr = typeof price === "number" ? `$${price.toFixed(6)}` : "";
       return {
-        message: `🚀 Position Opened: ${symbol} @ ${price}`,
+        message: `🚀 Position Opened: ${symbol}${priceStr ? ` @ ${priceStr}` : ""}`,
         color: "green",
       };
     }
 
     case "price_update": {
-      const ticker = data?.ticker || "Position";
-      const multiplier = data?.multiplier as number | undefined;
+      const ticker =
+        data?.ticker ||
+        data?.symbol ||
+        data?.tokenSymbol ||
+        data?.token_name ||
+        data?.tokenName ||
+        data?.mint?.toString().slice(0, 8) ||
+        "Position";
+      const multiplier = (data?.multiplier as number | undefined) ?? (data?.target_multiplier as number | undefined);
       const pnlPct = data?.pnl_pct as number | undefined;
       const pnlStr = pnlPct !== undefined ? `${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(1)}%` : "";
       return {
@@ -540,9 +555,10 @@ export function SmartTradingProvider({
     // NEW: Position Opened
     unsubscribes.push(
       on("position_opened", (data, event) => {
-        addActivity(event);
+        const payload = (data ?? (event as unknown as Record<string, any>)) as Record<string, any>;
+        addActivity({ ...event, data: payload });
         // Definitely refetch to show new position
-        console.log("[SmartTrading] Position opened:", data);
+        console.log("[SmartTrading] Position opened:", payload);
         fetchDashboard();
       })
     );
@@ -561,30 +577,44 @@ export function SmartTradingProvider({
         next_target: number | null;
         target_progress: number | null;
         timestamp: number;
-      }>("price_update", (data) => {
+      }>("price_update", (data, event) => {
+        const payload = (data ?? (event as unknown as Record<string, any>)) as {
+          mint?: string;
+          ticker?: string;
+          price?: number;
+          entry_price?: number;
+          multiplier?: number;
+          pnl_pct?: number;
+          pnl_sol?: number;
+          peak_pnl_pct?: number;
+          next_target?: number | null;
+          target_progress?: number | null;
+          timestamp?: number;
+        };
+
         // Safety check
-        if (!data || !data.mint) {
-          console.warn("[SmartTrading] Invalid price_update data:", data);
+        if (!payload || !payload.mint) {
+          console.warn("[SmartTrading] Invalid price_update data:", payload);
           return;
         }
 
         // Don't add to activity feed - too noisy
         // Surgical update to positions
-        console.log(`[SmartTrading] price_update for ${data.ticker}: ${data.pnl_pct.toFixed(2)}%, updating positions...`);
+        console.log(
+          `[SmartTrading] price_update for ${payload.ticker ?? payload.mint}: ${payload.pnl_pct?.toFixed(2)}%, updating positions...`
+        );
         setState((prev) => {
           const updatedPositions = prev.positions.map((pos) => {
-            if (pos.tokenMint === data.mint) {
-              console.log(`[SmartTrading] Updating position ${pos.tokenSymbol}: currentPrice ${pos.currentPrice} → ${data.price}`);
+            if (pos.tokenMint === payload.mint) {
               return {
                 ...pos,
-                currentPrice: data.price,
-                unrealizedPnl: data.pnl_sol,
+                currentPrice: payload.price ?? pos.currentPrice,
+                unrealizedPnl: payload.pnl_sol ?? pos.unrealizedPnl,
                 updatedAt: new Date().toISOString(),
               };
             }
             return pos;
           });
-          console.log(`[SmartTrading] Updated ${updatedPositions.filter(p => p.tokenMint === data.mint).length} positions`);
           return {
             ...prev,
             positions: updatedPositions,
@@ -605,9 +635,10 @@ export function SmartTradingProvider({
         remaining: number;
         is_final: boolean;
       }>("take_profit_triggered", (data, event) => {
+        const payload = (data ?? (event as unknown as Record<string, any>)) as typeof data;
         // Safety check
-        if (!data || !data.mint) {
-          console.warn("[SmartTrading] Invalid take_profit_triggered data:", data);
+        if (!payload || !payload.mint) {
+          console.warn("[SmartTrading] Invalid take_profit_triggered data:", payload);
           return;
         }
 
@@ -615,13 +646,13 @@ export function SmartTradingProvider({
           ...event,
           type: "take_profit_triggered",
           data: {
-            ...data,
-            message: `🎯 ${data.target_multiplier}x TP hit on ${data.ticker}! +${data.realized.toFixed(4)} SOL`,
+            ...payload,
+            message: `🎯 ${payload.target_multiplier}x TP hit on ${payload.ticker}! +${payload.realized.toFixed(4)} SOL`,
           },
         });
 
         // Surgical update or refetch
-        if (data.is_final) {
+        if (payload.is_final) {
           // Full exit - refetch to move to history
           fetchDashboard();
         } else {
@@ -629,13 +660,13 @@ export function SmartTradingProvider({
           setState((prev) => ({
             ...prev,
             positions: prev.positions.map((pos) => {
-              if (pos.tokenMint === data.mint) {
+              if (pos.tokenMint === payload.mint) {
                 return {
                   ...pos,
-                  remainingTokens: data.remaining,
-                  realizedPnlSol: pos.realizedPnlSol + data.realized,
-                  target1Hit: data.target_multiplier === 2 ? true : pos.target1Hit,
-                  target2Hit: data.target_multiplier === 3 ? true : pos.target2Hit,
+                  remainingTokens: payload.remaining,
+                  realizedPnlSol: pos.realizedPnlSol + payload.realized,
+                  target1Hit: payload.target_multiplier === 2 ? true : pos.target1Hit,
+                  target2Hit: payload.target_multiplier === 3 ? true : pos.target2Hit,
                 };
               }
               return pos;
@@ -653,9 +684,10 @@ export function SmartTradingProvider({
         reason: string;
         total_pnl_sol: number;
       }>("position_closed", (data, event) => {
+        const payload = (data ?? (event as unknown as Record<string, any>)) as typeof data;
         // Safety check
-        if (!data || !data.mint) {
-          console.warn("[SmartTrading] Invalid position_closed data:", data);
+        if (!payload || !payload.mint) {
+          console.warn("[SmartTrading] Invalid position_closed data:", payload);
           return;
         }
 
@@ -663,8 +695,8 @@ export function SmartTradingProvider({
           ...event,
           type: "position_closed",
           data: {
-            ...data,
-            message: `Position closed: ${data.ticker} (${data.reason}) - ${data.total_pnl_sol >= 0 ? "+" : ""}${data.total_pnl_sol.toFixed(4)} SOL`,
+            ...payload,
+            message: `Position closed: ${payload.ticker} (${payload.reason}) - ${payload.total_pnl_sol >= 0 ? "+" : ""}${payload.total_pnl_sol.toFixed(4)} SOL`,
           },
         });
 

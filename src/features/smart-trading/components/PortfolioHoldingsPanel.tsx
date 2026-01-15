@@ -3,17 +3,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import {
-    Wallet,
-    RefreshCw,
-    ExternalLink,
-    Target,
-    CheckCircle,
-    Zap,
-} from "lucide-react";
+import { Wallet, RefreshCw } from "lucide-react";
+import { CountUp } from "@/components/animations/CountUp";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 import { useSearchParams } from "next/navigation";
 import { useBirdeyeWebSocket, type BirdeyeTokenStats } from "../hooks/useBirdeyeWebSocket";
+import { useSharedWebSocket } from "../hooks/useWebSocket";
+import { TransactionDrawer } from "./TransactionDrawer";
 
 // ============================================
 // Types
@@ -39,6 +35,12 @@ interface LivePriceData {
     volume24h?: number;
     liquidity?: number;
     marketCap?: number;
+    entryPrice?: number;
+    pnlPct?: number;
+    pnlSol?: number;
+    multiplier?: number;
+    targetProgress?: number | null;
+    nextTarget?: number | null;
     lastUpdated: number;
 }
 
@@ -129,79 +131,93 @@ function TokenAvatar({ imageUrl, symbol, mint, size = 48 }: TokenAvatarProps) {
 
 interface ProgressBarProps {
     currentMultiplier: number;
-    targetsHit: number[];
+    goalMultiplier?: number;
+    progressOverride?: number | null;
 }
 
-function ProgressBar({ currentMultiplier, targetsHit }: ProgressBarProps) {
-    const nextTargetIndex = targetsHit.length;
-    const nextTarget = TP_TARGETS[nextTargetIndex];
-    const prevMultiplier = nextTargetIndex > 0 ? TP_TARGETS[nextTargetIndex - 1].multiplier : 1.0;
+function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride }: ProgressBarProps) {
+    const goal = Math.max(goalMultiplier, 1.01);
 
-    let progress = 0;
-    if (nextTarget) {
-        const range = nextTarget.multiplier - prevMultiplier;
-        progress = Math.min(Math.max((currentMultiplier - prevMultiplier) / range, 0), 1);
-    } else {
-        progress = 1;
+    let progressRaw = progressOverride ?? null;
+    if (progressRaw === null || progressRaw === undefined) {
+        progressRaw = currentMultiplier / goal;
     }
-
+    const clamped = Math.min(Math.max(progressRaw, 0), 1);
+    const progress = clamped > 0 && clamped < 0.02 ? 0.02 : clamped;
     const isPositive = currentMultiplier >= 1;
+    const isCloseToGoal = progress > 0.8;
+
+    // Calculate milestone positions (as percentage of goal)
+    const milestones = TP_TARGETS.map((tp) => ({
+        ...tp,
+        position: Math.min((tp.multiplier / goal) * 100, 100),
+        hit: currentMultiplier >= tp.multiplier,
+    }));
 
     return (
-        <div className="mt-3">
-            <div className="flex justify-between mb-1.5 text-[10px]">
-                {TP_TARGETS.map((target, i) => {
-                    const isHit = targetsHit.includes(i + 1);
-                    const isCurrent = i === nextTargetIndex;
-                    return (
+        <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-3">
+            {/* Progress Track */}
+            <div className="flex-1 relative">
+                <div className="relative h-3 rounded-full bg-white/10 overflow-hidden">
+                    {/* Progress Fill */}
+                    <motion.div
+                        className="absolute inset-y-0 left-0 rounded-full"
+                        style={{
+                            background: isPositive
+                                ? "linear-gradient(90deg, #22c55e, #c4f70e)"
+                                : "linear-gradient(90deg, #ef4444, #f97316)",
+                        }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress * 100}%` }}
+                        transition={{ type: "spring", stiffness: 120, damping: 18 }}
+                    />
+
+                    {/* Milestone Markers */}
+                    {milestones.map((milestone) => (
                         <div
-                            key={target.label}
-                            className={`flex flex-col items-center transition-colors ${isHit ? "text-[#c4f70e]" : isCurrent ? "text-white" : "text-white/40"
-                                }`}
+                            key={milestone.label}
+                            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex flex-col items-center"
+                            style={{ left: `${milestone.position}%` }}
                         >
-                            <span className="font-bold">{target.label}</span>
-                            <span className="font-mono">{target.multiplier}x</span>
+                            <div
+                                className={`w-0.5 h-4 rounded-full transition-colors ${milestone.hit ? "bg-[#c4f70e]" : "bg-white/30"}`}
+                            />
                         </div>
-                    );
-                })}
+                    ))}
+
+                    {/* Current Position Indicator */}
+                    <motion.div
+                        className="absolute w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                        style={{
+                            top: "50%",
+                            left: `${progress * 100}%`,
+                            background: isPositive ? "#c4f70e" : "#ef4444",
+                            boxShadow: `0 0 10px ${isPositive ? "#c4f70e" : "#ef4444"}`,
+                        }}
+                        animate={{ scale: [0.95, 1.08, 0.95] }}
+                        transition={{ duration: 1.6, repeat: Infinity }}
+                    />
+                </div>
+
+                {/* Milestone Labels Below */}
+                <div className="relative h-4 mt-1">
+                    {milestones.map((milestone) => (
+                        <span
+                            key={`label-${milestone.label}`}
+                            className={`absolute text-[9px] font-mono -translate-x-1/2 ${milestone.hit ? "text-[#c4f70e]" : "text-white/40"}`}
+                            style={{ left: `${milestone.position}%` }}
+                        >
+                            {milestone.label}
+                        </span>
+                    ))}
+                </div>
             </div>
 
-            <div className="relative h-2.5 rounded-full bg-white/10 overflow-hidden">
-                <motion.div
-                    className="absolute inset-y-0 left-0 rounded-full"
-                    style={{
-                        background: isPositive
-                            ? "linear-gradient(90deg, #22c55e, #c4f70e)"
-                            : "linear-gradient(90deg, #ef4444, #f97316)",
-                    }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress * 100}%` }}
-                    transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                />
-            </div>
-
-            <div className="relative h-0 -mt-2">
-                {TP_TARGETS.map((target, i) => {
-                    const isHit = targetsHit.includes(i + 1);
-                    const positionPct = ((i + 1) / TP_TARGETS.length) * 100;
-
-                    return (
-                        <div
-                            key={target.label}
-                            className="absolute transform -translate-x-1/2"
-                            style={{ left: `${positionPct}%`, top: "-2px" }}
-                        >
-                            {isHit ? (
-                                <CheckCircle className="w-4 h-4 text-[#c4f70e]" />
-                            ) : (
-                                <div
-                                    className="w-2.5 h-2.5 rounded-full border-2 border-white/30"
-                                    style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-                                />
-                            )}
-                        </div>
-                    );
-                })}
+            {/* Goal Badge - Clean, no border/background */}
+            <div className="flex items-center justify-center min-w-[40px]">
+                <span className={`text-lg font-bold font-mono ${isCloseToGoal ? "text-[#c4f70e]" : "text-white/80"}`}>
+                    {goal.toFixed(1)}x
+                </span>
             </div>
         </div>
     );
@@ -219,8 +235,8 @@ interface SolValueProps {
 function SolValue({ solAmount, size = "lg" }: SolValueProps) {
     const formatSol = (val: number) => {
         if (val >= 1000) return `${(val / 1000).toFixed(2)}K`;
-        if (val >= 1) return val.toFixed(4);
-        return val.toFixed(6);
+        if (val >= 0.01) return val.toFixed(2);
+        return val.toFixed(2);
     };
 
     return (
@@ -231,6 +247,7 @@ function SolValue({ solAmount, size = "lg" }: SolValueProps) {
     );
 }
 
+
 // ============================================
 // Holding Card Component
 // ============================================
@@ -240,24 +257,29 @@ interface HoldingCardProps {
     livePrice: LivePriceData | null;
     solPrice: number;
     index: number;
+    onClick?: () => void;
 }
 
-function HoldingCard({ holding, livePrice, solPrice, index }: HoldingCardProps) {
+function HoldingCard({ holding, livePrice, solPrice, index, onClick }: HoldingCardProps) {
     // Use live price if available, otherwise fallback to holding data
     const currentPriceUsd = livePrice?.price ?? holding.price_usd ?? 0;
+    const entryPriceUsd = livePrice?.entryPrice ?? holding.price_usd ?? 0;
     const valueUsd = holding.amount * currentPriceUsd;
+    const entryValueUsd = holding.amount * entryPriceUsd;
     const valueSol = valueUsd / solPrice;
-    const priceInSol = currentPriceUsd / solPrice;
+    const entryValueSol = entryValueUsd / solPrice;
 
-    // Calculate multiplier (would need entry price tracking for real P&L)
-    const currentMultiplier = 1.0; // Placeholder - needs entry price
-    const targetsHit: number[] = [];
+    const pnlSol = livePrice?.pnlSol ?? (entryValueSol > 0 ? valueSol - entryValueSol : 0);
+    const pnlPct = livePrice?.pnlPct ?? (entryPriceUsd > 0 ? ((currentPriceUsd - entryPriceUsd) / entryPriceUsd) * 100 : 0);
+
+    const currentMultiplier = livePrice?.multiplier ?? (entryPriceUsd > 0 ? currentPriceUsd / entryPriceUsd : 1);
+    const goalMultiplier = livePrice?.nextTarget ?? 2;
 
     // Twitter search link
     const twitterSearchUrl = `https://twitter.com/search?q=$${holding.symbol}&src=typed_query&f=live`;
 
-    // Price update indicator
-    const isLive = livePrice && (Date.now() - livePrice.lastUpdated) < 30000;
+    // Check if we have live data (updated within last 10 seconds)
+    const hasLiveData = Boolean(livePrice && (Date.now() - livePrice.lastUpdated) < 10000);
 
     return (
         <motion.div
@@ -266,106 +288,114 @@ function HoldingCard({ holding, livePrice, solPrice, index }: HoldingCardProps) 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ delay: index * 0.05, type: "spring", stiffness: 200, damping: 20 }}
-            className="relative p-4 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden hover:border-[#c4f70e]/30 transition-all group"
+            className="relative p-5 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden hover:border-[#c4f70e]/30 transition-all group cursor-pointer"
+            onClick={onClick}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === "Enter" && onClick?.()}
         >
-            {/* Live indicator */}
-            {isLive && (
-                <div className="absolute top-2 right-2">
-                    <span className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold rounded bg-green-500/20 text-green-400">
-                        <Zap className="w-2.5 h-2.5" />LIVE
-                    </span>
-                </div>
-            )}
-
             {/* Glow effect on hover */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 <div className="absolute inset-0 bg-gradient-to-r from-[#c4f70e]/5 to-transparent" />
             </div>
 
-            {/* Header: Token + Value */}
-            <div className="flex items-start justify-between mb-2">
+            {/* Row 1: Token Identity + PnL % */}
+            <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                     <TokenAvatar
                         imageUrl={holding.image_url}
                         symbol={holding.symbol}
                         mint={holding.mint}
-                        size={44}
+                        size={40}
                     />
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="font-bold text-white text-lg">{holding.symbol}</span>
-                            <a
-                                href={`https://solscan.io/token/${holding.mint}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-1 hover:bg-white/10 rounded transition-colors"
-                                title="View on Solscan"
-                            >
-                                <ExternalLink className="w-3 h-3 text-white/40" />
-                            </a>
-                            <a
-                                href={`https://dexscreener.com/solana/${holding.mint}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            <span className="font-bold text-white text-base">{holding.symbol}</span>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(holding.mint);
+                                }}
                                 className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-white/10 text-white/60 hover:bg-white/20 transition-colors"
-                                title="View on DexScreener"
+                                title="Copy Contract Address"
                             >
-                                DEX
-                            </a>
-                            <a
-                                href={twitterSearchUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[#1DA1F2]/20 text-[#1DA1F2] hover:bg-[#1DA1F2]/30 transition-colors"
-                                title="Search on Twitter"
-                            >
-                                𝕏
-                            </a>
+                                CA
+                            </button>
                         </div>
-                        {/* Current Price */}
-                        <div className="flex items-center gap-1 text-xs text-white/50 mt-0.5">
-                            <span>Price:</span>
-                            <motion.span
-                                key={priceInSol}
-                                initial={{ backgroundColor: "rgba(196,247,14,0.3)" }}
-                                animate={{ backgroundColor: "transparent" }}
-                                transition={{ duration: 0.5 }}
-                                className="rounded px-1"
-                            >
-                                <SolValue solAmount={priceInSol} size="sm" />
-                            </motion.span>
-                            {livePrice?.priceChange24h !== undefined && (
-                                <span className={livePrice.priceChange24h >= 0 ? "text-green-400" : "text-red-400"}>
-                                    {livePrice.priceChange24h >= 0 ? "+" : ""}{livePrice.priceChange24h.toFixed(2)}%
+                        {/* Buy value + Tokens (compact, horizontal) */}
+                        <div className="flex items-center gap-2 text-xs mt-0.5">
+                            <div className="flex items-center gap-1">
+                                <span className="text-white/40 text-[10px]">Buy</span>
+                                <span className="font-mono font-semibold text-white/90">
+                                    {valueSol.toFixed(2)}
                                 </span>
-                            )}
+                                <Image src={SOLANA_ICON} alt="SOL" width={12} height={12} className="opacity-70" />
+                            </div>
+                            <span className="text-white/20">•</span>
+                            <div className="flex items-center gap-1">
+                                <Image
+                                    src={holding.image_url || `https://dd.dexscreener.com/ds-data/tokens/solana/${holding.mint}.png`}
+                                    alt={holding.symbol}
+                                    width={14}
+                                    height={14}
+                                    className="rounded-full"
+                                    unoptimized
+                                />
+                                <span className="font-mono font-semibold text-white/80">
+                                    {holding.amount >= 1_000_000
+                                        ? `${(holding.amount / 1_000_000).toFixed(1)}M`
+                                        : holding.amount >= 1_000
+                                            ? `${(holding.amount / 1_000).toFixed(1)}K`
+                                            : holding.amount.toFixed(0)
+                                    }
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Total Value in SOL */}
-                <div className="text-right">
+                {/* PnL Section (right side) - Percentage + SOL below */}
+                <div className="flex flex-col items-end">
+                    {/* PnL Percentage - Hero */}
                     <motion.div
-                        key={valueSol}
-                        initial={{ scale: 1.05 }}
-                        animate={{ scale: 1 }}
-                        className="text-[#c4f70e]"
+                        className={`text-2xl font-bold font-mono ${pnlPct >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}
+                        style={{
+                            textShadow: pnlPct >= 0
+                                ? "0 0 10px rgba(196,247,14,0.35)"
+                                : "0 0 10px rgba(239,68,68,0.35)",
+                        }}
                     >
-                        <SolValue solAmount={valueSol} size="lg" />
+                        <CountUp
+                            to={pnlPct}
+                            duration={0.8}
+                            decimals={2}
+                            prefix={pnlPct >= 0 ? "+" : ""}
+                            suffix="%"
+                        />
                     </motion.div>
-                    <div className="text-xs text-white/40 font-mono">
-                        {holding.amount >= 1_000_000
-                            ? `${(holding.amount / 1_000_000).toFixed(2)}M`
-                            : holding.amount >= 1_000
-                                ? `${(holding.amount / 1_000).toFixed(2)}K`
-                                : holding.amount.toFixed(2)
-                        } tokens
+                    {/* SOL Profit - Smaller, below percentage */}
+                    <div className={`flex items-center gap-1 text-sm font-mono ${pnlSol >= 0 ? "text-green-400/80" : "text-red-400/80"}`}>
+                        <span>{pnlSol >= 0 ? "+" : ""}{pnlSol.toFixed(2)}</span>
+                        <Image
+                            src="/logos/solana.png"
+                            alt="SOL"
+                            width={14}
+                            height={14}
+                            className="opacity-70"
+                        />
+                        {hasLiveData && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse ml-1" />
+                        )}
                     </div>
                 </div>
             </div>
 
             {/* Progress Bar for Take Profit */}
-            <ProgressBar currentMultiplier={currentMultiplier} targetsHit={targetsHit} />
+            <ProgressBar
+                currentMultiplier={currentMultiplier}
+                progressOverride={livePrice?.targetProgress}
+                goalMultiplier={goalMultiplier}
+            />
         </motion.div>
     );
 }
@@ -379,16 +409,41 @@ interface PortfolioHoldingsPanelProps {
     minValueUsd?: number;
 }
 
+// Selected holding state for drawer
+interface SelectedHolding {
+    symbol: string;
+    mint: string;
+    imageUrl: string | null;
+}
+
 export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: PortfolioHoldingsPanelProps) {
     const [holdings, setHoldings] = useState<OnChainHolding[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [livePrices, setLivePrices] = useState<Map<string, LivePriceData>>(new Map());
     const [solPrice, setSolPrice] = useState(SOL_PRICE_USD);
+    const [selectedHolding, setSelectedHolding] = useState<SelectedHolding | null>(null);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const searchParams = useSearchParams();
     const walletFromQuery = searchParams?.get("wallet") || undefined;
     const effectiveWallet = useMemo(() => walletAddress ?? walletFromQuery, [walletAddress, walletFromQuery]);
     const subscribedRef = useRef(false);
+    const { status: tradingWsStatus, on: onTradingEvent } = useSharedWebSocket({ path: "/ws/trading" });
+
+    // Handle holding card click - open transaction drawer
+    const handleHoldingClick = useCallback((holding: OnChainHolding) => {
+        setSelectedHolding({
+            symbol: holding.symbol,
+            mint: holding.mint,
+            imageUrl: holding.image_url,
+        });
+        setIsDrawerOpen(true);
+    }, []);
+
+    // Close drawer
+    const handleCloseDrawer = useCallback(() => {
+        setIsDrawerOpen(false);
+    }, []);
 
     // Handle token stats from WebSocket
     const handleTokenStats = useCallback((stats: BirdeyeTokenStats) => {
@@ -402,12 +457,19 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
 
         setLivePrices((prev) => {
             const newMap = new Map(prev);
+            const prevEntry = newMap.get(stats.address);
             newMap.set(stats.address, {
                 price: stats.price,
                 priceChange24h: stats.priceChange24h,
                 volume24h: stats.volume24h,
                 liquidity: stats.liquidity,
                 marketCap: stats.marketCap,
+                entryPrice: prevEntry?.entryPrice,
+                pnlPct: prevEntry?.pnlPct,
+                pnlSol: prevEntry?.pnlSol,
+                multiplier: prevEntry?.multiplier,
+                targetProgress: prevEntry?.targetProgress,
+                nextTarget: prevEntry?.nextTarget,
                 lastUpdated: Date.now(),
             });
             return newMap;
@@ -418,12 +480,58 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
     const { isConnected, subscribeTokenStats } = useBirdeyeWebSocket({
         apiKey: BIRDEYE_API_KEY,
         onTokenStats: handleTokenStats,
-        onConnect: () => {
-            console.log("[Portfolio] Birdeye WebSocket connected");
-            // Subscribe to SOL price
-            subscribeTokenStats(["So11111111111111111111111111111111111111112"]);
-        },
     });
+
+    // Listen to trading WebSocket price updates as a secondary live source
+    useEffect(() => {
+        const unsubscribe = onTradingEvent<{
+            mint?: string;
+            price?: number;
+            entry_price?: number;
+            pnl_pct?: number;
+            pnl_sol?: number;
+            multiplier?: number;
+            target_progress?: number | null;
+            next_target?: number | null;
+        }>("price_update", (data, event) => {
+            const payload = (data ?? (event as unknown as { mint?: string; price?: number })) as {
+                mint?: string;
+                price?: number;
+                entry_price?: number;
+                pnl_pct?: number;
+                pnl_sol?: number;
+                multiplier?: number;
+                target_progress?: number | null;
+                next_target?: number | null;
+            };
+            if (!payload?.mint || payload.price === undefined) return;
+
+            setLivePrices((prev) => {
+                const next = new Map(prev);
+                next.set(payload.mint as string, {
+                    price: payload.price as number,
+                    entryPrice: payload.entry_price,
+                    pnlPct: payload.pnl_pct,
+                    pnlSol: payload.pnl_sol,
+                    multiplier: payload.multiplier,
+                    targetProgress: payload.target_progress,
+                    nextTarget: payload.next_target,
+                    lastUpdated: Date.now(),
+                });
+                return next;
+            });
+        });
+
+        return () => {
+            unsubscribe?.();
+        };
+    }, [onTradingEvent]);
+
+    useEffect(() => {
+        if (!isConnected) return;
+        console.log("[Portfolio] Birdeye WebSocket connected");
+        subscribeTokenStats(["So11111111111111111111111111111111111111112"]);
+    }, [isConnected, subscribeTokenStats]);
 
     // Fetch initial holdings (one-time from Helius via backend, or direct if available)
     const fetchHoldings = useCallback(async () => {
@@ -453,7 +561,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
                 throw new Error(result.error || "Failed to load holdings");
             }
 
-            const data: OnChainHolding[] = (result?.data as OnChainHolding[]) || [];
+            const data: OnChainHolding[] = ((result?.data as OnChainHolding[]) || []).filter((h) => (h.value_usd ?? 0) > 0.01);
             data.sort((a, b) => (b.value_usd || 0) - (a.value_usd || 0));
 
             setHoldings(data);
@@ -488,20 +596,15 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
     }, [holdings, livePrices, solPrice]);
 
     return (
-        <div className="rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+        <div className="overflow-hidden">
+            {/* Header - Outside cards */}
+            <div className="flex items-center justify-between px-1 py-3 mb-3">
                 <div className="flex items-center gap-2">
-                    <Wallet className="w-4 h-4 text-[#c4f70e]" />
-                    <span className="text-sm font-medium text-white">Portfolio</span>
-                    <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-[#c4f70e]/20 text-[#c4f70e]">
+                    <Wallet className="w-5 h-5 text-[#c4f70e]" />
+                    <span className="text-base font-semibold text-white">Portfolio</span>
+                    <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-[#c4f70e]/20 text-[#c4f70e]">
                         {holdings.length}
                     </span>
-                    {isConnected && (
-                        <span className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold rounded bg-green-500/20 text-green-400">
-                            <Zap className="w-2.5 h-2.5" />WS
-                        </span>
-                    )}
                 </div>
                 <div className="flex items-center gap-3">
                     {totalValueSol > 0 && (
@@ -514,13 +617,13 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
                         disabled={isLoading}
                         className="p-1.5 hover:bg-white/10 rounded transition-colors"
                     >
-                        <RefreshCw className={`w-3.5 h-3.5 text-white/40 ${isLoading ? "animate-spin" : ""}`} />
+                        <RefreshCw className={`w-4 h-4 text-white/40 ${isLoading ? "animate-spin" : ""}`} />
                     </button>
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="p-3 space-y-3 max-h-[700px] overflow-y-auto">
+            {/* Cards - No wrapper */}
+            <div className="space-y-3 max-h-[700px] overflow-y-auto">
                 {isLoading && holdings.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12">
                         <RefreshCw className="w-8 h-8 text-[#c4f70e] animate-spin mb-3" />
@@ -558,10 +661,20 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
                             livePrice={livePrices.get(holding.mint) || null}
                             solPrice={solPrice}
                             index={index}
+                            onClick={() => handleHoldingClick(holding)}
                         />
                     ))}
                 </AnimatePresence>
             </div>
+
+            {/* Transaction History Drawer */}
+            <TransactionDrawer
+                isOpen={isDrawerOpen}
+                onClose={handleCloseDrawer}
+                tokenSymbol={selectedHolding?.symbol || ""}
+                tokenMint={selectedHolding?.mint || ""}
+                tokenImage={selectedHolding?.imageUrl}
+            />
         </div>
     );
 }

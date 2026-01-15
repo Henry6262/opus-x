@@ -38,7 +38,9 @@ export function VibrCoder({ state, className = '', statusText, reason, pnl, heig
       />
 
       {/* Bottom fade overlay for smooth section transition */}
-      <div className="vibr-coder-fade-bottom" />
+      <div className="vibr-coder-fade vibr-coder-fade-bottom" />
+      {/* Top fade overlay for smooth intro */}
+      <div className="vibr-coder-fade vibr-coder-fade-top" />
 
       {/* Portfolio Wallet Widget - Top Left */}
       {showWallet && <PortfolioWallet />}

@@ -8,6 +8,6 @@ export { TrackedWalletsPanel } from "./TrackedWalletsPanel";
 export { RecentTradesPanel } from "./RecentTradesPanel";
 export { TransactionsPanel } from "./TransactionsPanel";
 export { PositionProgressCard } from "./PositionProgressCard";
-export { ActivePositionsPanel } from "./ActivePositionsPanel";
 export { OnChainHoldingsPanel } from "./OnChainHoldingsPanel";
 export { PortfolioHoldingsPanel } from "./PortfolioHoldingsPanel";
+export { TransactionDrawer } from "./TransactionDrawer";

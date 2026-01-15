@@ -84,8 +84,9 @@ function DashboardContent() {
       <main className={`cockpit-layout ai-mood ai-mood-${aiMood}`}>
         {/* ===== TOP SECTION: VIBR CODER VIDEO + TERMINAL ===== */}
         <div className="hero-section relative">
-          <div className="absolute top-4 right-4 z-20">
-            <LanguageSwitcher className="shadow-[0_10px_30px_rgba(0,0,0,0.35)] border-white/15 bg-black/50 backdrop-blur-xl" />
+          <div className="vibr-coder-fade-top" />
+          <div className="absolute top-14 right-2 md:top-4 md:right-4 z-20">
+            <LanguageSwitcher className="shadow-[0_10px_30px_rgba(0,0,0,0.35)] border-white/15 bg-black/50 backdrop-blur-xl scale-75 md:scale-100 origin-top-right" />
           </div>
           <VibrCoder
             state={getVibrCoderState(aiMood)}
@@ -101,7 +102,7 @@ function DashboardContent() {
         {/* ===== BOTTOM SECTION: THE DASHBOARD ===== */}
         <div className="dashboard-panel">
           {/* Trader Profile Card with Integrated Tabs */}
-          <div className="mb-4">
+          <div className="mb-4 mt-4">
             <TraderProfileCard
               stats={dashboardStats}
               config={config}

@@ -10,7 +10,6 @@ import {
     ChevronDown,
     ChevronUp,
     ExternalLink,
-    Twitter,
     Globe,
     RefreshCw,
 } from "lucide-react";
@@ -152,40 +151,40 @@ export function TransactionsPanel({ maxTransactions = 15 }: TransactionsPanelPro
     }, [maxTransactions]);
 
     return (
-        <div className="rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+        <div className="overflow-hidden">
+            {/* Header - Outside cards */}
+            <div className="flex items-center justify-between px-1 py-3 mb-3">
                 <div
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity flex-1"
                 >
-                    <TrendingUp className="w-4 h-4 text-[#c4f70e]" />
-                    <span className="text-sm font-medium text-white">Transaction History</span>
-                    <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-[#c4f70e]/20 text-[#c4f70e]">
+                    <TrendingUp className="w-5 h-5 text-[#c4f70e]" />
+                    <span className="text-base font-semibold text-white">Transaction History</span>
+                    <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-[#c4f70e]/20 text-[#c4f70e]">
                         {transactions.length}
                     </span>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => fetchTransactions()}
-                        className="p-1 hover:bg-white/10 rounded transition-colors"
+                        className="p-1.5 hover:bg-white/10 rounded transition-colors"
                     >
-                        <RefreshCw className={`w-3.5 h-3.5 text-white/40 ${isLoading ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`w-4 h-4 text-white/40 ${isLoading ? 'animate-spin' : ''}`} />
                     </button>
                     <div
                         onClick={() => setIsExpanded(!isExpanded)}
                         className="cursor-pointer hover:opacity-80 transition-opacity"
                     >
                         {isExpanded ? (
-                            <ChevronUp className="w-4 h-4 text-white/40" />
+                            <ChevronUp className="w-5 h-5 text-white/40" />
                         ) : (
-                            <ChevronDown className="w-4 h-4 text-white/40" />
+                            <ChevronDown className="w-5 h-5 text-white/40" />
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* Transaction list */}
+            {/* Transaction cards - No wrapper */}
             <AnimatePresence>
                 {isExpanded && (
                     <motion.div
@@ -195,7 +194,7 @@ export function TransactionsPanel({ maxTransactions = 15 }: TransactionsPanelPro
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                     >
-                        <div className="max-h-[400px] overflow-y-auto p-3 space-y-2">
+                        <div className="max-h-[400px] overflow-y-auto space-y-3">
                             {error && (
                                 <div className="text-center py-4 text-red-400 text-sm">{error}</div>
                             )}
@@ -227,6 +226,14 @@ export function TransactionsPanel({ maxTransactions = 15 }: TransactionsPanelPro
 
 interface TransactionCardProps {
     tx: EnrichedTransaction;
+}
+
+function XIcon({ className }: { className?: string }) {
+    return (
+        <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+    );
 }
 
 function TransactionCard({ tx }: TransactionCardProps) {
@@ -282,8 +289,9 @@ function TransactionCard({ tx }: TransactionCardProps) {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                            title="View on X"
                         >
-                            <Twitter className="w-3.5 h-3.5 text-blue-400" />
+                            <XIcon className="w-4 h-4 text-white/70" />
                         </a>
                     )}
                     {tx.website_url && (
@@ -310,9 +318,9 @@ function TransactionCard({ tx }: TransactionCardProps) {
             {/* Middle row: Amounts */}
             <div className="flex items-center justify-between text-xs mb-2">
                 <div className="flex items-center gap-3 text-white/60">
-                    <span>{formatSol(solAmount)} SOL</span>
+                    <span className="font-mono">{formatTokenAmount(tokenAmount)} tokens</span>
                     <span className="text-white/30">→</span>
-                    <span>{formatNumber(tokenAmount)} tokens</span>
+                    <span className="font-mono">{formatSol(solAmount)} SOL</span>
                 </div>
                 <span className="font-mono text-white/80">
                     @ ${formatPrice(tx.price)}
@@ -356,22 +364,25 @@ function TransactionCard({ tx }: TransactionCardProps) {
 // ============================================
 
 function formatSol(amount: number | undefined): string {
-    if (!amount) return "0";
-    return amount.toFixed(4);
+    if (!amount) return "0.00";
+    return amount.toFixed(2);
 }
 
-function formatNumber(num: number | undefined): string {
+function formatTokenAmount(num: number | undefined): string {
     if (!num) return "0";
-    if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(2)}M`;
-    if (num >= 1_000) return `${(num / 1_000).toFixed(2)}K`;
+    const abs = Math.abs(num);
+    if (abs >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(2)}B`;
+    if (abs >= 1_000_000) return `${(num / 1_000_000).toFixed(2)}M`;
+    if (abs >= 1_000) return `${(num / 1_000).toFixed(2)}K`;
     return num.toFixed(2);
 }
 
 function formatPrice(price: number): string {
-    if (price < 0.0001) return price.toExponential(2);
-    if (price < 0.01) return price.toFixed(6);
-    if (price < 1) return price.toFixed(4);
-    return price.toFixed(2);
+    if (!Number.isFinite(price)) return "0.00";
+    if (price >= 1) return price.toFixed(2);
+    if (price >= 0.01) return price.toFixed(4);
+    if (price >= 0.000001) return price.toFixed(6);
+    return price.toFixed(8);
 }
 
 function formatCompact(num: number): string {

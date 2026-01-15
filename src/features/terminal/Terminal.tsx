@@ -200,7 +200,7 @@ function TerminalLine({
 
 export function Terminal() {
   const { logs } = useTerminal();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [animationComplete, setAnimationComplete] = useState(false);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const [isFirstRender, setIsFirstRender] = useState(true);

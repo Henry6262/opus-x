@@ -79,12 +79,13 @@ export function CountUp({
     [maxDecimals, separator]
   );
 
-  // Set initial text content
+  // Set initial text content without resetting to the "from" value on updates
   useEffect(() => {
     if (ref.current) {
-      ref.current.textContent = `${prefix}${formatValue(direction === "down" ? to : from)}${suffix}`;
+      const latest = springValue.get();
+      ref.current.textContent = `${prefix}${formatValue(latest)}${suffix}`;
     }
-  }, [from, to, direction, formatValue, prefix, suffix]);
+  }, [formatValue, prefix, suffix, springValue]);
 
   // Handle initial animation when in view
   useEffect(() => {

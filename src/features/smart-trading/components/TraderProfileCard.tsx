@@ -90,49 +90,51 @@ export function TraderProfileCard({
       ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
       : walletAddress;
 
-  const StatsItems = () => (
-    <>
-      <div className="flex flex-col gap-1 text-center md:text-left">
-        <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("streak")}</div>
-        <div className="flex items-baseline gap-0.5 justify-center md:justify-start">
-          <span className={`text-lg font-bold font-mono ${isOnStreak ? "text-orange-400" : "text-white"}`}>
-            {streak.current}
-          </span>
-          <span className="text-xs text-white/30">/{streak.best}</span>
-        </div>
+  const StatStreak = () => (
+    <div className="flex flex-col gap-1 text-center md:text-left">
+      <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("streak")}</div>
+      <div className="flex items-baseline gap-0.5 justify-center md:justify-start">
+        <span className={`text-lg font-bold font-mono ${isOnStreak ? "text-orange-400" : "text-white"}`}>
+          {streak.current}
+        </span>
+        <span className="text-xs text-white/30">/{streak.best}</span>
       </div>
+    </div>
+  );
 
-      <div className="flex flex-col gap-1 text-center md:text-left">
-        <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("trades")}</div>
-        <div className="flex items-baseline gap-1 justify-center md:justify-start">
-          <span className="text-lg font-bold font-mono text-white">{totalTrades}</span>
-          <span className="text-xs text-green-400/70">({winningTrades}W)</span>
-        </div>
+  const StatTrades = () => (
+    <div className="flex flex-col gap-1 text-center md:text-left">
+      <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("trades")}</div>
+      <div className="flex items-baseline gap-1 justify-center md:justify-start">
+        <span className="text-lg font-bold font-mono text-white">{totalTrades}</span>
+        <span className="text-xs text-green-400/70">({winningTrades}W)</span>
       </div>
+    </div>
+  );
 
-      <div className="flex flex-col gap-1 text-center md:text-left">
-        <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("bestTrade")}</div>
-        <div className="flex items-center gap-1 justify-center md:justify-start">
-          <span className="text-lg font-bold font-mono text-green-400">
-            +<CountUp to={Number.isFinite(largestWinPercent) ? Number(largestWinPercent.toFixed(1)) : 0} duration={0.8} decimals={1} />
-          </span>
-          <span className="text-xs text-green-400/70">%</span>
-          <span
-            className="text-[10px] text-white/50 border border-white/10 rounded-full px-2 py-0.5 cursor-help"
-            title="Best realized trade percentage (performance.best_trade_pct from trading stats)"
-          >
-            ?
-          </span>
-        </div>
+  const StatBest = () => (
+    <div className="flex flex-col gap-1 text-center md:text-left">
+      <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("bestTrade")}</div>
+      <div className="flex items-center gap-1 justify-center md:justify-start">
+        <span className="text-lg font-bold font-mono text-green-400">
+          +{Number.isFinite(largestWinPercent) ? Math.round(largestWinPercent) : 0}
+        </span>
+        <span className="text-xs text-green-400/70">%</span>
+        <span
+          className="text-[10px] text-white/50 border border-white/10 rounded-full px-2 py-0.5 cursor-help"
+          title="Best realized trade percentage (performance.best_trade_pct from trading stats)"
+        >
+          ?
+        </span>
       </div>
-    </>
+    </div>
   );
 
   return (
-    <div className="relative pt-4 pb-16">
+    <div className="relative pt-20 md:pt-12 pb-16 overflow-hidden md:overflow-visible">
 
-      {/* Wallet address badge */}
-      <div className="absolute left-[140px] -top-3 flex items-center gap-2 text-[11px] font-mono text-white/85">
+      {/* Wallet address badge - Desktop only (absolute positioned) */}
+      <div className="hidden md:flex absolute left-[160px] top-5 items-center gap-2 text-[11px] font-mono text-white/85">
         <span>{shortWallet}</span>
         {walletAddress !== "N/A" && (
           <button
@@ -146,12 +148,12 @@ export function TraderProfileCard({
         )}
       </div>
 
-      {/* X/Twitter Handle - simple text link */}
+      {/* X/Twitter Handle - Desktop only (absolute positioned) */}
       <motion.a
         href="https://x.com/SuperRouterSol"
         target="_blank"
         rel="noopener noreferrer"
-        className="absolute top-[96px] left-[140px] flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white transition-colors z-10"
+        className="hidden md:flex absolute top-[104px] left-[140px] items-center gap-2 text-sm font-medium text-white/70 hover:text-white transition-colors z-10"
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.5, duration: 0.3 }}
@@ -162,26 +164,26 @@ export function TraderProfileCard({
       </motion.a>
 
       {/* Main pill container */}
-      <div className="relative rounded-full bg-black/50 backdrop-blur-xl border border-white/10 h-20 ml-16 overflow-visible">
+      <div className="relative rounded-full bg-black/50 backdrop-blur-xl border border-white/10 h-16 md:h-20 ml-16 md:ml-16 mr-2 md:mr-4 max-w-[960px] mx-auto overflow-visible flex items-center">
         {/* Subtle glow effects */}
         <div className="absolute -top-20 right-1/4 w-48 h-48 bg-[#c4f70e]/5 rounded-full blur-3xl pointer-events-none" />
 
         {/* Content grid - 3 zones */}
-        <div className="relative h-full flex items-center pl-24 pr-6">
+        <div className="relative h-full flex items-center pl-16 md:pl-32 pr-3 md:pr-6 w-full">
 
           {/* ZONE 1: Hero P&L - The main attraction */}
-          <div className="pr-6 border-r border-white/10">
-            <div className="text-[10px] text-white/50 uppercase tracking-wider font-medium">{tProfile("allTimePnl")}</div>
-            <div className={`flex items-center gap-1.5 text-2xl font-bold font-mono tracking-tight ${netPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+          <div className="pr-4 md:pr-6 border-r border-white/10">
+            <div className="text-[9px] md:text-[10px] text-white/50 uppercase tracking-wider font-medium">{tProfile("allTimePnl")}</div>
+            <div className={`flex items-center gap-1.5 md:gap-1.5 text-xl md:text-2xl font-bold font-mono tracking-tight ${netPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
               <CountUp to={netPnl} duration={1.2} decimals={2} prefix={netPnl >= 0 ? "+" : ""} />
-              <Image src="/logos/solana.png" alt="SOL" width={18} height={18} className="opacity-80" />
+              <Image src="/logos/solana.png" alt="SOL" width={16} height={16} className="opacity-80 md:w-[18px] md:h-[18px]" />
             </div>
           </div>
 
           {/* ZONE 2: Win Rate Ring - Visual anchor */}
-          <div className="flex items-center justify-center px-6 border-r border-white/10">
-            <div className="relative w-14 h-14 flex items-center justify-center">
-              <svg width={56} height={56} className="transform -rotate-90">
+          <div className="flex items-center justify-center px-4 md:px-6">
+            <div className="relative w-12 h-12 md:w-14 md:h-14 flex items-center justify-center">
+              <svg viewBox="0 0 56 56" className="w-full h-full transform -rotate-90">
                 <circle
                   cx={28}
                   cy={28}
@@ -211,38 +213,61 @@ export function TraderProfileCard({
                 </defs>
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-sm font-bold text-white font-mono leading-none">
-                  <CountUp to={Number.isFinite(winRate) ? Math.round(winRate) : 0} duration={1} decimals={0} suffix="%" />
+                <span className="text-xs md:text-sm font-bold text-white font-mono leading-none">
+                  {Number.isFinite(winRate) ? Math.round(winRate) : 0}%
                 </span>
-                <span className="text-[7px] text-white/40 uppercase tracking-wide">{tProfile("winRate")}</span>
+                <span className="text-[5px] md:text-[7px] text-white/40 uppercase tracking-wide">{tProfile("winRate")}</span>
               </div>
             </div>
           </div>
 
-          {/* ZONE 3: Secondary stats - Clean labels and values */}
-          <div className="hidden md:flex items-center gap-6 pl-6">
-            <StatsItems />
+          {/* ZONE 3: Secondary stats - Clean labels and values (desktop only) */}
+          <div className="hidden md:flex items-center gap-6 pl-6 border-l border-white/10">
+            <StatStreak />
+            <StatTrades />
+            <StatBest />
           </div>
         </div>
       </div>
 
-      {/* Mobile stats below pill */}
-      <div className="md:hidden mt-4 px-6">
-        <div className="grid grid-cols-3 gap-4">
-          <StatsItems />
+      {/* Mobile: X handle & wallet below pill */}
+      <div className="md:hidden mt-4 px-6 flex flex-col items-center gap-2">
+        {/* X/Twitter Handle */}
+        <a
+          href="https://x.com/SuperRouterSol"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white transition-colors"
+        >
+          <XIcon className="w-4 h-4 text-white/60" />
+          <span>@SuperRouterSol</span>
+        </a>
+        {/* Wallet address */}
+        <div className="flex items-center gap-2 text-[11px] font-mono text-white/60">
+          <span>{shortWallet}</span>
+          {walletAddress !== "N/A" && (
+            <button
+              onClick={() => navigator.clipboard.writeText(walletAddress)}
+              className="text-white/40 hover:text-white transition-colors"
+              aria-label="Copy wallet address"
+              type="button"
+            >
+              <Copy className="w-3 h-3" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Avatar with animated glow rings */}
       <motion.div
-        className="absolute left-0 top-[calc(50%-16px)] -translate-y-1/2 w-32 h-32 z-20"
+        className="absolute left-0 top-[48%] md:top-[calc(50%)] -translate-y-1/2 w-28 h-28 md:w-32 md:h-32 z-20"
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.4 }}
       >
-        {/* Outer rotating ring - conic gradient */}
+        {/* Outer rotating ring - conic gradient (hidden on mobile to reduce glow bleed) */}
         <motion.div
-          className="absolute inset-[-10px] rounded-full opacity-60"
+          className="absolute inset-[-10px] rounded-full opacity-0 md:opacity-60"
           style={{
             background: "conic-gradient(from 0deg, transparent, rgba(196,247,14,0.4), transparent, rgba(34,211,238,0.4), transparent)",
           }}
@@ -250,21 +275,21 @@ export function TraderProfileCard({
           transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
         />
 
-        {/* Middle pulsing ring */}
+        {/* Middle pulsing ring (reduced on mobile) */}
         <motion.div
-          className="absolute inset-[-5px] rounded-full border-2 border-[#c4f70e]/30"
+          className="absolute inset-[-3px] md:inset-[-5px] rounded-full border border-[#c4f70e]/20 md:border-2 md:border-[#c4f70e]/30"
           animate={{
-            scale: [1, 1.06, 1],
-            opacity: [0.3, 0.6, 0.3],
+            scale: [1, 1.04, 1],
+            opacity: [0.2, 0.4, 0.2],
           }}
           transition={{ duration: 2.5, repeat: Infinity }}
         />
 
-        {/* Inner glow behind avatar */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#c4f70e]/40 to-cyan-500/40 rounded-full blur-xl scale-110" />
+        {/* Inner glow behind avatar (reduced on mobile) */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#c4f70e]/20 to-cyan-500/20 md:from-[#c4f70e]/40 md:to-cyan-500/40 rounded-full blur-lg md:blur-xl scale-105 md:scale-110" />
 
         {/* Avatar container */}
-        <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-[#c4f70e]/60 bg-black shadow-[0_0_40px_rgba(196,247,14,0.3)]">
+        <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-[#c4f70e]/60 bg-black shadow-[0_0_20px_rgba(196,247,14,0.2)] md:shadow-[0_0_40px_rgba(196,247,14,0.3)]">
           <img
             src="/character/super-router.png"
             alt="SuperRouter"
