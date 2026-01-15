@@ -1,7 +1,7 @@
 "use client";
 
+
 import { useState, useMemo } from "react";
-import { SimulationTwitterSection } from "@/features/simulation-twitter";
 import {
   SmartTradingDashboard,
   SmartTradingProvider,
@@ -114,11 +114,6 @@ function DashboardContent() {
           {activeView === "smart-trading" && (
             <div className="space-y-4">
               <SmartTradingDashboard />
-            </div>
-          )}
-          {activeView === "simulation-twitter" && (
-            <div className="space-y-4">
-              <SimulationTwitterSection />
             </div>
           )}
         </div>
