@@ -285,14 +285,20 @@ function TransactionCard({ tx }: TransactionCardProps) {
                     </div>
                 </div>
 
-                {/* Right side: Time, SOL amount, P&L, tx link */}
+                {/* Right side: Time, Action badge, P&L, tx link */}
                 <div className="flex flex-col items-end gap-0.5">
                     {/* Time ago */}
                     <span className="text-[10px] text-white/40">{formatTimeAgo(tx.timestamp)}</span>
-                    {/* SOL amount */}
-                    <span className={`font-mono font-semibold text-sm ${isBuy ? "text-red-400" : "text-green-400"}`}>
-                        {isBuy ? "-" : "+"}{formatSol(solAmount)} SOL
-                    </span>
+                    {/* Action badge - Swapped for buys, Sold for sells */}
+                    {isBuy ? (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#c4f70e]/20 text-[#c4f70e] font-mono">
+                            Swapped {formatSol(solAmount)} SOL
+                        </span>
+                    ) : (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-green-500/20 text-green-400 font-mono">
+                            Sold +{formatSol(solAmount)} SOL
+                        </span>
+                    )}
                     {/* P&L + tx link */}
                     <div className="flex items-center gap-2">
                         {pnlPercent !== null && (

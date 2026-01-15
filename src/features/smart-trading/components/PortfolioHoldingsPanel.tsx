@@ -355,47 +355,24 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                                 CA
                             </button>
                         </div>
-                        {/* Token price + Entry price + Tokens (compact, horizontal) */}
-                        <div className="flex items-center gap-2 text-xs mt-0.5 flex-wrap">
-                            {/* Current Token Price */}
-                            <div className="flex items-center gap-1">
-                                <span className="text-white/40 text-[10px]">Price</span>
-                                <span className="font-mono font-semibold text-white/90">
-                                    ${currentPriceUsd < 0.01 ? currentPriceUsd.toFixed(6) : currentPriceUsd < 1 ? currentPriceUsd.toFixed(4) : currentPriceUsd.toFixed(2)}
-                                </span>
-                            </div>
-                            <span className="text-white/20">•</span>
-                            {/* Entry Price (if different from current) */}
-                            {entryPriceUsd > 0 && Math.abs(entryPriceUsd - currentPriceUsd) > 0.000001 && (
-                                <>
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-white/40 text-[10px]">Entry</span>
-                                        <span className="font-mono font-semibold text-white/60">
-                                            ${entryPriceUsd < 0.01 ? entryPriceUsd.toFixed(6) : entryPriceUsd < 1 ? entryPriceUsd.toFixed(4) : entryPriceUsd.toFixed(2)}
-                                        </span>
-                                    </div>
-                                    <span className="text-white/20">•</span>
-                                </>
-                            )}
-                            {/* Token Amount */}
-                            <div className="flex items-center gap-1">
-                                <Image
-                                    src={holding.image_url || `https://dd.dexscreener.com/ds-data/tokens/solana/${holding.mint}.png`}
-                                    alt={holding.symbol}
-                                    width={14}
-                                    height={14}
-                                    className="rounded-full"
-                                    unoptimized
-                                />
-                                <span className="font-mono font-semibold text-white/80">
-                                    {holding.amount >= 1_000_000
-                                        ? `${(holding.amount / 1_000_000).toFixed(1)}M`
-                                        : holding.amount >= 1_000
-                                            ? `${(holding.amount / 1_000).toFixed(1)}K`
-                                            : holding.amount.toFixed(0)
-                                    }
-                                </span>
-                            </div>
+                        {/* Token Amount */}
+                        <div className="flex items-center gap-1 text-xs mt-0.5">
+                            <Image
+                                src={holding.image_url || `https://dd.dexscreener.com/ds-data/tokens/solana/${holding.mint}.png`}
+                                alt={holding.symbol}
+                                width={14}
+                                height={14}
+                                className="rounded-full"
+                                unoptimized
+                            />
+                            <span className="font-mono font-semibold text-white/80">
+                                {holding.amount >= 1_000_000
+                                    ? `${(holding.amount / 1_000_000).toFixed(1)}M`
+                                    : holding.amount >= 1_000
+                                        ? `${(holding.amount / 1_000).toFixed(1)}K`
+                                        : holding.amount.toFixed(0)
+                                }
+                            </span>
                         </div>
                     </div>
                 </div>
