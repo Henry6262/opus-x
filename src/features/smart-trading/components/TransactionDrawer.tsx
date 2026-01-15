@@ -44,14 +44,18 @@ interface TransactionDrawerProps {
 
 const SOLANA_ICON = "/logos/solana.png";
 
-const TX_TYPE_CONFIG: Record<Transaction["type"], { label: string; icon: typeof ArrowDownRight; color: string; bgColor: string }> = {
-    entry: { label: "Entry", icon: ArrowDownRight, color: "text-blue-400", bgColor: "bg-blue-500/20" },
-    tp1: { label: "TP1", icon: ArrowUpRight, color: "text-green-400", bgColor: "bg-green-500/20" },
-    tp2: { label: "TP2", icon: ArrowUpRight, color: "text-green-400", bgColor: "bg-green-500/20" },
-    tp3: { label: "TP3", icon: ArrowUpRight, color: "text-[#c4f70e]", bgColor: "bg-[#c4f70e]/20" },
-    stop_loss: { label: "Stop Loss", icon: ArrowUpRight, color: "text-red-400", bgColor: "bg-red-500/20" },
-    manual_sell: { label: "Sell", icon: ArrowUpRight, color: "text-orange-400", bgColor: "bg-orange-500/20" },
-    unknown: { label: "Transaction", icon: ArrowDownRight, color: "text-white/60", bgColor: "bg-white/10" },
+// Brand-consistent color palette
+// Primary: #c4f70e (lime) - for profits/success
+// Accent: #22d3ee (cyan) - for entries/neutral actions
+// Danger: #ef4444 (red) - only for losses
+const TX_TYPE_CONFIG: Record<Transaction["type"], { label: string; icon: typeof ArrowDownRight; color: string; bgColor: string; borderColor: string }> = {
+    entry: { label: "Entry", icon: ArrowDownRight, color: "text-[#22d3ee]", bgColor: "bg-[#22d3ee]/10", borderColor: "border-[#22d3ee]/20" },
+    tp1: { label: "TP1", icon: ArrowUpRight, color: "text-[#c4f70e]", bgColor: "bg-[#c4f70e]/10", borderColor: "border-[#c4f70e]/20" },
+    tp2: { label: "TP2", icon: ArrowUpRight, color: "text-[#c4f70e]", bgColor: "bg-[#c4f70e]/10", borderColor: "border-[#c4f70e]/20" },
+    tp3: { label: "TP3", icon: ArrowUpRight, color: "text-[#c4f70e]", bgColor: "bg-[#c4f70e]/15", borderColor: "border-[#c4f70e]/30" },
+    stop_loss: { label: "Stop Loss", icon: ArrowUpRight, color: "text-[#ef4444]", bgColor: "bg-[#ef4444]/10", borderColor: "border-[#ef4444]/20" },
+    manual_sell: { label: "Sell", icon: ArrowUpRight, color: "text-[#c4f70e]/80", bgColor: "bg-[#c4f70e]/8", borderColor: "border-[#c4f70e]/15" },
+    unknown: { label: "Transaction", icon: ArrowDownRight, color: "text-white/50", bgColor: "bg-white/5", borderColor: "border-white/10" },
 };
 
 // ============================================
@@ -90,20 +94,20 @@ function TransactionRow({ tx, index }: TransactionRowProps) {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            transition={{ delay: index * 0.05 }}
-            className="group relative p-3 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all"
+            transition={{ delay: index * 0.05, duration: 0.3 }}
+            className={`group relative p-3.5 rounded-xl border transition-all duration-200 ${config.bgColor} ${config.borderColor} hover:bg-white/[0.08]`}
         >
             {/* Type Badge + Time */}
-            <div className="flex items-center justify-between mb-2">
-                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${config.bgColor}`}>
+            <div className="flex items-center justify-between mb-3">
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/20 border ${config.borderColor}`}>
                     <Icon className={`w-3.5 h-3.5 ${config.color}`} />
-                    <span className={`text-xs font-semibold ${config.color}`}>{config.label}</span>
+                    <span className={`text-xs font-bold uppercase tracking-wide ${config.color}`}>{config.label}</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-white/40">
-                    {tx.status === "pending" && <Loader2 className="w-3 h-3 animate-spin" />}
-                    {tx.status === "confirmed" && <CheckCircle2 className="w-3 h-3 text-green-400" />}
-                    {tx.status === "failed" && <AlertCircle className="w-3 h-3 text-red-400" />}
-                    <Clock className="w-3 h-3" />
+                <div className="flex items-center gap-1.5 text-[11px] text-white/40">
+                    {tx.status === "pending" && <Loader2 className="w-3 h-3 animate-spin text-[#c4f70e]" />}
+                    {tx.status === "confirmed" && <CheckCircle2 className="w-3 h-3 text-[#c4f70e]" />}
+                    {tx.status === "failed" && <AlertCircle className="w-3 h-3 text-[#ef4444]" />}
+                    <Clock className="w-3 h-3 opacity-60" />
                     <span>{formatTime(tx.timestamp)}</span>
                 </div>
             </div>
@@ -111,34 +115,37 @@ function TransactionRow({ tx, index }: TransactionRowProps) {
             {/* Amount Row */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <span className={`text-lg font-bold font-mono ${isSell ? "text-green-400" : "text-white"}`}>
-                        {isSell ? "+" : "-"}{tx.solAmount.toFixed(3)}
+                    <span className={`text-xl font-bold font-mono tracking-tight ${isSell ? "text-[#c4f70e]" : "text-white"}`}>
+                        {isSell ? "+" : "-"}{tx.solAmount.toFixed(4)}
                     </span>
-                    <Image src={SOLANA_ICON} alt="SOL" width={16} height={16} className="opacity-80" />
+                    <Image src={SOLANA_ICON} alt="SOL" width={18} height={18} className="opacity-90" />
                 </div>
-                <span className="text-xs text-white/40 font-mono">
-                    {tx.tokenAmount >= 1_000_000
-                        ? `${(tx.tokenAmount / 1_000_000).toFixed(2)}M`
-                        : tx.tokenAmount >= 1_000
-                            ? `${(tx.tokenAmount / 1_000).toFixed(1)}K`
-                            : tx.tokenAmount.toFixed(0)
-                    } tokens
-                </span>
+                <div className="text-right">
+                    <span className="text-xs text-white/50 font-mono">
+                        {tx.tokenAmount >= 1_000_000
+                            ? `${(tx.tokenAmount / 1_000_000).toFixed(2)}M`
+                            : tx.tokenAmount >= 1_000
+                                ? `${(tx.tokenAmount / 1_000).toFixed(1)}K`
+                                : tx.tokenAmount.toFixed(0)
+                        }
+                    </span>
+                    <span className="text-[10px] text-white/30 ml-1">tokens</span>
+                </div>
             </div>
 
             {/* Price + Solscan Link */}
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
-                <span className="text-xs text-white/30">
-                    @ ${tx.priceUsd.toFixed(8)}
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.06]">
+                <span className="text-[11px] text-white/40 font-mono">
+                    @ ${tx.priceUsd < 0.00001 ? tx.priceUsd.toExponential(2) : tx.priceUsd.toFixed(8)}
                 </span>
                 <a
                     href={`https://solscan.io/tx/${tx.signature}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs text-[#c4f70e]/60 hover:text-[#c4f70e] transition-colors"
+                    className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-[#c4f70e] transition-colors group/link"
                 >
                     <span className="font-mono">{truncateSig(tx.signature)}</span>
-                    <ExternalLink className="w-3 h-3" />
+                    <ExternalLink className="w-3 h-3 opacity-60 group-hover/link:opacity-100" />
                 </a>
             </div>
         </motion.div>
@@ -294,60 +301,78 @@ export function TransactionDrawer({
                     <div className="transaction-drawer-header">
                         <div className="flex items-center gap-3">
                             {tokenImage ? (
-                                <Image
-                                    src={tokenImage}
-                                    alt={tokenSymbol}
-                                    width={32}
-                                    height={32}
-                                    className="rounded-lg"
-                                    unoptimized
-                                />
+                                <div className="relative">
+                                    <Image
+                                        src={tokenImage}
+                                        alt={tokenSymbol}
+                                        width={36}
+                                        height={36}
+                                        className="rounded-xl ring-1 ring-white/10"
+                                        unoptimized
+                                    />
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#c4f70e] border-2 border-[#0a0a0f]" />
+                                </div>
                             ) : (
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#c4f70e] to-[#22d3ee] flex items-center justify-center text-xs font-bold text-black">
+                                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#c4f70e]/20 to-[#22d3ee]/20 border border-[#c4f70e]/20 flex items-center justify-center text-xs font-bold text-[#c4f70e]">
                                     {tokenSymbol.slice(0, 2)}
                                 </div>
                             )}
                             <div>
-                                <h3 className="text-sm font-bold text-white">${tokenSymbol}</h3>
-                                <p className="text-xs text-white/40">Transaction History</p>
+                                <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                                    ${tokenSymbol}
+                                    <span className="text-[10px] font-normal text-white/30 uppercase tracking-wider">History</span>
+                                </h3>
+                                <p className="text-[11px] text-white/40">{transactions.length} transaction{transactions.length !== 1 ? "s" : ""}</p>
                             </div>
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 transition-all"
                             aria-label="Close drawer"
                         >
-                            <X className="w-5 h-5 text-white/60" />
+                            <X className="w-4 h-4 text-white/50" />
                         </button>
                     </div>
 
                     {/* Summary Stats */}
                     {transactions.length > 0 && (
                         <div className="transaction-drawer-summary">
-                            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
-                                <div className="text-center">
-                                    <div className="text-xs text-white/40 mb-1">Cost Basis</div>
-                                    <div className="flex items-center gap-1 text-sm font-bold text-white">
-                                        <span>{costBasisOfSold.toFixed(3)}</span>
-                                        <Image src={SOLANA_ICON} alt="SOL" width={14} height={14} />
+                            <div className="grid grid-cols-3 gap-2">
+                                {/* Cost Basis */}
+                                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
+                                    <div className="text-[10px] uppercase tracking-wider text-white/40 mb-1.5">Cost Basis</div>
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <span className="text-base font-bold text-white font-mono">{costBasisOfSold.toFixed(3)}</span>
+                                        <Image src={SOLANA_ICON} alt="SOL" width={14} height={14} className="opacity-70" />
                                     </div>
-                                    <div className="text-[10px] text-white/30">
+                                    <div className="text-[10px] text-white/30 mt-1">
                                         {(percentageSold * 100).toFixed(0)}% sold
                                     </div>
                                 </div>
-                                <div className="text-center">
-                                    <div className="text-xs text-white/40 mb-1">Returned</div>
-                                    <div className="flex items-center gap-1 text-sm font-bold text-green-400">
-                                        <span>{totalReturned.toFixed(3)}</span>
-                                        <Image src={SOLANA_ICON} alt="SOL" width={14} height={14} />
+
+                                {/* Returned */}
+                                <div className="p-3 rounded-xl bg-[#c4f70e]/[0.03] border border-[#c4f70e]/10 text-center">
+                                    <div className="text-[10px] uppercase tracking-wider text-white/40 mb-1.5">Returned</div>
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <span className="text-base font-bold text-[#c4f70e] font-mono">{totalReturned.toFixed(3)}</span>
+                                        <Image src={SOLANA_ICON} alt="SOL" width={14} height={14} className="opacity-70" />
                                     </div>
                                 </div>
-                                <div className="text-center">
-                                    <div className="text-xs text-white/40 mb-1">Realized PnL</div>
-                                    <div className={`flex items-center gap-1 text-sm font-bold ${netPnl >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}>
-                                        <span>{netPnl >= 0 ? "+" : ""}{netPnl.toFixed(3)}</span>
-                                        <Image src={SOLANA_ICON} alt="SOL" width={14} height={14} />
+
+                                {/* Realized PnL */}
+                                <div className={`p-3 rounded-xl text-center ${netPnl >= 0 ? "bg-[#c4f70e]/[0.05] border border-[#c4f70e]/20" : "bg-[#ef4444]/[0.05] border border-[#ef4444]/20"}`}>
+                                    <div className="text-[10px] uppercase tracking-wider text-white/40 mb-1.5">Realized PnL</div>
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <span className={`text-base font-bold font-mono ${netPnl >= 0 ? "text-[#c4f70e]" : "text-[#ef4444]"}`}>
+                                            {netPnl >= 0 ? "+" : ""}{netPnl.toFixed(3)}
+                                        </span>
+                                        <Image src={SOLANA_ICON} alt="SOL" width={14} height={14} className="opacity-70" />
                                     </div>
+                                    {netPnl !== 0 && costBasisOfSold > 0 && (
+                                        <div className={`text-[10px] mt-1 ${netPnl >= 0 ? "text-[#c4f70e]/60" : "text-[#ef4444]/60"}`}>
+                                            {netPnl >= 0 ? "+" : ""}{((netPnl / costBasisOfSold) * 100).toFixed(1)}%
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -356,19 +381,24 @@ export function TransactionDrawer({
                     {/* Content */}
                     <div className="transaction-drawer-content">
                         {isLoading && (
-                            <div className="flex flex-col items-center justify-center py-12">
-                                <Loader2 className="w-8 h-8 text-[#c4f70e] animate-spin mb-3" />
-                                <span className="text-sm text-white/50">Loading transactions...</span>
+                            <div className="flex flex-col items-center justify-center py-16">
+                                <div className="relative">
+                                    <div className="w-12 h-12 rounded-full border-2 border-[#c4f70e]/20" />
+                                    <Loader2 className="w-12 h-12 text-[#c4f70e] animate-spin absolute inset-0" />
+                                </div>
+                                <span className="text-sm text-white/40 mt-4">Loading transactions...</span>
                             </div>
                         )}
 
                         {error && !isLoading && transactions.length === 0 && (
-                            <div className="text-center py-8">
-                                <AlertCircle className="w-10 h-10 text-white/20 mx-auto mb-3" />
-                                <div className="text-white/40 text-sm mb-2">{error}</div>
+                            <div className="flex flex-col items-center justify-center py-12">
+                                <div className="w-14 h-14 rounded-xl bg-[#ef4444]/10 border border-[#ef4444]/20 flex items-center justify-center mb-4">
+                                    <AlertCircle className="w-7 h-7 text-[#ef4444]/60" />
+                                </div>
+                                <div className="text-white/50 text-sm mb-3">{error}</div>
                                 <button
                                     onClick={fetchTransactions}
-                                    className="text-xs text-[#c4f70e]/60 hover:text-[#c4f70e] underline"
+                                    className="px-4 py-2 text-xs font-medium text-[#c4f70e] bg-[#c4f70e]/10 hover:bg-[#c4f70e]/20 border border-[#c4f70e]/20 rounded-lg transition-all"
                                 >
                                     Retry
                                 </button>
@@ -376,9 +406,11 @@ export function TransactionDrawer({
                         )}
 
                         {!isLoading && transactions.length === 0 && !error && (
-                            <div className="flex flex-col items-center justify-center py-16 text-white/40">
-                                <Clock className="w-12 h-12 mb-4 opacity-50" />
-                                <span className="text-sm font-medium">No transactions yet</span>
+                            <div className="flex flex-col items-center justify-center py-16">
+                                <div className="w-16 h-16 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-4">
+                                    <Clock className="w-8 h-8 text-white/20" />
+                                </div>
+                                <span className="text-sm font-medium text-white/50">No transactions yet</span>
                                 <span className="text-xs text-white/30 mt-1">
                                     Transactions will appear here
                                 </span>
@@ -399,10 +431,10 @@ export function TransactionDrawer({
                                 href={`https://solscan.io/token/${tokenMint}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-[#c4f70e] hover:border-[#c4f70e]/30 transition-all"
+                                className="group flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#c4f70e]/5 border border-[#c4f70e]/10 text-[#c4f70e]/70 hover:text-[#c4f70e] hover:bg-[#c4f70e]/10 hover:border-[#c4f70e]/20 transition-all"
                             >
-                                <span className="text-sm font-medium">View Token on Solscan</span>
-                                <ExternalLink className="w-4 h-4" />
+                                <span className="text-sm font-medium">View on Solscan</span>
+                                <ExternalLink className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" />
                             </a>
                         </div>
                     )}
