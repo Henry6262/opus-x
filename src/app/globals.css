@@ -152,6 +152,7 @@ main {
   width: 100%;
   background: var(--void-black);
   overflow: hidden;
+  isolation: isolate;
 }
 
 .vibr-coder-video {
@@ -162,33 +163,22 @@ main {
   object-position: center;
   background: var(--void-black);
   pointer-events: none;
-}
-
-/* Bottom fade overlay for smooth section transition */
-.vibr-coder-fade-bottom {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 120px;
-  background: linear-gradient(
-    to top,
-    var(--void-black) 0%,
-    rgba(0, 0, 0, 0.85) 25%,
-    rgba(0, 0, 0, 0.5) 55%,
-    transparent 100%
-  );
-  pointer-events: none;
-  z-index: 5;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 /* Gradient fade overlays for smooth video transitions */
 .vibr-coder-fade {
   position: absolute;
   pointer-events: none;
-  z-index: 20;
+  z-index: 10;
+  will-change: opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
+/* Bottom fade overlay for smooth section transition */
 .vibr-coder-fade-bottom {
   bottom: 0;
   left: 0;
@@ -2044,14 +2034,6 @@ main {
     padding: 0 8px var(--space-4) 8px !important;
   }
 
-  .vibr-coder-container {
-    max-height: 280px;
-  }
-
-  .vibr-coder-video {
-    max-height: 280px;
-  }
-
   /* Mobile fade overlays - smaller and lighter to not darken the small video */
   .vibr-coder-fade-bottom {
     height: 80px;
@@ -2179,7 +2161,7 @@ button:focus-visible {
 }
 
 .ai-mood-executing .vibr-coder-container {
-  animation: pulse-glow 1.5s ease-in-out infinite;
+  /* Removed animation to prevent flickering with overlays */
 }
 
 .ai-mood-executing .card-glass {
@@ -2208,9 +2190,9 @@ button:focus-visible {
   --mood-intensity: 0.1;
 }
 
-/* Sleeping mode - opacity effects removed to prevent UI darkening */
+/* Sleeping mode - removed opacity animations to prevent flickering */
 .ai-mood-sleeping .vibr-coder-container {
-  animation: gentle-breathe 4s ease-in-out infinite;
+  /* No animation - prevents flickering with overlays */
 }
 
 .ai-mood-sleeping .terminal {
@@ -2880,10 +2862,10 @@ button:focus-visible {
 .portfolio-wallet {
   position: fixed;
   top: var(--space-4);
-  left: var(--space-4);
-  z-index: 25;
+  right: var(--space-4);
+  z-index: 9999;
   font-family: var(--font-mono);
-  transform-origin: top left;
+  transform-origin: top right;
 }
 
 /* Collapsed State - Compact Pill */
@@ -4080,12 +4062,14 @@ button:focus-visible {
 @media (max-width: 768px) {
   .portfolio-wallet {
     top: var(--space-2);
-    left: var(--space-2);
+    right: var(--space-2);
+    left: auto;
   }
 
   .portfolio-wallet.expanded {
     width: calc(100vw - var(--space-4));
     max-width: 300px;
+    right: var(--space-2);
   }
 
   .portfolio-wallet-total-value {
