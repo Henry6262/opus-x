@@ -5,6 +5,11 @@ All notable changes to Opus-X are documented here.
 ## 2026-01-14
 - Transaction History now sits alongside Live Activity and Active Positions in the top desktop rail as its own collapsible column, eliminating the bottom-row copy.
 - Smart Money panel is fixed to roughly half-screen height with a single-column vertical list so each tracked wallet uses the full width.
+- Live Activity rail no longer embeds the Recent Trades widget; the history stays in its own panel instead.
+- VIBR wallet history now pulls from the trading transactions feed (same as the Smart Trading Transaction History panel) instead of inferred position closures.
+- On-chain holdings panel now defaults to the trading wallet (or ?wallet= override) so it loads without the missing-wallet error.
+- Trading config now falls back to the provided public wallet `FXP5NMdrC4qHQbtBy8dduLbryVmevCkjd25mmLBKVA7x` when the backend doesn’t send one, keeping holdings and balances in sync.
+- Removed the Trading Configuration card from the dashboard per request.
 
 ## 2026-01-12
 - Migration cards replaced their token-name row with a minimalist inline stat strip (MCap · Liq · Score) separated by subtle dividers directly beneath the ticker.

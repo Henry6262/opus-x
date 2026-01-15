@@ -19,6 +19,11 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 ## Changelog
 - 2026-01-14: Transaction History now lives beside Live Activity and Active Positions as a collapsible rail on desktop, removing the bottom-row duplication.
 - 2026-01-14: Smart Money panel now sits at half-screen height with a single-column list so each wallet spans the full width vertically.
+- 2026-01-14: Live Activity rail no longer embeds Recent Trades; history sits in its own dedicated panel.
+- 2026-01-14: VIBR wallet history now reads from the trading transactions feed (same source as the dashboard Transaction History panel) instead of derived position closures.
+- 2026-01-14: On-chain holdings now auto-uses the trading wallet (or ?wallet= query param) so the panel no longer throws missing-wallet errors.
+- 2026-01-14: Trading config now falls back to public wallet `FXP5NMdrC4qHQbtBy8dduLbryVmevCkjd25mmLBKVA7x` when none is returned from the backend.
+- 2026-01-14: Trading Configuration card removed from the dashboard.
 - 2026-01-12: Mobile dashboard now swaps Live Activity, Migration Feed, and Positions with a dedicated three-button switcher (no more per-card collapse toggles on phones).
 - 2026-01-12: Migration cards replaced the token name row with a minimalist inline stat strip (MCap · Liq · Score) separated by subtle dividers directly beneath the ticker.
 - 2026-01-12: Tracked wallet presets now include Orange, Dior, Jack Duval, and POW Twitter handles, falling back to the SuperRouter avatar whenever a profile image is missing.

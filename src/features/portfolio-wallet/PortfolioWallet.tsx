@@ -6,6 +6,7 @@ import { X, TrendingUp, TrendingDown, BarChart3, Clock, Layers, ChevronUp, Chevr
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { CountUp } from "@/components/animations";
+import { buildDevprntApiUrl } from "@/lib/devprnt";
 import type { PortfolioWalletProps, TimeFilter, PortfolioStats, WalletView, Position as UiPosition, Transaction, ChartHistoryEntry } from "./types";
 import { useDashboardStats, usePositions } from "@/features/smart-trading";
 
@@ -57,6 +58,8 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   const { dashboardStats } = useDashboardStats();
   const { positions, history } = usePositions();
   const chartHistory: ChartHistoryEntry[] = []; // TODO: Add chartHistory to real-time context
+  const [fetchedTransactions, setFetchedTransactions] = useState<Transaction[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeView, setActiveView] = useState<WalletView>("overview");
@@ -137,21 +140,89 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     entryTime: new Date(p.createdAt),
   }));
 
-  // Map History to Transactions
-  // We'll treat closed positions as "SELL" and their entries as "BUY" conceptually,
-  // but for now let's just show closed positions as completed trades.
-  const transactions: Transaction[] = history.map(p => ({
-    id: p.id,
-    type: "sell", // Completed trade
-    symbol: p.tokenSymbol || "TOKEN",
-    price: p.currentPrice || 0, // Exit price ideally
-    quantity: p.entryTokens, // Total tokens traded
-    value: p.realizedPnlSol + p.entryAmountSol, // Total exit value
-    pnl: p.realizedPnlSol,
-    pnlPercent: p.entryAmountSol > 0 ? (p.realizedPnlSol / p.entryAmountSol) * 100 : 0,
-    timestamp: new Date(p.closedAt || p.updatedAt),
-    txHash: p.target1TxSig || p.stopLossTxSig || undefined,
-  }));
+  type EnrichedTransaction = {
+    id: string;
+    tx_type: "buy" | "sell";
+    signature: string;
+    mint: string;
+    ticker: string;
+    token_name: string;
+    sol_amount?: number;
+    tokens_received?: number;
+    tokens_sold?: number;
+    sol_received?: number;
+    price: number;
+    timestamp: string;
+    current_price?: number;
+  };
+
+  const mapHistoryToTransactions = useMemo(
+    () =>
+      history.map((p) => ({
+        id: p.id,
+        type: "sell" as const,
+        symbol: p.tokenSymbol || "TOKEN",
+        price: p.currentPrice || p.entryPriceSol || 0,
+        quantity: p.entryTokens,
+        value: p.realizedPnlSol + p.entryAmountSol,
+        pnl: p.realizedPnlSol,
+        pnlPercent: p.entryAmountSol > 0 ? (p.realizedPnlSol / p.entryAmountSol) * 100 : 0,
+        timestamp: new Date(p.closedAt || p.updatedAt),
+        txHash: p.target1TxSig || p.stopLossTxSig || undefined,
+      })),
+    [history]
+  );
+
+  const mapEnrichedTransaction = useCallback((tx: EnrichedTransaction): Transaction => {
+    const value = tx.tx_type === "buy" ? tx.sol_amount ?? 0 : tx.sol_received ?? 0;
+    const quantity = tx.tx_type === "buy" ? tx.tokens_received ?? 0 : tx.tokens_sold ?? 0;
+    const pnlPercent =
+      tx.current_price && tx.price
+        ? ((tx.current_price / tx.price - 1) * 100)
+        : undefined;
+
+    return {
+      id: tx.id || tx.signature,
+      type: tx.tx_type,
+      symbol: tx.ticker || tx.token_name || tx.mint?.slice(0, 4) || "TOKEN",
+      price: tx.price || 0,
+      quantity,
+      value,
+      pnlPercent,
+      timestamp: new Date(tx.timestamp),
+      txHash: tx.signature,
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchTransactions = async () => {
+      setIsLoadingHistory(true);
+      try {
+        const url = buildDevprntApiUrl("/api/trading/transactions?limit=25");
+        const response = await fetch(url.toString());
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const result = await response.json();
+        const items: EnrichedTransaction[] = Array.isArray(result.data) ? result.data : [];
+        if (!cancelled) {
+          setFetchedTransactions(items.map(mapEnrichedTransaction));
+        }
+      } catch (err) {
+        console.error("Failed to fetch wallet transaction history", err);
+      } finally {
+        if (!cancelled) setIsLoadingHistory(false);
+      }
+    };
+
+    fetchTransactions();
+    return () => {
+      cancelled = true;
+    };
+  }, [mapEnrichedTransaction]);
+
+  const transactions: Transaction[] =
+    fetchedTransactions.length > 0 ? fetchedTransactions : mapHistoryToTransactions;
 
   const isProfitable = pnlPercent >= 0;
   const chartData = useMemo(() => {
@@ -444,7 +515,12 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
             {/* History View */}
             {activeView === "history" && (
               <div className="portfolio-wallet-history">
-                {transactions.length === 0 ? (
+                {isLoadingHistory && transactions.length === 0 ? (
+                  <div className="portfolio-wallet-empty">
+                    <Clock className="w-8 h-8 text-white/20" />
+                    <span>Loading history...</span>
+                  </div>
+                ) : transactions.length === 0 ? (
                   <div className="portfolio-wallet-empty">
                     <Clock className="w-8 h-8 text-white/20" />
                     <span>No transactions yet</span>

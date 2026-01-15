@@ -231,7 +231,7 @@ function WalletRow({
   return (
     <motion.div
       onClick={onClick}
-      className="relative flex flex-col gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 via-black/60 to-black/80 p-4 cursor-pointer overflow-hidden group min-h-[120px]"
+      className="relative flex flex-col gap-3 rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 via-black/60 to-black/80 p-3 cursor-pointer overflow-hidden group min-h-[96px]"
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 320, damping: 26 }}
@@ -706,7 +706,7 @@ export function TrackedWalletsPanel() {
             </p>
           </div>
         </div>
-        <div className="flex flex-col gap-3 min-h-[50vh] max-h-[60vh] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
           {isLoading && enrichedWallets.length === 0 ? (
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="w-5 h-5 animate-spin text-white/50" />

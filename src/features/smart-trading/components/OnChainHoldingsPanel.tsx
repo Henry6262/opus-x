@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Wallet, RefreshCw, ExternalLink, TrendingUp, TrendingDown } from "lucide-react";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 
 // ============================================
 // Types for On-Chain Holdings
@@ -121,43 +122,69 @@ interface OnChainHoldingsPanelProps {
 }
 
 export function OnChainHoldingsPanel({ walletAddress, minValueUsd = 0.1 }: OnChainHoldingsPanelProps) {
-    const [holdings, setHoldings] = useState<OnChainHolding[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [totalValue, setTotalValue] = useState(0);
+  const [holdings, setHoldings] = useState<OnChainHolding[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalValue, setTotalValue] = useState(0);
+  const searchParams = useSearchParams();
+  const walletFromQuery = searchParams?.get("wallet") || undefined;
+  const effectiveWallet = useMemo(() => walletAddress ?? walletFromQuery, [walletAddress, walletFromQuery]);
 
-    const fetchHoldings = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            const params = new URLSearchParams();
-            if (walletAddress) params.set("wallet", walletAddress);
-            params.set("min_value_usd", minValueUsd.toString());
+  const fetchHoldings = useCallback(async () => {
+    if (!effectiveWallet) {
+      setHoldings([]);
+      setTotalValue(0);
+      setError("Provide a wallet (?wallet=) or set a trading wallet to load holdings.");
+      setIsLoading(false);
+      return;
+    }
 
-            const url = buildDevprntApiUrl(`/api/trading/holdings?${params.toString()}`);
-            const response = await fetch(url.toString());
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const result = await response.json();
+    const friendlyError = (message?: string | null) => {
+      if (!message) return "Failed to load holdings. Please retry.";
+      const lower = message.toLowerCase();
+      if (lower.includes("error decoding response body") || lower.includes("invalid type")) {
+        return "Holdings API returned malformed data. Please retry later.";
+      }
+      return message;
+    };
 
-            if (!result.success) {
-                throw new Error(result.error || "Failed to fetch holdings");
-            }
+    try {
+      setIsLoading(true);
+      const params = new URLSearchParams();
+      params.set("wallet", effectiveWallet);
+      params.set("min_value_usd", minValueUsd.toString());
 
-            const data: OnChainHolding[] = result.data || [];
-            setHoldings(data);
-            setTotalValue(data.reduce((sum, h) => sum + (h.value_usd || 0), 0));
-            setError(null);
-        } catch (err) {
-            console.error("Failed to fetch on-chain holdings:", err);
-            setError(err instanceof Error ? err.message : "Failed to load");
-        } finally {
-            setIsLoading(false);
-        }
-    }, [walletAddress, minValueUsd]);
+      const url = buildDevprntApiUrl(`/api/trading/holdings?${params.toString()}`);
+      const response = await fetch(url.toString());
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-    useEffect(() => {
-        fetchHoldings();
-        const interval = setInterval(fetchHoldings, 60000); // Refresh every 60s
-        return () => clearInterval(interval);
+      let result: any = null;
+      try {
+        result = await response.json();
+      } catch (parseErr) {
+        throw new Error("Unexpected response while loading holdings");
+      }
+
+      if (result && result.success === false) {
+        throw new Error(friendlyError(result.error));
+      }
+
+      const data: OnChainHolding[] = (result?.data as OnChainHolding[]) || [];
+      setHoldings(data);
+      setTotalValue(data.reduce((sum, h) => sum + (h.value_usd || 0), 0));
+      setError(null);
+    } catch (err) {
+      console.error("Failed to fetch on-chain holdings:", err);
+      setError(err instanceof Error ? friendlyError(err.message) : "Failed to load holdings. Please retry.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [effectiveWallet, minValueUsd]);
+
+  useEffect(() => {
+    fetchHoldings();
+    const interval = setInterval(fetchHoldings, 60000); // Refresh every 60s
+    return () => clearInterval(interval);
     }, [fetchHoldings]);
 
     return (

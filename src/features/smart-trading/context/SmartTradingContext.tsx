@@ -84,6 +84,7 @@ interface SmartTradingContextValue extends SmartTradingState {
 }
 
 const SmartTradingContext = createContext<SmartTradingContextValue | null>(null);
+const DEFAULT_TRADING_WALLET = "FXP5NMdrC4qHQbtBy8dduLbryVmevCkjd25mmLBKVA7x";
 
 // ============================================
 // Helper: Generate activity message
@@ -329,7 +330,26 @@ export function SmartTradingProvider({
 
       setState((prev) => ({
         ...prev,
-        config: response.config,
+        config: response.config
+          ? {
+            ...response.config,
+            wallet_address: response.config.wallet_address || DEFAULT_TRADING_WALLET,
+          }
+          : {
+            tradingEnabled: false,
+            maxPositionPercent: 0,
+            maxOpenPositions: 0,
+            target1Percent: 0,
+            target1SellPercent: 0,
+            target2Percent: 0,
+            stopLossPercent: 0,
+            minTweetCount: 0,
+            minSentimentScore: 0,
+            maxDailyLossSol: 0,
+            maxDailyTrades: 0,
+            maxSlippageBps: 0,
+            wallet_address: DEFAULT_TRADING_WALLET,
+          },
         dashboardStats: response.stats,
         wallets: response.wallets,
         signals: response.signals,

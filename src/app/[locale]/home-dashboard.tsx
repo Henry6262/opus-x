@@ -43,7 +43,7 @@ export function HomeDashboard() {
 }
 
 function DashboardContent() {
-  const [activeView, setActiveView] = useState<ActiveView>("smart-trading");
+  const activeView: ActiveView = "smart-trading";
 
   // Smart Trading data from unified WebSocket-first context (live updates!)
   const { config } = useSmartTradingConfig();
@@ -107,8 +107,6 @@ function DashboardContent() {
               config={config}
               positions={positions}
               history={history}
-              activeView={activeView}
-              onViewChange={setActiveView}
             />
           </div>
 

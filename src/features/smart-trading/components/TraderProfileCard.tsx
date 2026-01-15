@@ -3,20 +3,17 @@
 import Image from "next/image";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
+import { Copy } from "lucide-react";
 import { CountUp } from "@/components/animations/CountUp";
 import { SmartMoneyAnimation } from "@/components/animations";
 import { cn } from "@/lib/utils";
 import type { DashboardStatsResponse, Position, TradingConfig } from "../types";
-
-type ActiveView = "smart-trading" | "simulation-twitter";
 
 interface TraderProfileCardProps {
   stats: DashboardStatsResponse | null;
   config: TradingConfig | null;
   positions: Position[];
   history: Position[];
-  activeView: ActiveView;
-  onViewChange: (view: ActiveView) => void;
 }
 
 function calculateStreak(history: Position[]): { current: number; best: number; type: "win" | "loss" } {
@@ -74,12 +71,9 @@ export function TraderProfileCard({
   stats,
   config,
   history,
-  activeView,
-  onViewChange,
 }: TraderProfileCardProps) {
   const t = useTranslations();
   const tProfile = useTranslations("profile");
-  const tNav = useTranslations("nav");
 
   const streak = calculateStreak(history);
   const performance = stats?.performance;
@@ -87,14 +81,14 @@ export function TraderProfileCard({
   const winRate = performance?.winRate ?? 0;
   const totalTrades = performance?.totalTrades ?? 0;
   const winningTrades = performance?.winningTrades ?? 0;
-  const largestWin = performance?.largestWin ?? 0;
+  const largestWinPercent = performance?.largestWin ?? 0;
   const netPnl = performance?.netPnlSol ?? 0;
   const isOnStreak = streak.current >= 2 && streak.type === "win";
-
-  const tabs = [
-    { id: "smart-trading" as const, label: tNav("smartMoney"), iconType: "smart-money" as const },
-    { id: "simulation-twitter" as const, label: tNav("twitter"), iconType: "twitter" as const },
-  ];
+  const walletAddress = config?.wallet_address || "N/A";
+  const shortWallet =
+    walletAddress && walletAddress.length > 8
+      ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
+      : walletAddress;
 
   const StatsItems = () => (
     <>
@@ -120,9 +114,15 @@ export function TraderProfileCard({
         <div className="text-[9px] text-white/40 uppercase tracking-wider">{tProfile("bestTrade")}</div>
         <div className="flex items-center gap-1 justify-center md:justify-start">
           <span className="text-lg font-bold font-mono text-green-400">
-            +<CountUp to={largestWin} duration={0.8} decimals={2} />
+            +<CountUp to={Number.isFinite(largestWinPercent) ? Number(largestWinPercent.toFixed(1)) : 0} duration={0.8} decimals={1} />
           </span>
-          <Image src="/logos/solana.png" alt="SOL" width={14} height={14} className="opacity-60" />
+          <span className="text-xs text-green-400/70">%</span>
+          <span
+            className="text-[10px] text-white/50 border border-white/10 rounded-full px-2 py-0.5 cursor-help"
+            title="Best realized trade percentage (performance.best_trade_pct from trading stats)"
+          >
+            ?
+          </span>
         </div>
       </div>
     </>
@@ -131,19 +131,34 @@ export function TraderProfileCard({
   return (
     <div className="relative pt-4 pb-16">
 
-      {/* X/Twitter Handle - below pill, right of avatar */}
+      {/* Wallet address badge */}
+      <div className="absolute left-[140px] -top-3 flex items-center gap-2 text-[11px] font-mono text-white/85">
+        <span>{shortWallet}</span>
+        {walletAddress !== "N/A" && (
+          <button
+            onClick={() => navigator.clipboard.writeText(walletAddress)}
+            className="text-white/60 hover:text-white transition-colors"
+            aria-label="Copy wallet address"
+            type="button"
+          >
+            <Copy className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* X/Twitter Handle - simple text link */}
       <motion.a
         href="https://x.com/SuperRouterSol"
         target="_blank"
         rel="noopener noreferrer"
-        className="absolute top-[88px] left-[140px] flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 group z-10"
+        className="absolute top-[96px] left-[140px] flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white transition-colors z-10"
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.5, duration: 0.3 }}
         whileHover={{ scale: 1.02 }}
       >
         <XIcon className="w-4 h-4 text-white/60 group-hover:text-white transition-colors" />
-        <span className="text-sm font-medium text-white/60 group-hover:text-white transition-colors">@SuperRouterSol</span>
+        <span className="transition-colors">@SuperRouterSol</span>
       </motion.a>
 
       {/* Main pill container */}
@@ -197,7 +212,7 @@ export function TraderProfileCard({
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-sm font-bold text-white font-mono leading-none">
-                  <CountUp to={winRate} duration={1} suffix="%" />
+                  <CountUp to={Number.isFinite(winRate) ? Math.round(winRate) : 0} duration={1} decimals={0} suffix="%" />
                 </span>
                 <span className="text-[7px] text-white/40 uppercase tracking-wide">{tProfile("winRate")}</span>
               </div>
@@ -217,55 +232,6 @@ export function TraderProfileCard({
           <StatsItems />
         </div>
       </div>
-
-      {/* Tabs - centered on screen */}
-      <motion.div
-        className="absolute -bottom-6 left-0 right-0 z-10 flex items-center justify-center gap-8"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.4 }}
-      >
-        {tabs.map((tab) => (
-          <motion.button
-            key={tab.id}
-            onClick={() => onViewChange(tab.id)}
-            className="relative flex flex-col items-center gap-2 py-3 px-4 group"
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.97 }}
-          >
-            {/* Icon + Label */}
-            <div className={cn(
-              "flex items-center gap-3 transition-colors duration-200",
-              activeView === tab.id
-                ? "text-[#c4f70e]"
-                : "text-white/40 group-hover:text-white/70"
-            )}>
-              <TabIcon type={tab.iconType} />
-              <span className="text-sm font-semibold uppercase tracking-wide">{tab.label}</span>
-            </div>
-
-            {/* Underline indicator */}
-            {activeView === tab.id && (
-              <motion.div
-                layoutId="activeTabIndicator"
-                className="absolute -bottom-1 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#c4f70e] to-transparent"
-                initial={false}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              />
-            )}
-
-            {/* Glow effect for active */}
-            {activeView === tab.id && (
-              <motion.div
-                layoutId="activeTabGlow"
-                className="absolute -bottom-1 left-1/4 right-1/4 h-[2px] blur-sm bg-[#c4f70e]"
-                initial={false}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              />
-            )}
-          </motion.button>
-        ))}
-      </motion.div>
 
       {/* Avatar with animated glow rings */}
       <motion.div
