@@ -15,6 +15,7 @@ import { useTerminal } from "../TerminalProvider";
 import {
     generateMessage,
     getCategoryColor,
+    getCategoryIcon,
     shouldStream,
     type MessageCategory,
 } from "../ai-personality";
@@ -92,9 +93,10 @@ export function useAiReasoningStream({
             const { category, context } = resolveEvent(event);
             const text = generateMessage(category, context);
             const color = getCategoryColor(category);
+            const icon = getCategoryIcon(category);
             const isStreaming = shouldStream(category);
 
-            log({ text, color, isStreaming, type: "standard" });
+            log({ text, color, icon, isStreaming, type: "standard" });
             lastMessageTimeRef.current = now;
         },
         [log, throttleMs]

@@ -3,7 +3,10 @@
  *
  * Provides first-person AI voice with message templates,
  * rotation to avoid repetition, and mood-influenced language.
+ * Uses Lucide React icons instead of emojis for professional look.
  */
+
+import type { TerminalIconType } from "./types";
 
 export type MessageCategory =
   | "boot"
@@ -157,69 +160,94 @@ const templates: Record<MessageCategory, string[]> = {
     "{tokenSymbol} updated - current P&L: {pnl}%",
   ],
 
-  // NEW: AI Reasoning Stream Templates
+  // AI Reasoning Stream Templates (no emojis - icons handled separately)
   ai_thinking: [
-    "🧠 Initiating analysis on {tokenSymbol}...",
-    "🔬 Deep diving into {tokenSymbol}...",
-    "🎯 Targeting {tokenSymbol} for evaluation...",
-    "⚡ Neural network activating for {tokenSymbol}...",
+    "Initiating analysis on {tokenSymbol}...",
+    "Deep diving into {tokenSymbol}...",
+    "Targeting {tokenSymbol} for evaluation...",
+    "Neural network activating for {tokenSymbol}...",
   ],
 
   ai_thinking_step: [
-    "  ├─ {reason}",
-    "  │ {reason}",
-    "  ▸ {reason}",
-    "  → {reason}",
+    "├─ {reason}",
+    "│ {reason}",
+    "▸ {reason}",
+    "→ {reason}",
   ],
 
   ai_reasoning: [
-    "💭 {reason}",
-    "🔍 {reason}",
-    "📊 {reason}",
     "{reason}",
   ],
 
   ai_market_analysis: [
-    "📈 Market Scan for {tokenSymbol}:",
-    "  ├─ Price: {price} | {reason}",
-    "📊 {tokenSymbol} market structure: {reason}",
-    "🔎 Evaluating {tokenSymbol} fundamentals... {reason}",
+    "Market Scan for {tokenSymbol}:",
+    "├─ Price: {price} | {reason}",
+    "{tokenSymbol} market structure: {reason}",
+    "Evaluating {tokenSymbol} fundamentals... {reason}",
   ],
 
   ai_trade_eval: [
-    "⚖️ Trade Evaluation: {reason}",
-    "🎲 Risk/Reward on {tokenSymbol}: {reason}",
-    "📋 Entry criteria check: {reason}",
-    "🔄 Trade setup assessment: {reason}",
+    "Trade Evaluation: {reason}",
+    "Risk/Reward on {tokenSymbol}: {reason}",
+    "Entry criteria check: {reason}",
+    "Trade setup assessment: {reason}",
   ],
 
   ai_risk: [
-    "⚠️ Risk Assessment: {reason}",
-    "🛡️ Risk score: {score}/10 - {reason}",
-    "⚡ Danger level: {reason}",
-    "🔐 Safety check: {reason}",
+    "Risk Assessment: {reason}",
+    "Risk score: {score}/10 - {reason}",
+    "Danger level: {reason}",
+    "Safety check: {reason}",
   ],
 
   ai_confidence: [
-    "📊 Confidence: {score}% - {reason}",
-    "🎯 Conviction level: {score}%",
-    "💎 Signal strength: {score}/100 ({reason})",
-    "🔥 Hot score: {score}% - {reason}",
+    "Confidence: {score}% - {reason}",
+    "Conviction level: {score}%",
+    "Signal strength: {score}/100 ({reason})",
+    "Hot score: {score}% - {reason}",
   ],
 
   ai_verdict: [
-    "⚡ VERDICT: {reason} ({score}% confidence)",
-    "🎯 FINAL CALL: {reason}",
-    "✅ Decision: {reason} | Confidence: {score}%",
-    "🚀 {reason} - {score}% conviction",
+    "VERDICT: {reason} ({score}% confidence)",
+    "FINAL CALL: {reason}",
+    "Decision: {reason} | Confidence: {score}%",
+    "{reason} - {score}% conviction",
   ],
 
   ai_no_data: [
-    "⚠️ {tokenSymbol}: {reason}",
-    "📵 No data for {tokenSymbol} - {reason}",
-    "🔇 {tokenSymbol} skipped: {reason}",
-    "❌ Cannot evaluate {tokenSymbol}: {reason}",
+    "{tokenSymbol}: {reason}",
+    "No data for {tokenSymbol} - {reason}",
+    "{tokenSymbol} skipped: {reason}",
+    "Cannot evaluate {tokenSymbol}: {reason}",
   ],
+};
+
+// Icon mapping for each category
+const categoryIcons: Record<MessageCategory, TerminalIconType | undefined> = {
+  boot: "zap",
+  scanning: "search",
+  analyzing: "microscope",
+  executing: "rocket",
+  success: "check",
+  rejection: "x",
+  position_opened: "rocket",
+  position_closed: "check",
+  position_update: "trending-up",
+  stop_loss: "alert-triangle",
+  migration_detected: "zap",
+  wallet_signal: "target",
+  ai_decision: "brain",
+  idle: undefined,
+  insight: "gem",
+  ai_thinking: "brain",
+  ai_thinking_step: undefined,
+  ai_reasoning: "search",
+  ai_market_analysis: "chart",
+  ai_trade_eval: "scale",
+  ai_risk: "alert-triangle",
+  ai_confidence: "target",
+  ai_verdict: "zap",
+  ai_no_data: "volume-x",
 };
 
 // Track recently used templates to avoid repetition
@@ -294,6 +322,13 @@ export function generateMessage(
 ): string {
   const template = getTemplate(category);
   return interpolate(template, context);
+}
+
+/**
+ * Get the icon for a message category
+ */
+export function getCategoryIcon(category: MessageCategory): TerminalIconType | undefined {
+  return categoryIcons[category];
 }
 
 /**

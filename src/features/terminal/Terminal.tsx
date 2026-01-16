@@ -1,9 +1,64 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { ChevronDown } from "lucide-react";
+import {
+  ChevronDown,
+  Brain,
+  Microscope,
+  Target,
+  Zap,
+  Search,
+  BarChart3,
+  TrendingUp,
+  Scale,
+  Dice5,
+  ClipboardList,
+  RefreshCw,
+  AlertTriangle,
+  Shield,
+  Lock,
+  Gem,
+  Flame,
+  Rocket,
+  Check,
+  X,
+  SignalLow,
+  VolumeX,
+} from "lucide-react";
 import { useTerminal } from "./TerminalProvider";
-import type { TerminalLogEntry } from "./types";
+import type { TerminalLogEntry, TerminalIconType } from "./types";
+
+// Icon component map for efficient rendering
+const iconComponents: Record<TerminalIconType, React.ComponentType<{ className?: string }>> = {
+  brain: Brain,
+  microscope: Microscope,
+  target: Target,
+  zap: Zap,
+  thought: Brain,
+  search: Search,
+  chart: BarChart3,
+  "trending-up": TrendingUp,
+  scale: Scale,
+  dice: Dice5,
+  clipboard: ClipboardList,
+  refresh: RefreshCw,
+  "alert-triangle": AlertTriangle,
+  shield: Shield,
+  lock: Lock,
+  gem: Gem,
+  flame: Flame,
+  rocket: Rocket,
+  check: Check,
+  x: X,
+  "signal-low": SignalLow,
+  "volume-x": VolumeX,
+};
+
+function TerminalIcon({ type, className }: { type: TerminalIconType; className?: string }) {
+  const IconComponent = iconComponents[type];
+  if (!IconComponent) return null;
+  return <IconComponent className={className} />;
+}
 
 function MatrixRain() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -184,6 +239,11 @@ function TerminalLine({
     >
       {isThinkingStep && <span className="thinking-indicator">&gt;</span>}
       <span className="terminal-time">[{event.time}]</span>
+      {event.icon && (
+        <span className="terminal-icon">
+          <TerminalIcon type={event.icon} className="w-3.5 h-3.5" />
+        </span>
+      )}
       <span className="terminal-text">
         <TypewriterText
           text={event.text}

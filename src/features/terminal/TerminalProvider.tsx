@@ -6,7 +6,7 @@ import type { TerminalLogEntry, ThinkingState } from "./types";
 interface TerminalContextValue {
   logs: TerminalLogEntry[];
   log: (entry: Omit<TerminalLogEntry, "id" | "time"> & { time?: string }) => string;
-  updateLog: (id: string, updates: Partial<Pick<TerminalLogEntry, 'text' | 'color' | 'isStreaming'>>) => void;
+  updateLog: (id: string, updates: Partial<Pick<TerminalLogEntry, 'text' | 'color' | 'isStreaming' | 'icon'>>) => void;
   thinkingState: ThinkingState;
   startThinking: (tokenSymbol: string) => void;
   stopThinking: () => void;
@@ -54,6 +54,7 @@ export function TerminalProvider({
             color: entry.color,
             type: entry.type,
             isStreaming: entry.isStreaming,
+            icon: entry.icon,
           },
         ];
         return next.slice(-maxLogs);

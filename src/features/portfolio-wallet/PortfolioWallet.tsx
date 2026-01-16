@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { X, TrendingUp, TrendingDown, BarChart3, Clock, Layers, ChevronUp, ChevronDown, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
@@ -36,10 +37,11 @@ function generateChartData(timeFilter: TimeFilter, isProfitable: boolean) {
   return data;
 }
 
-function formatValue(value: number): string {
-  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)}M`;
-  if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-  return `$${value.toFixed(2)}`;
+function formatSolValue(value: number): string {
+  if (value >= 1000) return `${(value / 1000).toFixed(2)}K`;
+  if (value >= 100) return value.toFixed(1);
+  if (value >= 1) return value.toFixed(2);
+  return value.toFixed(4);
 }
 
 function formatTimeAgo(dateInput: string | Date): string {
@@ -84,6 +86,22 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeView, setActiveView] = useState<WalletView>("overview");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("24H");
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+  const [isTimeFilterOpen, setIsTimeFilterOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Set up portal container on mount
+  useEffect(() => {
+    setPortalContainer(document.body);
+  }, []);
 
   // Calculate real values from dashboardStats.trading
   // Use realWalletBalance if available (even in simulation mode), otherwise fall back to reported balance
@@ -368,8 +386,8 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
         </div>
       )}
 
-      {/* Expanded State */}
-      {isExpanded && (
+      {/* Expanded State - Rendered via Portal to ensure proper z-index stacking */}
+      {isExpanded && portalContainer && createPortal(
         <>
           {/* Backdrop overlay - darkens/blurs the background */}
           <div
@@ -427,13 +445,11 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
             {/* Overview View */}
             {activeView === "overview" && (
               <>
-                {/* Total Value */}
+                {/* Total Value in SOL */}
                 <div className="portfolio-wallet-total">
                   <div className="portfolio-wallet-total-value">
-                    {/* formatValue expects $ input, but totalValue is in SOL. Let's assume $150/SOL for now or just show SOL symbol */}
-                    {/* Actually current UI mock used dollar values ($12,847). Users expect $. */}
-                    {/* We'll approximate USD value for now nicely. */}
-                    {formatValue(totalValue * 150)}
+                    <span className="tabular-nums">{formatSolValue(totalValue)}</span>
+                    <Image src="/sol.svg" alt="SOL" width={24} height={24} className="inline-block ml-2" />
                   </div>
                   <div className={`portfolio-wallet-total-pnl ${isProfitable ? "positive" : "negative"}`}>
                     {isProfitable ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
@@ -442,18 +458,46 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                   </div>
                 </div>
 
-                {/* Time Filters */}
-                <div className="portfolio-wallet-filters">
-                  {(["1H", "24H", "1W", "1M", "ALL"] as TimeFilter[]).map((filter) => (
+                {/* Time Filters - Dropdown on mobile, buttons on desktop */}
+                {isMobile ? (
+                  <div className="portfolio-wallet-filters-mobile">
                     <button
-                      key={filter}
-                      onClick={() => setTimeFilter(filter)}
-                      className={`portfolio-wallet-filter ${timeFilter === filter ? "active" : ""}`}
+                      onClick={() => setIsTimeFilterOpen(!isTimeFilterOpen)}
+                      className="portfolio-wallet-filter-dropdown"
                     >
-                      {filter}
+                      <span>{timeFilter}</span>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${isTimeFilterOpen ? 'rotate-180' : ''}`} />
                     </button>
-                  ))}
-                </div>
+                    {isTimeFilterOpen && (
+                      <div className="portfolio-wallet-filter-dropdown-menu">
+                        {(["1H", "24H", "1W", "1M", "ALL"] as TimeFilter[]).map((filter) => (
+                          <button
+                            key={filter}
+                            onClick={() => {
+                              setTimeFilter(filter);
+                              setIsTimeFilterOpen(false);
+                            }}
+                            className={`portfolio-wallet-filter-dropdown-item ${timeFilter === filter ? "active" : ""}`}
+                          >
+                            {filter}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="portfolio-wallet-filters">
+                    {(["1H", "24H", "1W", "1M", "ALL"] as TimeFilter[]).map((filter) => (
+                      <button
+                        key={filter}
+                        onClick={() => setTimeFilter(filter)}
+                        className={`portfolio-wallet-filter ${timeFilter === filter ? "active" : ""}`}
+                      >
+                        {filter}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Chart */}
                 <div className="portfolio-wallet-chart">
@@ -644,7 +688,8 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
             )}
             </div>
           </div>
-        </>
+        </>,
+        portalContainer
       )}
     </>
   );

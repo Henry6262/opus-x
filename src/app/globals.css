@@ -1832,6 +1832,20 @@ main {
   font-size: 0.75em;
 }
 
+.terminal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: var(--space-2);
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+.terminal-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* AI Thinking step styling */
 .terminal-line.thinking-step {
   padding-left: calc(var(--space-4) + var(--space-1));
@@ -3750,6 +3764,11 @@ button:focus-visible {
   border-radius: var(--radius-md);
 }
 
+/* Hide mobile dropdown on desktop */
+.portfolio-wallet-filters-mobile {
+  display: none;
+}
+
 .portfolio-wallet-filter {
   flex: 1;
   padding: var(--space-1) var(--space-2);
@@ -4130,18 +4149,184 @@ button:focus-visible {
   }
 
   .portfolio-wallet.expanded {
-    width: calc(100vw - var(--space-4));
-    max-width: 300px;
-    left: var(--space-2);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: var(--space-3);
+    z-index: 99999;
+    animation: wallet-slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes wallet-slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .portfolio-wallet-total-value {
     font-size: 24px;
   }
 
+  /* Smaller tabs on mobile */
+  .portfolio-wallet-tabs {
+    gap: var(--space-1);
+  }
+
+  .portfolio-wallet-tab {
+    padding: var(--space-1) var(--space-2);
+    font-size: 10px;
+    gap: var(--space-1);
+  }
+
+  .portfolio-wallet-tab svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .portfolio-wallet-tab-count {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+
+  /* Hide regular filters on mobile - use dropdown instead */
+  .portfolio-wallet-filters {
+    display: none !important;
+  }
+
+  /* Show mobile time filter dropdown */
+  .portfolio-wallet-filters-mobile {
+    display: block;
+    position: relative;
+    width: 100%;
+  }
+
+  .portfolio-wallet-filter-dropdown {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .portfolio-wallet-filter-dropdown:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .portfolio-wallet-filter-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: rgba(15, 15, 20, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    z-index: 10;
+    backdrop-filter: blur(12px);
+  }
+
+  .portfolio-wallet-filter-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .portfolio-wallet-filter-dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+  }
+
+  .portfolio-wallet-filter-dropdown-item.active {
+    background: rgba(196, 247, 14, 0.15);
+    color: #c4f70e;
+  }
+
   .portfolio-wallet-positions-list,
   .portfolio-wallet-history-list {
-    max-height: 220px;
+    flex: 1;
+    max-height: none;
+  }
+
+  /* Bigger total value on mobile */
+  .portfolio-wallet-total-value {
+    font-size: 32px !important;
+  }
+
+  .portfolio-wallet-total-value img {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .portfolio-wallet-total-pnl {
+    font-size: 16px !important;
+  }
+
+  /* Bigger tabs on mobile */
+  .portfolio-wallet-tabs {
+    gap: var(--space-2);
+  }
+
+  .portfolio-wallet-tab {
+    padding: var(--space-3) var(--space-4) !important;
+    font-size: 13px !important;
+    gap: var(--space-2) !important;
+  }
+
+  .portfolio-wallet-tab svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .portfolio-wallet-tab-count {
+    font-size: 11px !important;
+    padding: 2px 6px !important;
+  }
+
+  /* Bigger stats grid on mobile */
+  .portfolio-wallet-stats {
+    gap: var(--space-3);
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .portfolio-wallet-stat {
+    padding: var(--space-3);
+  }
+
+  .portfolio-wallet-stat-label {
+    font-size: 11px;
+  }
+
+  .portfolio-wallet-stat-value {
+    font-size: 16px;
   }
 }
 
