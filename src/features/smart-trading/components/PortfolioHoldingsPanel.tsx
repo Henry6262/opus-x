@@ -508,7 +508,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
                 symbol: p.tokenSymbol,
                 mint: p.tokenMint?.slice(0, 8) + "...",
                 entryPriceSol: p.entryPriceSol,
-                currentPriceSol: p.currentPriceSol,
+                currentPrice: p.currentPrice,
                 pnlPct: p.pnlPct,
                 status: p.status,
             })));
