@@ -136,14 +136,18 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
             console.log("[WebSocket] Client ID:", event.clientId);
           }
 
+          // Extract data: use event.data if present, otherwise use the event itself
+          // This handles both formats: { type, data: {...} } and { type, symbol, mint, ... }
+          const eventData = event.data ?? event;
+
           // Notify specific handlers
           const handlers = handlersRef.current.get(event.type);
           if (handlers) {
-            handlers.forEach((handler) => handler(event.data, event));
+            handlers.forEach((handler) => handler(eventData, event));
           }
 
           // Notify 'any' handlers
-          anyHandlersRef.current.forEach((handler) => handler(event.data, event));
+          anyHandlersRef.current.forEach((handler) => handler(eventData, event));
         } catch (err) {
           console.warn("[WebSocket] Failed to parse message:", messageEvent.data);
         }
@@ -239,21 +243,42 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 }
 
 // ============================================
-// SINGLETON HOOK (Shared across components)
+// SINGLETON HOOK (Shared across components, per path)
 // ============================================
 
-let sharedSocket: WebSocket | null = null;
-let sharedStatus: ConnectionStatus = "disconnected";
-let sharedClientId: string | null = null;
-let sharedReconnectAttempt = 0;
-let sharedReconnectTimeout: NodeJS.Timeout | null = null;
-const sharedHandlers = new Map<string, Set<EventHandler>>();
-const sharedAnyHandlers = new Set<EventHandler>();
-const statusListeners = new Set<(status: ConnectionStatus) => void>();
+interface SharedSocketState {
+  socket: WebSocket | null;
+  status: ConnectionStatus;
+  clientId: string | null;
+  reconnectAttempt: number;
+  reconnectTimeout: NodeJS.Timeout | null;
+  handlers: Map<string, Set<EventHandler>>;
+  anyHandlers: Set<EventHandler>;
+  statusListeners: Set<(status: ConnectionStatus) => void>;
+}
+
+// Map of path -> socket state (supports multiple WebSocket connections)
+const sharedSockets = new Map<string, SharedSocketState>();
+
+function getOrCreateSocketState(path: string): SharedSocketState {
+  if (!sharedSockets.has(path)) {
+    sharedSockets.set(path, {
+      socket: null,
+      status: "disconnected",
+      clientId: null,
+      reconnectAttempt: 0,
+      reconnectTimeout: null,
+      handlers: new Map(),
+      anyHandlers: new Set(),
+      statusListeners: new Set(),
+    });
+  }
+  return sharedSockets.get(path)!;
+}
 
 /**
- * Shared WebSocket connection - all components share the same socket
- * Use this when you want one connection for the whole app
+ * Shared WebSocket connection - components with the same path share a socket
+ * Different paths get different socket connections
  */
 export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const {
@@ -266,61 +291,64 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
     reconnectionDelay = 1000,
   } = options;
 
-  const [status, setStatus] = useState<ConnectionStatus>(sharedStatus);
-  const [clientId, setClientId] = useState<string | null>(sharedClientId);
+  // Get or create state for this specific path
+  const socketState = getOrCreateSocketState(path);
+
+  const [status, setStatus] = useState<ConnectionStatus>(socketState.status);
+  const [clientId, setClientId] = useState<string | null>(socketState.clientId);
   const [lastEvent, setLastEvent] = useState<MigrationFeedEvent | null>(null);
 
-  // Sync local state with shared state
+  // Sync local state with shared state for this path
   useEffect(() => {
     const listener = (newStatus: ConnectionStatus) => setStatus(newStatus);
-    statusListeners.add(listener);
+    socketState.statusListeners.add(listener);
     return () => {
-      statusListeners.delete(listener);
+      socketState.statusListeners.delete(listener);
     };
-  }, []);
+  }, [socketState]);
 
   const connect = useCallback(() => {
-    if (sharedSocket?.readyState === WebSocket.OPEN) return;
+    if (socketState.socket?.readyState === WebSocket.OPEN) return;
 
-    sharedStatus = "connecting";
-    sharedReconnectAttempt = 0;
-    statusListeners.forEach((l) => l("connecting"));
+    socketState.status = "connecting";
+    socketState.reconnectAttempt = 0;
+    socketState.statusListeners.forEach((l) => l("connecting"));
 
     const wsUrl = getWebSocketUrl(url, path);
-    console.log("[SharedWebSocket] Connecting to:", wsUrl);
+    console.log(`[SharedWebSocket:${path}] Connecting to:`, wsUrl);
 
     try {
       const socket = new WebSocket(wsUrl);
-      sharedSocket = socket;
+      socketState.socket = socket;
 
       socket.onopen = () => {
-        console.log("[SharedWebSocket] Connected to devprint");
-        sharedStatus = "connected";
-        sharedReconnectAttempt = 0;
-        statusListeners.forEach((l) => l("connected"));
+        console.log(`[SharedWebSocket:${path}] Connected`);
+        socketState.status = "connected";
+        socketState.reconnectAttempt = 0;
+        socketState.statusListeners.forEach((l) => l("connected"));
       };
 
       socket.onclose = (event) => {
-        console.log("[SharedWebSocket] Disconnected:", event.code, event.reason);
-        sharedStatus = "disconnected";
-        sharedClientId = null;
-        statusListeners.forEach((l) => l("disconnected"));
+        console.log(`[SharedWebSocket:${path}] Disconnected:`, event.code, event.reason);
+        socketState.status = "disconnected";
+        socketState.clientId = null;
+        socketState.statusListeners.forEach((l) => l("disconnected"));
 
         // Auto-reconnect logic
-        if (sharedReconnectAttempt < reconnectionAttempts) {
-          sharedReconnectAttempt++;
-          const delay = reconnectionDelay * Math.pow(2, sharedReconnectAttempt - 1);
-          console.log(`[SharedWebSocket] Reconnecting in ${delay}ms (attempt ${sharedReconnectAttempt}/${reconnectionAttempts})`);
+        if (socketState.reconnectAttempt < reconnectionAttempts) {
+          socketState.reconnectAttempt++;
+          const delay = reconnectionDelay * Math.pow(2, socketState.reconnectAttempt - 1);
+          console.log(`[SharedWebSocket:${path}] Reconnecting in ${delay}ms (attempt ${socketState.reconnectAttempt}/${reconnectionAttempts})`);
 
-          sharedReconnectTimeout = setTimeout(() => {
+          socketState.reconnectTimeout = setTimeout(() => {
             connect();
           }, delay);
         }
       };
 
       socket.onerror = () => {
-        sharedStatus = "error";
-        statusListeners.forEach((l) => l("error"));
+        socketState.status = "error";
+        socketState.statusListeners.forEach((l) => l("error"));
       };
 
       socket.onmessage = (messageEvent) => {
@@ -328,85 +356,86 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
           const event: MigrationFeedEvent = JSON.parse(messageEvent.data);
 
           if (event.type === "connected" && event.clientId) {
-            sharedClientId = event.clientId;
+            socketState.clientId = event.clientId;
+            setClientId(event.clientId);
           }
 
-          // Notify handlers
-          sharedHandlers.get(event.type)?.forEach((h) => h(event.data, event));
-          sharedAnyHandlers.forEach((h) => h(event.data, event));
+          // Extract data: use event.data if present, otherwise use the event itself (minus type)
+          // This handles both formats: { type, data: {...} } and { type, symbol, mint, ... }
+          const eventData = event.data ?? event;
+
+          console.log(`[SharedWebSocket:${path}] Received:`, event.type, eventData);
+
+          // Notify handlers for this path
+          socketState.handlers.get(event.type)?.forEach((h) => h(eventData, event));
+          socketState.anyHandlers.forEach((h) => h(eventData, event));
         } catch (err) {
-          console.warn("[SharedWebSocket] Failed to parse message:", messageEvent.data);
+          console.warn(`[SharedWebSocket:${path}] Failed to parse message:`, messageEvent.data);
         }
       };
     } catch (err) {
-      console.error("[SharedWebSocket] Failed to create connection:", err);
-      sharedStatus = "error";
-      statusListeners.forEach((l) => l("error"));
+      console.error(`[SharedWebSocket:${path}] Failed to create connection:`, err);
+      socketState.status = "error";
+      socketState.statusListeners.forEach((l) => l("error"));
     }
-  }, [url, path, reconnectionAttempts, reconnectionDelay]);
+  }, [url, path, reconnectionAttempts, reconnectionDelay, socketState]);
 
   const disconnect = useCallback(() => {
-    if (sharedReconnectTimeout) {
-      clearTimeout(sharedReconnectTimeout);
-      sharedReconnectTimeout = null;
+    if (socketState.reconnectTimeout) {
+      clearTimeout(socketState.reconnectTimeout);
+      socketState.reconnectTimeout = null;
     }
-    sharedReconnectAttempt = reconnectionAttempts; // Prevent auto-reconnect
+    socketState.reconnectAttempt = reconnectionAttempts; // Prevent auto-reconnect
 
-    if (sharedSocket) {
-      sharedSocket.close();
-      sharedSocket = null;
-      sharedStatus = "disconnected";
-      sharedClientId = null;
-      statusListeners.forEach((l) => l("disconnected"));
+    if (socketState.socket) {
+      socketState.socket.close();
+      socketState.socket = null;
+      socketState.status = "disconnected";
+      socketState.clientId = null;
+      socketState.statusListeners.forEach((l) => l("disconnected"));
     }
-  }, [reconnectionAttempts]);
+  }, [reconnectionAttempts, socketState]);
 
   const on = useCallback(<T = unknown>(
     eventType: MigrationFeedEvent["type"],
     handler: EventHandler<T>
   ): (() => void) => {
-    if (!sharedHandlers.has(eventType)) {
-      sharedHandlers.set(eventType, new Set());
+    if (!socketState.handlers.has(eventType)) {
+      socketState.handlers.set(eventType, new Set());
     }
-    sharedHandlers.get(eventType)!.add(handler as EventHandler);
-
-    // Also update local lastEvent when this handler's event fires
-    const wrappedHandler: EventHandler = (data, event) => {
-      setLastEvent(event);
-      (handler as EventHandler)(data, event);
-    };
+    socketState.handlers.get(eventType)!.add(handler as EventHandler);
 
     return () => {
-      sharedHandlers.get(eventType)?.delete(handler as EventHandler);
+      socketState.handlers.get(eventType)?.delete(handler as EventHandler);
     };
-  }, []);
+  }, [socketState]);
 
   const onAny = useCallback((handler: EventHandler): (() => void) => {
     const wrappedHandler: EventHandler = (data, event) => {
       setLastEvent(event);
       handler(data, event);
     };
-    sharedAnyHandlers.add(wrappedHandler);
+    socketState.anyHandlers.add(wrappedHandler);
     return () => {
-      sharedAnyHandlers.delete(wrappedHandler);
+      socketState.anyHandlers.delete(wrappedHandler);
     };
-  }, []);
+  }, [socketState]);
 
   const emit = useCallback((event: string, data?: unknown) => {
-    if (sharedSocket?.readyState === WebSocket.OPEN) {
+    if (socketState.socket?.readyState === WebSocket.OPEN) {
       const message = JSON.stringify({ type: event, data, timestamp: Date.now() });
-      sharedSocket.send(message);
+      socketState.socket.send(message);
     } else {
-      console.warn("[SharedWebSocket] Cannot emit - not connected");
+      console.warn(`[SharedWebSocket:${path}] Cannot emit - not connected`);
     }
-  }, []);
+  }, [socketState, path]);
 
-  // Auto-connect on first mount
+  // Auto-connect on first mount for this path
   useEffect(() => {
-    if (autoConnect && !sharedSocket) {
+    if (autoConnect && !socketState.socket) {
       connect();
     }
-  }, [autoConnect, connect]);
+  }, [autoConnect, connect, socketState]);
 
   return {
     status,
