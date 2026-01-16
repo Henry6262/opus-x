@@ -197,7 +197,7 @@ wss.on("connection", (clientWs: WebSocket, req) => {
                     ? message.data.address
                     : [message.data.address];
 
-                addresses.forEach(addr => connection.subscribedTokens.add(addr));
+                addresses.forEach((addr: string) => connection.subscribedTokens.add(addr));
                 console.log(`📊 ${clientId} subscribed to ${addresses.length} tokens`);
 
                 // Check Redis cache for instant data
@@ -217,7 +217,7 @@ wss.on("connection", (clientWs: WebSocket, req) => {
                     ? message.data.address
                     : [message.data.address];
 
-                addresses.forEach(addr => connection.subscribedTokens.delete(addr));
+                addresses.forEach((addr: string) => connection.subscribedTokens.delete(addr));
                 console.log(`📊 ${clientId} unsubscribed from ${addresses.length} tokens`);
             }
 
