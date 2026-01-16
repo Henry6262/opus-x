@@ -209,7 +209,7 @@ export function Terminal() {
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const [isFirstRender, setIsFirstRender] = useState(true);
   const terminalRef = useRef<HTMLElement>(null);
-  const prevLogsLengthRef = useRef(logs.length);
+  const prevLastLogIdRef = useRef(logs[logs.length - 1]?.id);
   const initialLogCountRef = useRef(logs.length);
 
   // Check if at bottom helper
@@ -246,18 +246,17 @@ export function Terminal() {
     setUserScrolledUp(!atBottom);
   }, [checkIsAtBottom]);
 
-  // Auto-scroll when new logs arrive
+  // Auto-scroll when new logs arrive (track by last log ID, not length)
+  const lastLogId = logs[logs.length - 1]?.id;
   useEffect(() => {
-    if (logs.length > prevLogsLengthRef.current) {
-      // New logs added - wait for animation to complete before scrolling
-      // Initial load uses staggered animation, new items use fast animation (200ms)
+    if (lastLogId && lastLogId !== prevLastLogIdRef.current) {
+      // New log added - wait for animation to complete before scrolling
       const delay = isFirstRender ? 100 : 250;
       const timer = setTimeout(scrollToBottom, delay);
-      prevLogsLengthRef.current = logs.length;
+      prevLastLogIdRef.current = lastLogId;
       return () => clearTimeout(timer);
     }
-    prevLogsLengthRef.current = logs.length;
-  }, [logs.length, scrollToBottom, isFirstRender]);
+  }, [lastLogId, scrollToBottom, isFirstRender]);
 
   // Initial scroll to bottom
   useEffect(() => {
