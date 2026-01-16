@@ -814,7 +814,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
     }, [holdings, livePrices]);
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
+        <div className="h-full max-h-[400px] lg:max-h-none flex flex-col overflow-hidden">
             {/* Header - Outside cards */}
             <div className="flex items-center justify-between px-1 py-3 mb-3 flex-shrink-0">
                 <div className="flex items-center gap-2">

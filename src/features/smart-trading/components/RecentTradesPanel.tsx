@@ -5,18 +5,21 @@ import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
 import {
-    TrendingUp,
-    TrendingDown,
+    Trophy,
+    Skull,
     ChevronDown,
     ChevronUp,
-    ExternalLink,
+    Clock,
+    Target,
+    XCircle,
 } from "lucide-react";
 import { usePositions } from "../context";
 import type { Position } from "../types";
 
 // ============================================
 // Recent Trades Panel
-// Shows the most recent closed positions as "trades"
+// Shows completed trading rounds (positions that were opened then closed)
+// Different from History which shows raw blockchain transactions
 // ============================================
 
 interface RecentTradesProps {
@@ -25,7 +28,7 @@ interface RecentTradesProps {
 
 export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
     const t = useTranslations("dashboard");
-    const { history, isLoading } = usePositions();
+    const { history } = usePositions();
     const [isExpanded, setIsExpanded] = useState(true);
 
     // Use history (closed positions) directly, sorted by most recent first
@@ -33,30 +36,59 @@ export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
         .sort((a, b) => {
             const dateA = new Date(a.closedAt || a.updatedAt).getTime();
             const dateB = new Date(b.closedAt || b.updatedAt).getTime();
-            return dateB - dateA; // Most recent first
+            return dateB - dateA;
         })
         .slice(0, maxTrades);
 
+    // Calculate summary stats
+    const wins = closedTrades.filter(t => (t.realizedPnlSol ?? 0) >= 0).length;
+    const losses = closedTrades.length - wins;
+    const totalPnl = closedTrades.reduce((sum, t) => sum + (t.realizedPnlSol ?? 0), 0);
+
     return (
-        <div className="rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden">
-            {/* Header */}
-            <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between px-4 py-3 border-b border-white/10 hover:bg-white/5 transition-colors"
-            >
-                <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-[#c4f70e]" />
-                    <span className="text-sm font-medium text-white">{t("recentTrades")}</span>
-                    <span className="px-1.5 py-0.5 text-[10px] font-semibold tabular-nums rounded bg-[#c4f70e]/20 text-[#c4f70e]">
+        <div className="h-full max-h-[350px] lg:max-h-none flex flex-col overflow-hidden">
+            {/* Header - Matching other panels */}
+            <div className="flex items-center justify-between px-1 py-3 mb-3 flex-shrink-0">
+                <div
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                    <Trophy className="w-6 h-6 text-[#c4f70e]" />
+                    <span className="text-lg font-semibold text-white">{t("recentTrades")}</span>
+                    <span className="px-2 py-0.5 text-[11px] font-bold tabular-nums rounded-full bg-[#c4f70e]/20 text-[#c4f70e]">
                         {closedTrades.length}
                     </span>
+                    {/* Win/Loss badges */}
+                    {closedTrades.length > 0 && (
+                        <div className="flex items-center gap-1.5 ml-1">
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold tabular-nums rounded bg-green-500/20 text-green-400">
+                                {wins}W
+                            </span>
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold tabular-nums rounded bg-red-500/20 text-red-400">
+                                {losses}L
+                            </span>
+                        </div>
+                    )}
                 </div>
-                {isExpanded ? (
-                    <ChevronUp className="w-4 h-4 text-white/40" />
-                ) : (
-                    <ChevronDown className="w-4 h-4 text-white/40" />
-                )}
-            </button>
+                <div className="flex items-center gap-3">
+                    {/* Total P&L */}
+                    {closedTrades.length > 0 && (
+                        <span className={`text-sm font-bold font-mono tabular-nums ${totalPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                            {totalPnl >= 0 ? "+" : ""}{totalPnl.toFixed(2)} SOL
+                        </span>
+                    )}
+                    <div
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                    >
+                        {isExpanded ? (
+                            <ChevronUp className="w-5 h-5 text-white/40" />
+                        ) : (
+                            <ChevronDown className="w-5 h-5 text-white/40" />
+                        )}
+                    </div>
+                </div>
+            </div>
 
             {/* Trade list */}
             <AnimatePresence>
@@ -66,13 +98,13 @@ export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
+                        className="flex-1 overflow-hidden"
                     >
-                        <div className="max-h-[300px] overflow-y-auto p-3 space-y-2">
+                        <div className="h-full overflow-y-auto space-y-2">
                             <AnimatePresence mode="popLayout">
                                 {closedTrades.length > 0 ? (
-                                    closedTrades.map((trade) => (
-                                        <TradeCard key={trade.id} trade={trade} t={t} />
+                                    closedTrades.map((trade, index) => (
+                                        <CompactTradeRow key={trade.id} trade={trade} index={index} />
                                     ))
                                 ) : (
                                     <motion.div
@@ -80,7 +112,7 @@ export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
                                         animate={{ opacity: 1 }}
                                         className="flex flex-col items-center justify-center py-8 text-white/40"
                                     >
-                                        <TrendingUp className="w-8 h-8 mb-2 opacity-50" />
+                                        <Trophy className="w-8 h-8 mb-2 opacity-30" />
                                         <span className="text-xs">{t("noRecentTrades")}</span>
                                         <span className="text-[10px] text-white/30 mt-1">
                                             {t("tradesAppearHere")}
@@ -97,23 +129,24 @@ export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
 }
 
 // ============================================
-// Trade Card - Individual trade item
+// Compact Trade Row - Horizontal layout
 // ============================================
 
-interface TradeCardProps {
+interface CompactTradeRowProps {
     trade: Position;
-    t: (key: string) => string;
+    index: number;
 }
 
-function TradeCard({ trade, t }: TradeCardProps) {
-    const pnlPercent = trade.entryPriceSol
-        ? ((trade.currentPrice || trade.entryPriceSol) / trade.entryPriceSol - 1) * 100
+function CompactTradeRow({ trade, index }: CompactTradeRowProps) {
+    const pnl = trade.realizedPnlSol ?? 0;
+    const isProfit = pnl >= 0;
+    const pnlPercent = trade.entryAmountSol > 0
+        ? (pnl / trade.entryAmountSol) * 100
         : 0;
 
-    const isProfit = (trade.realizedPnlSol ?? 0) >= 0;
-    const exitReason = trade.status === "STOPPED_OUT" ? "Stop Loss" : "Take Profit";
-
+    const exitReason = trade.status === "STOPPED_OUT" ? "stop" : "tp";
     const timeHeld = getHoldTime(trade.createdAt, trade.closedAt || trade.updatedAt);
+    const timeAgo = getTimeAgo(trade.closedAt || trade.updatedAt);
 
     return (
         <motion.div
@@ -121,52 +154,66 @@ function TradeCard({ trade, t }: TradeCardProps) {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 10 }}
-            className="p-3 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
+            transition={{ delay: index * 0.03 }}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl bg-black/30 hover:bg-white/5 transition-colors ${
+                isProfit ? "hover:bg-green-500/5" : "hover:bg-red-500/5"
+            }`}
         >
-            {/* Top row: Symbol + P&L */}
-            <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                    {isProfit ? (
-                        <TrendingUp className="w-4 h-4 text-green-400" />
-                    ) : (
-                        <TrendingDown className="w-4 h-4 text-red-400" />
-                    )}
-                    {/* Token image */}
-                    <TokenImage tokenMint={trade.tokenMint} tokenSymbol={trade.tokenSymbol} />
-                    <span className="font-mono font-medium text-white text-sm">
+            {/* Result Icon */}
+            <div className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center ${
+                isProfit ? "bg-green-500/20" : "bg-red-500/20"
+            }`}>
+                {isProfit ? (
+                    <Trophy className="w-3.5 h-3.5 text-green-400" />
+                ) : (
+                    <Skull className="w-3.5 h-3.5 text-red-400" />
+                )}
+            </div>
+
+            {/* Token Info */}
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+                <TokenImage tokenMint={trade.tokenMint} tokenSymbol={trade.tokenSymbol} size={24} />
+                <div className="min-w-0">
+                    <span className="font-mono font-semibold text-white text-sm block truncate">
                         {trade.tokenSymbol || shortenAddress(trade.tokenMint)}
                     </span>
-                    <a
-                        href={`https://solscan.io/token/${trade.tokenMint}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1 hover:bg-white/10 rounded transition-colors"
-                    >
-                        <ExternalLink className="w-3 h-3 text-white/40" />
-                    </a>
-                </div>
-                <div className="text-right">
-                    <div className={`flex items-center justify-end gap-1 font-mono font-bold tabular-nums text-sm ${isProfit ? "text-green-400" : "text-red-400"}`}>
-                        {formatPnLValue(trade.realizedPnlSol ?? 0)}
-                        <Image src="/logos/solana.png" alt="SOL" width={14} height={14} />
-                    </div>
-                    <div className={`text-xs font-mono tabular-nums min-w-[5ch] ${isProfit ? "text-green-400/60" : "text-red-400/60"}`}>
-                        {formatPercent(pnlPercent)}
+                    <div className="flex items-center gap-1.5 text-[10px] text-white/40">
+                        <Clock className="w-3 h-3" />
+                        <span>{timeHeld}</span>
+                        <span className="text-white/20">•</span>
+                        {exitReason === "tp" ? (
+                            <span className="flex items-center gap-0.5 text-green-400/70">
+                                <Target className="w-3 h-3" />
+                                TP
+                            </span>
+                        ) : (
+                            <span className="flex items-center gap-0.5 text-red-400/70">
+                                <XCircle className="w-3 h-3" />
+                                SL
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Bottom row: Details */}
-            <div className="flex items-center justify-between text-[10px] text-white/50">
-                <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1 font-mono tabular-nums">
-                        {t("entry")}: {formatSolValue(trade.entryAmountSol)}
-                        <Image src="/logos/solana.png" alt="SOL" width={10} height={10} />
-                    </span>
-                    <span>•</span>
-                    <span className="text-white/35">{exitReason}</span>
+            {/* P&L */}
+            <div className="flex-shrink-0 text-right">
+                <div className={`flex items-center justify-end gap-1 font-mono font-bold tabular-nums text-sm ${
+                    isProfit ? "text-green-400" : "text-red-400"
+                }`}>
+                    {pnl >= 0 ? "+" : ""}{pnl.toFixed(3)}
+                    <Image src="/logos/solana.png" alt="SOL" width={12} height={12} className="opacity-80" />
                 </div>
-                <span className="font-mono tabular-nums">{timeHeld}</span>
+                <div className={`text-[10px] font-mono tabular-nums ${
+                    isProfit ? "text-green-400/60" : "text-red-400/60"
+                }`}>
+                    {pnlPercent >= 0 ? "+" : ""}{pnlPercent.toFixed(0)}%
+                </div>
+            </div>
+
+            {/* Time ago */}
+            <div className="flex-shrink-0 text-[10px] text-white/30 font-mono tabular-nums w-12 text-right">
+                {timeAgo}
             </div>
         </motion.div>
     );
@@ -175,26 +222,6 @@ function TradeCard({ trade, t }: TradeCardProps) {
 // ============================================
 // Helper Functions
 // ============================================
-
-function formatSolValue(amount: number | undefined | null): string {
-    if (amount === undefined || amount === null) return "—";
-    return amount.toFixed(2);
-}
-
-function formatPnLValue(pnl: number): string {
-    const sign = pnl >= 0 ? "+" : "";
-    return `${sign}${pnl.toFixed(2)}`;
-}
-
-function formatPercent(value: number): string {
-    const sign = value >= 0 ? "+" : "";
-    return `${sign}${value.toFixed(2)}%`;
-}
-
-function shortenAddress(address: string): string {
-    if (address.length <= 12) return address;
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-}
 
 function getHoldTime(createdAt: string, closedAt: string): string {
     const start = new Date(createdAt).getTime();
@@ -205,10 +232,28 @@ function getHoldTime(createdAt: string, closedAt: string): string {
     if (diffMins < 60) return `${diffMins}m`;
 
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ${diffMins % 60}m`;
+    if (diffHours < 24) return `${diffHours}h`;
 
     const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d ${diffHours % 24}h`;
+    return `${diffDays}d`;
+}
+
+function getTimeAgo(dateStr: string): string {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return "now";
+    if (diffMins < 60) return `${diffMins}m`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h`;
+    return `${Math.floor(diffHours / 24)}d`;
+}
+
+function shortenAddress(address: string): string {
+    if (address.length <= 10) return address;
+    return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }
 
 // ============================================
@@ -221,13 +266,13 @@ interface TokenImageProps {
     size?: number;
 }
 
-function TokenImage({ tokenMint, tokenSymbol, size = 20 }: TokenImageProps) {
+function TokenImage({ tokenMint, tokenSymbol, size = 24 }: TokenImageProps) {
     const [imgError, setImgError] = useState(false);
 
     if (imgError) {
         return (
             <div
-                className="rounded-full bg-white/10 flex items-center justify-center text-[8px] font-bold text-white/60"
+                className="rounded-lg bg-white/10 flex items-center justify-center text-[8px] font-bold text-white/60 flex-shrink-0"
                 style={{ width: size, height: size }}
             >
                 {(tokenSymbol || tokenMint.slice(0, 2)).slice(0, 2).toUpperCase()}
@@ -237,12 +282,13 @@ function TokenImage({ tokenMint, tokenSymbol, size = 20 }: TokenImageProps) {
 
     return (
         <Image
-            src={`https://img.fotofolio.xyz/?url=https://dd.dexscreener.com/ds-data/tokens/solana/${tokenMint}.png`}
+            src={`https://dd.dexscreener.com/ds-data/tokens/solana/${tokenMint}.png`}
             alt={tokenSymbol || "Token"}
             width={size}
             height={size}
-            className="rounded-full"
+            className="rounded-lg flex-shrink-0"
             onError={() => setImgError(true)}
+            unoptimized
         />
     );
 }

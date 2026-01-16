@@ -636,9 +636,10 @@ main {
   /* Default for standard desktop (1201px-1299px) */
   margin-top: -280px !important;
   padding: 0 12% var(--space-4) 12% !important;
-  padding-bottom: var(--space-12) !important;
+  padding-bottom: 100px !important;
   position: relative;
-  z-index: 40;
+  /* Keep below fixed wallet pill (z-index: 100) */
+  z-index: 10;
 }
 
 /* Mid-large desktop (1300px-1500px) - less overlap */
@@ -4218,8 +4219,8 @@ button:focus-visible {
     justify-content: space-between;
     width: 100%;
     padding: var(--space-3) var(--space-4);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #12121a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--radius-lg);
     color: white;
     font-size: 14px;
@@ -4229,8 +4230,8 @@ button:focus-visible {
   }
 
   .portfolio-wallet-filter-dropdown:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: #18182a;
+    border-color: rgba(255, 255, 255, 0.2);
   }
 
   .portfolio-wallet-filter-dropdown-menu {
@@ -4238,20 +4239,21 @@ button:focus-visible {
     top: calc(100% + 4px);
     left: 0;
     right: 0;
-    background: rgba(15, 15, 20, 0.98);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #0a0a0f;
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: var(--radius-lg);
     overflow: hidden;
     z-index: 10;
-    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   }
 
   .portfolio-wallet-filter-dropdown-item {
     display: block;
     width: 100%;
     padding: var(--space-3) var(--space-4);
-    background: transparent;
+    background: #0a0a0f;
     border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     color: rgba(255, 255, 255, 0.7);
     font-size: 14px;
     font-weight: 500;
@@ -4260,14 +4262,19 @@ button:focus-visible {
     transition: all 0.15s ease;
   }
 
+  .portfolio-wallet-filter-dropdown-item:last-child {
+    border-bottom: none;
+  }
+
   .portfolio-wallet-filter-dropdown-item:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: #151520;
     color: white;
   }
 
   .portfolio-wallet-filter-dropdown-item.active {
-    background: rgba(196, 247, 14, 0.15);
+    background: rgba(196, 247, 14, 0.12);
     color: #c4f70e;
+    font-weight: 600;
   }
 
   .portfolio-wallet-positions-list,
