@@ -54,14 +54,6 @@ interface AiDecision {
 function parseActivityToDecision(item: ActivityItem): AiDecision | null {
     const data = item.data as Record<string, unknown> | undefined;
 
-    // 🔍 DEBUG: Log the raw activity item to see structure
-    console.log("[AiDecisionFeed] 📦 Raw activity item:", {
-        type: item.type,
-        message: item.message,
-        dataKeys: data ? Object.keys(data) : "no data",
-        data: data,
-    });
-
     switch (item.type) {
         case "ai_analysis": {
             const decision = data?.decision as string;

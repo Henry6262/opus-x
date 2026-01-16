@@ -316,12 +316,16 @@ export function SmartTradingProvider({
   const addActivity = useCallback((event: MigrationFeedEvent) => {
     const { message, color } = generateActivityMessage(event);
 
+    // Handle both flat messages { type, symbol, ... } and nested { type, data: {...} }
+    // If event.data is undefined, use the event itself as data (excluding type/timestamp)
+    const eventData = event.data ?? event;
+
     const item: ActivityItem = {
       id: `${event.type}-${event.timestamp}-${Math.random().toString(36).slice(2, 9)}`,
       type: event.type,
       message,
       timestamp: new Date(event.timestamp),
-      data: event.data,
+      data: eventData,
       color,
     };
 
