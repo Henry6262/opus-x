@@ -10,7 +10,6 @@ import {
     ChevronDown,
     ChevronUp,
     ExternalLink,
-    RefreshCw,
 } from "lucide-react";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 
@@ -130,12 +129,19 @@ export function TransactionsPanel({ maxTransactions = 15 }: TransactionsPanelPro
         setError(null);
         try {
             const url = buildDevprntApiUrl(`/api/trading/transactions?limit=${maxTransactions}`);
+            console.log("[TransactionsPanel] 📡 Fetching from:", url.toString());
             const response = await fetch(url.toString());
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const result = await response.json();
+            console.log("[TransactionsPanel] 📦 RAW API Response:", result);
+            console.log("[TransactionsPanel] 📊 Transactions count:", result.data?.length || 0);
+            if (result.data?.length > 0) {
+                console.log("[TransactionsPanel] 🔍 First transaction:", JSON.stringify(result.data[0], null, 2));
+                console.log("[TransactionsPanel] 🔍 Transaction signatures:", result.data.map((tx: EnrichedTransaction) => tx.signature?.slice(0, 20) + "..."));
+            }
             setTransactions(result.data || []);
         } catch (err) {
-            console.error("Failed to fetch transactions:", err);
+            console.error("[TransactionsPanel] ❌ Failed to fetch transactions:", err);
             setError("Failed to load transactions");
         } finally {
             setIsLoading(false);
@@ -150,36 +156,28 @@ export function TransactionsPanel({ maxTransactions = 15 }: TransactionsPanelPro
     }, [maxTransactions]);
 
     return (
-        <div className="overflow-hidden">
-            {/* Header - Outside cards */}
-            <div className="flex items-center justify-between px-1 py-3 mb-3">
+        <div className="h-full flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-1 py-2 flex-shrink-0">
                 <div
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity flex-1"
                 >
                     <TrendingUp className="w-5 h-5 text-[#c4f70e]" />
-                    <span className="text-base font-semibold text-white">Transaction History</span>
+                    <span className="text-base font-semibold text-white">History</span>
                     <span className="px-2 py-0.5 text-[11px] font-bold tabular-nums rounded-full bg-[#c4f70e]/20 text-[#c4f70e]">
                         {transactions.length}
                     </span>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => fetchTransactions()}
-                        className="p-1.5 hover:bg-white/10 rounded transition-colors"
-                    >
-                        <RefreshCw className={`w-4 h-4 text-white/40 ${isLoading ? 'animate-spin' : ''}`} />
-                    </button>
-                    <div
-                        onClick={() => setIsExpanded(!isExpanded)}
-                        className="cursor-pointer hover:opacity-80 transition-opacity"
-                    >
-                        {isExpanded ? (
-                            <ChevronUp className="w-5 h-5 text-white/40" />
-                        ) : (
-                            <ChevronDown className="w-5 h-5 text-white/40" />
-                        )}
-                    </div>
+                <div
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                    {isExpanded ? (
+                        <ChevronUp className="w-5 h-5 text-white/40" />
+                    ) : (
+                        <ChevronDown className="w-5 h-5 text-white/40" />
+                    )}
                 </div>
             </div>
 
@@ -191,9 +189,9 @@ export function TransactionsPanel({ maxTransactions = 15 }: TransactionsPanelPro
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
+                        className="flex-1 overflow-hidden"
                     >
-                        <div className="max-h-[400px] overflow-y-auto space-y-3">
+                        <div className="h-full overflow-y-auto space-y-2">
                             {error && (
                                 <div className="text-center py-4 text-red-400 text-sm">{error}</div>
                             )}
@@ -251,76 +249,108 @@ function TransactionCard({ tx }: TransactionCardProps) {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 10 }}
-            className="p-3 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
+            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
         >
-            {/* Main row: Token info left, Time + SOL right */}
-            <div className="flex items-center justify-between">
-                {/* Left side: X icon (if twitter) + Avatar + Token info */}
-                <div className="flex items-center gap-2">
-                    {/* X icon - top left if has twitter */}
-                    {tx.twitter_url && (
-                        <a
-                            href={tx.twitter_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1 hover:bg-white/10 rounded transition-colors"
-                            title="View on X"
-                        >
-                            <XIcon className="w-4 h-4 text-white/50" />
-                        </a>
-                    )}
-                    <TokenAvatar
-                        imageUrl={tx.image_url}
-                        symbol={tx.ticker}
-                        mint={tx.mint}
-                        size={32}
-                    />
-                    <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+                {/* Avatar */}
+                <TokenAvatar
+                    imageUrl={tx.image_url}
+                    symbol={tx.ticker}
+                    mint={tx.mint}
+                    size={32}
+                />
+
+                {/* Middle: Token info + action */}
+                <div className="flex-1 min-w-0">
+                    {/* Token name row with X icon on right */}
+                    <div className="flex items-center gap-2">
                         <span className="font-mono font-bold text-white text-sm">
                             {tx.ticker}
                         </span>
-                        <span className="text-[10px] text-white/50 font-mono tabular-nums">
-                            {formatTokenAmount(tokenAmount)} tokens
-                        </span>
+                        {tx.twitter_url && (
+                            <a
+                                href={tx.twitter_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-0.5 hover:bg-white/10 rounded transition-colors"
+                                title="View on X"
+                            >
+                                <XIcon className="w-3.5 h-3.5 text-white/40 hover:text-white/70" />
+                            </a>
+                        )}
+                    </div>
+
+                    {/* Action text - subtle, not a badge */}
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                        {isBuy ? (
+                            <span className="text-xs text-white/60 inline-flex items-center gap-1">
+                                <span className="text-[#c4f70e] font-medium">Bought</span>
+                                {" "}{formatTokenAmount(tokenAmount)}
+                                {tx.image_url && (
+                                    <Image
+                                        src={tx.image_url}
+                                        alt={tx.ticker}
+                                        width={12}
+                                        height={12}
+                                        className="rounded-full inline-block"
+                                        unoptimized
+                                    />
+                                )}
+                                {" "}for{" "}
+                                <span className="text-white font-mono tabular-nums">{formatSol(solAmount)}</span>
+                                {" "}SOL
+                            </span>
+                        ) : (
+                            <span className="text-xs text-white/60 inline-flex items-center gap-1">
+                                <span className="text-green-400 font-medium">Sold</span>
+                                {" "}{formatTokenAmount(tokenAmount)}
+                                {tx.image_url && (
+                                    <Image
+                                        src={tx.image_url}
+                                        alt={tx.ticker}
+                                        width={12}
+                                        height={12}
+                                        className="rounded-full inline-block"
+                                        unoptimized
+                                    />
+                                )}
+                                {" "}for{" "}
+                                <span className="text-green-400 font-mono tabular-nums">+{formatSol(solAmount)}</span>
+                                {" "}SOL
+                            </span>
+                        )}
                     </div>
                 </div>
 
-                {/* Right side: Time, Action badge, P&L, tx link */}
-                <div className="flex flex-col items-end gap-0.5">
+                {/* Right side: Time, P&L, tx link */}
+                <div className="flex flex-col items-end gap-1">
                     {/* Time ago */}
-                    <span className="text-[10px] font-mono tabular-nums text-white/40">{formatTimeAgo(tx.timestamp)}</span>
-                    {/* Action badge - Swapped for buys, Sold for sells */}
-                    {isBuy ? (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#c4f70e]/20 text-[#c4f70e] font-mono tabular-nums">
-                            Swapped {formatSol(solAmount)} SOL
-                        </span>
-                    ) : (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-green-500/20 text-green-400 font-mono tabular-nums">
-                            Sold +{formatSol(solAmount)} SOL
+                    <span className="text-[10px] font-mono tabular-nums text-white/40">
+                        {formatTimeAgo(tx.timestamp)}
+                    </span>
+
+                    {/* P&L indicator */}
+                    {pnlPercent !== null && (
+                        <span className={`flex items-center gap-0.5 text-xs font-mono tabular-nums font-medium ${pnlPercent >= 0 ? "text-green-400" : "text-red-400"}`}>
+                            {pnlPercent >= 0 ? (
+                                <TrendingUp className="w-3.5 h-3.5" />
+                            ) : (
+                                <TrendingDown className="w-3.5 h-3.5" />
+                            )}
+                            {pnlPercent >= 0 ? "+" : ""}{pnlPercent.toFixed(0)}%
                         </span>
                     )}
-                    {/* P&L + tx link */}
-                    <div className="flex items-center gap-2">
-                        {pnlPercent !== null && (
-                            <span className={`flex items-center gap-0.5 text-[10px] font-mono tabular-nums min-w-[4ch] ${pnlPercent >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                {pnlPercent >= 0 ? (
-                                    <TrendingUp className="w-3 h-3" />
-                                ) : (
-                                    <TrendingDown className="w-3 h-3" />
-                                )}
-                                {pnlPercent >= 0 ? "+" : ""}{pnlPercent.toFixed(0)}%
-                            </span>
-                        )}
-                        <a
-                            href={`https://solscan.io/tx/${tx.signature}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-[10px] text-white/40 hover:text-[#c4f70e] transition-colors"
-                        >
-                            <span>tx</span>
-                            <ExternalLink className="w-3 h-3" />
-                        </a>
-                    </div>
+
+                    {/* Tx link */}
+                    <a
+                        href={`https://solscan.io/tx/${tx.signature}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-[10px] text-white/40 hover:text-[#c4f70e] transition-colors"
+                    >
+                        <span>tx</span>
+                        <ExternalLink className="w-3 h-3" />
+                    </a>
                 </div>
             </div>
         </motion.div>
@@ -339,10 +369,10 @@ function formatSol(amount: number | undefined): string {
 function formatTokenAmount(num: number | undefined): string {
     if (!num) return "0";
     const abs = Math.abs(num);
-    if (abs >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(2)}B`;
-    if (abs >= 1_000_000) return `${(num / 1_000_000).toFixed(2)}M`;
-    if (abs >= 1_000) return `${(num / 1_000).toFixed(2)}K`;
-    return num.toFixed(2);
+    if (abs >= 1_000_000_000) return `${Math.round(num / 1_000_000_000)}B`;
+    if (abs >= 1_000_000) return `${Math.round(num / 1_000_000)}M`;
+    if (abs >= 1_000) return `${Math.round(num / 1_000)}K`;
+    return Math.round(num).toString();
 }
 
 function formatPrice(price: number): string {

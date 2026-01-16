@@ -175,49 +175,22 @@ export function TransactionDrawer({
             return;
         }
 
-        // Use mock data directly for now (API endpoint not implemented yet)
-        // When the backend endpoint is ready, uncomment the fetch logic below
-        setIsLoading(true);
-
-        // Simulate network delay for demo
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        setTransactions([
-            {
-                signature: "5Kx9nJpTmY2wB4zXcV8mF7aQ3rD1eS6hN0uL",
-                type: "entry",
-                timestamp: Date.now() - 3600000 * 2,
-                solAmount: 0.5,
-                tokenAmount: 125000,
-                priceUsd: 0.00000412,
-                status: "confirmed",
-            },
-            {
-                signature: "7Yz3kLpWmX8vB2cN4aS6mQ9rT1eD5hU0jF",
-                type: "tp1",
-                timestamp: Date.now() - 3600000,
-                solAmount: 0.325,
-                tokenAmount: 62500,
-                priceUsd: 0.00000536,
-                status: "confirmed",
-            },
-        ]);
-        setError(null);
-        setIsLoading(false);
-
-        /* TODO: Enable when backend endpoint is ready
+        // Fetch real transactions from backend
         try {
             setIsLoading(true);
             setError(null);
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
 
             const params = new URLSearchParams();
             if (positionId) params.set("position_id", positionId);
             if (tokenMint) params.set("mint", tokenMint);
+            params.set("limit", "50"); // Fetch last 50 transactions
 
             const url = buildDevprntApiUrl(`/api/trading/transactions?${params.toString()}`);
+            console.log(`[TransactionDrawer] Fetching transactions from ${url.toString()}`);
+
             const response = await fetch(url.toString(), { signal: controller.signal });
             clearTimeout(timeoutId);
 
@@ -230,16 +203,44 @@ export function TransactionDrawer({
                 throw new Error(result.error || "Failed to load transactions");
             }
 
-            const data: Transaction[] = result?.data || [];
-            data.sort((a, b) => b.timestamp - a.timestamp);
-            setTransactions(data);
+            // Map backend transaction format to frontend format
+            const rawTransactions = result?.data || [];
+            const mappedTransactions: Transaction[] = rawTransactions.map((tx: any) => {
+                // Determine transaction type based on tx_type from backend
+                let type: Transaction["type"] = "unknown";
+                if (tx.tx_type === "buy") {
+                    type = "entry";
+                } else if (tx.tx_type === "sell") {
+                    // For sells, check if it's a take profit or stop loss
+                    // This is a simplification - you may want more sophisticated logic
+                    type = "tp1"; // Default to tp1 for now
+                }
+
+                return {
+                    signature: tx.signature,
+                    type,
+                    timestamp: new Date(tx.timestamp).getTime(),
+                    solAmount: tx.sol_amount || tx.sol_received || 0,
+                    tokenAmount: tx.tokens_received || tx.tokens_sold || 0,
+                    priceUsd: tx.price || 0,
+                    status: "confirmed", // All fetched transactions are confirmed
+                };
+            });
+
+            mappedTransactions.sort((a, b) => b.timestamp - a.timestamp);
+            console.log(`[TransactionDrawer] Loaded ${mappedTransactions.length} real transactions for ${tokenSymbol}`);
+            setTransactions(mappedTransactions);
         } catch (err) {
-            console.error("Failed to fetch transactions:", err);
-            setError(err instanceof Error ? err.message : "Failed to load transactions");
+            console.error("[TransactionDrawer] Failed to fetch transactions:", err);
+            if (err instanceof Error && err.name === "AbortError") {
+                setError("Request timed out. Please try again.");
+            } else {
+                setError(err instanceof Error ? err.message : "Failed to load transactions");
+            }
+            setTransactions([]);
         } finally {
             setIsLoading(false);
         }
-        */
     }, [tokenMint, positionId]);
 
     useEffect(() => {

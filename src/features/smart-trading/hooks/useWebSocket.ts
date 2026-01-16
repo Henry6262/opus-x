@@ -255,6 +255,9 @@ interface SharedSocketState {
   handlers: Map<string, Set<EventHandler>>;
   anyHandlers: Set<EventHandler>;
   statusListeners: Set<(status: ConnectionStatus) => void>;
+  clientIdListeners: Set<(clientId: string | null) => void>;
+  isConnecting: boolean;
+  hasInitiatedConnection: boolean;
 }
 
 // Map of path -> socket state (supports multiple WebSocket connections)
@@ -271,6 +274,9 @@ function getOrCreateSocketState(path: string): SharedSocketState {
       handlers: new Map(),
       anyHandlers: new Set(),
       statusListeners: new Set(),
+      clientIdListeners: new Set(),
+      isConnecting: false,
+      hasInitiatedConnection: false,
     });
   }
   return sharedSockets.get(path)!;
@@ -300,16 +306,30 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
 
   // Sync local state with shared state for this path
   useEffect(() => {
-    const listener = (newStatus: ConnectionStatus) => setStatus(newStatus);
-    socketState.statusListeners.add(listener);
+    const statusListener = (newStatus: ConnectionStatus) => setStatus(newStatus);
+    const clientIdListener = (newClientId: string | null) => setClientId(newClientId);
+
+    socketState.statusListeners.add(statusListener);
+    socketState.clientIdListeners.add(clientIdListener);
+
+    // Sync current state on mount
+    setStatus(socketState.status);
+    setClientId(socketState.clientId);
+
     return () => {
-      socketState.statusListeners.delete(listener);
+      socketState.statusListeners.delete(statusListener);
+      socketState.clientIdListeners.delete(clientIdListener);
     };
   }, [socketState]);
 
   const connect = useCallback(() => {
-    if (socketState.socket?.readyState === WebSocket.OPEN) return;
+    // Prevent multiple simultaneous connection attempts
+    if (socketState.socket?.readyState === WebSocket.OPEN || socketState.isConnecting) {
+      console.log(`[SharedWebSocket:${path}] Already connected or connecting, skipping...`);
+      return;
+    }
 
+    socketState.isConnecting = true;
     socketState.status = "connecting";
     socketState.reconnectAttempt = 0;
     socketState.statusListeners.forEach((l) => l("connecting"));
@@ -323,6 +343,7 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
 
       socket.onopen = () => {
         console.log(`[SharedWebSocket:${path}] Connected`);
+        socketState.isConnecting = false;
         socketState.status = "connected";
         socketState.reconnectAttempt = 0;
         socketState.statusListeners.forEach((l) => l("connected"));
@@ -330,9 +351,13 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
 
       socket.onclose = (event) => {
         console.log(`[SharedWebSocket:${path}] Disconnected:`, event.code, event.reason);
+        socketState.isConnecting = false;
+        socketState.socket = null;
         socketState.status = "disconnected";
         socketState.clientId = null;
+        socketState.hasInitiatedConnection = false;
         socketState.statusListeners.forEach((l) => l("disconnected"));
+        socketState.clientIdListeners.forEach((l) => l(null));
 
         // Auto-reconnect logic
         if (socketState.reconnectAttempt < reconnectionAttempts) {
@@ -341,12 +366,15 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
           console.log(`[SharedWebSocket:${path}] Reconnecting in ${delay}ms (attempt ${socketState.reconnectAttempt}/${reconnectionAttempts})`);
 
           socketState.reconnectTimeout = setTimeout(() => {
+            socketState.hasInitiatedConnection = true;
             connect();
           }, delay);
         }
       };
 
-      socket.onerror = () => {
+      socket.onerror = (err) => {
+        console.error(`[SharedWebSocket:${path}] Connection error:`, err);
+        socketState.isConnecting = false;
         socketState.status = "error";
         socketState.statusListeners.forEach((l) => l("error"));
       };
@@ -357,7 +385,8 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
 
           if (event.type === "connected" && event.clientId) {
             socketState.clientId = event.clientId;
-            setClientId(event.clientId);
+            socketState.clientIdListeners.forEach((l) => l(event.clientId!));
+            console.log(`[SharedWebSocket:${path}] Client ID received:`, event.clientId);
           }
 
           // Extract data: use event.data if present, otherwise use the event itself (minus type)
@@ -375,6 +404,7 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
       };
     } catch (err) {
       console.error(`[SharedWebSocket:${path}] Failed to create connection:`, err);
+      socketState.isConnecting = false;
       socketState.status = "error";
       socketState.statusListeners.forEach((l) => l("error"));
     }
@@ -386,6 +416,7 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
       socketState.reconnectTimeout = null;
     }
     socketState.reconnectAttempt = reconnectionAttempts; // Prevent auto-reconnect
+    socketState.isConnecting = false;
 
     if (socketState.socket) {
       socketState.socket.close();
@@ -393,6 +424,7 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
       socketState.status = "disconnected";
       socketState.clientId = null;
       socketState.statusListeners.forEach((l) => l("disconnected"));
+      socketState.clientIdListeners.forEach((l) => l(null));
     }
   }, [reconnectionAttempts, socketState]);
 
@@ -430,11 +462,25 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
     }
   }, [socketState, path]);
 
-  // Auto-connect on first mount for this path
+  // Auto-connect on first mount for this path (client-side only)
   useEffect(() => {
-    if (autoConnect && !socketState.socket) {
-      connect();
+    // Only run on client
+    if (typeof window === "undefined") return;
+    if (!autoConnect) return;
+
+    // Check if already initiated connection (prevents duplicate connections in StrictMode)
+    if (socketState.hasInitiatedConnection) {
+      return;
     }
+
+    // Check if already connected or connecting
+    if (socketState.socket?.readyState === WebSocket.OPEN || socketState.socket?.readyState === WebSocket.CONNECTING || socketState.isConnecting) {
+      return;
+    }
+
+    // Set flag BEFORE calling connect
+    socketState.hasInitiatedConnection = true;
+    connect();
   }, [autoConnect, connect, socketState]);
 
   return {

@@ -180,6 +180,7 @@ main {
   width: 100%;
   position: relative;
   overflow-x: hidden;
+  z-index: 20;
 }
 
 /* ===== VIBR CODER VIDEO CONTAINER ===== */
@@ -189,6 +190,8 @@ main {
   background: var(--void-black);
   overflow: hidden;
   isolation: isolate;
+  /* Ensure fixed wallet inside stays above other elements like TraderProfileCard avatar */
+  z-index: 30;
 }
 
 .vibr-coder-video {
@@ -597,7 +600,7 @@ main {
     bottom: var(--space-6);
     width: 400px;
     max-height: 280px;
-    z-index: 10;
+    z-index: 40;
   }
 
   .hero-terminal .terminal-drawer {

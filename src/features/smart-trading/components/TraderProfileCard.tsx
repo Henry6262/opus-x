@@ -84,10 +84,6 @@ export function TraderProfileCard({
   const streak = calculateStreak(history);
   const performance = stats?.performance;
 
-  // DEBUG: Log stats to trace data issue
-  console.log('[TraderProfileCard] stats:', stats);
-  console.log('[TraderProfileCard] performance:', performance);
-
   // Determine loading state - stats is null when data hasn't loaded yet
   const isLoading = stats === null;
 

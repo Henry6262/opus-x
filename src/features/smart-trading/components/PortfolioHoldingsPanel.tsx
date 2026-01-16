@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { Wallet, RefreshCw } from "lucide-react";
+import { Wallet, Copy, Loader2 } from "lucide-react";
 import { CountUp } from "@/components/animations/CountUp";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 import { useSearchParams } from "next/navigation";
@@ -156,15 +156,24 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
     const progress = clamped > 0 && clamped < 0.02 ? 0.02 : clamped;
     const isCloseToGoal = progress > 0.8;
 
-    // Calculate target market cap (entry mcap × goal multiplier)
-    const targetMarketCap = entryMarketCap ? entryMarketCap * goal : undefined;
+    // Calculate target market cap
+    // If we have entry mcap, use: entryMcap × goal
+    // Otherwise, derive from current: currentMcap × (goal / currentMultiplier)
+    let targetMarketCap: number | undefined;
+    if (entryMarketCap && entryMarketCap > 0) {
+        targetMarketCap = entryMarketCap * goal;
+    } else if (currentMarketCap && currentMarketCap > 0 && currentMultiplier > 0) {
+        // currentMcap = entryMcap × currentMultiplier
+        // targetMcap = entryMcap × goal = currentMcap × (goal / currentMultiplier)
+        targetMarketCap = currentMarketCap * (goal / currentMultiplier);
+    }
 
     // Show market cap badge if we have data
     const showMcapBadge = currentMarketCap !== undefined && currentMarketCap > 0;
 
     return (
-        <div className="mt-2 pt-4 flex items-center gap-3">
-            {/* Progress Track - extra pt for floating MCap badge */}
+        <div className="mt-1 pt-1 flex items-center gap-2">
+            {/* Progress Track */}
             <div className="flex-1 relative">
                 <div className="relative h-3 rounded-full bg-white/10 overflow-hidden">
                     {/* Progress Fill - Always lime green (progress toward TP target) */}
@@ -192,29 +201,28 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
                     />
                 </div>
 
-                {/* Floating MCap Badge at Progress Tip - Speech bubble with arrow */}
+                {/* Floating MCap Value Badge at Progress Tip */}
                 {showMcapBadge && (
                     <motion.div
                         className="absolute -translate-x-1/2 pointer-events-none"
-                        style={{ left: `${progress * 100}%`, top: "-22px" }}
+                        style={{ left: `${progress * 100}%`, top: "-16px" }}
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
                     >
                         <div className="relative">
-                            {/* Compact pill */}
                             <div className="px-1.5 py-0.5 rounded bg-black/95 border border-[#c4f70e]/60 whitespace-nowrap">
                                 <span className="text-[10px] font-mono font-bold tabular-nums text-[#c4f70e]">
                                     {formatMarketCap(currentMarketCap)}
                                 </span>
                             </div>
-                            {/* Arrow pointing down - more visible */}
+                            {/* Arrow pointing down */}
                             <div
-                                className="absolute left-1/2 -translate-x-1/2 -bottom-[5px] w-0 h-0"
+                                className="absolute left-1/2 -translate-x-1/2 -bottom-[4px] w-0 h-0"
                                 style={{
-                                    borderLeft: "4px solid transparent",
-                                    borderRight: "4px solid transparent",
-                                    borderTop: "5px solid #c4f70e",
+                                    borderLeft: "3px solid transparent",
+                                    borderRight: "3px solid transparent",
+                                    borderTop: "4px solid #c4f70e",
                                 }}
                             />
                         </div>
@@ -222,18 +230,15 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
                 )}
             </div>
 
-            {/* Target: Multiplier + MCap */}
-            <div className="flex items-center gap-2 min-w-[80px]">
-                {/* Multiplier Badge */}
-                <span className={`px-2 py-1 rounded-lg text-sm font-bold font-mono tabular-nums ${isCloseToGoal ? "bg-[#c4f70e]/20 text-[#c4f70e]" : "bg-white/10 text-white/80"}`}>
-                    {goal.toFixed(1)}x
+            {/* Target: MCap Goal */}
+            <div className="flex items-center gap-1.5">
+                <span className={`px-2 py-0.5 rounded-lg text-sm font-bold font-mono tabular-nums ${isCloseToGoal ? "bg-[#c4f70e]/20 text-[#c4f70e]" : "bg-white/10 text-white/70"}`}>
+                    {targetMarketCap !== undefined && targetMarketCap > 0
+                        ? formatMarketCap(targetMarketCap)
+                        : `${goal.toFixed(1)}x`
+                    }
                 </span>
-                {/* Target MCap */}
-                {targetMarketCap !== undefined && targetMarketCap > 0 && (
-                    <span className={`text-sm font-bold font-mono tabular-nums ${isCloseToGoal ? "text-[#c4f70e]" : "text-white/60"}`}>
-                        {formatMarketCap(targetMarketCap)}
-                    </span>
-                )}
+                <span className="text-[11px] font-medium text-white/50">mcap</span>
             </div>
         </div>
     );
@@ -331,7 +336,7 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ delay: index * 0.05, type: "spring", stiffness: 200, damping: 20 }}
-            className="relative p-4 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden hover:border-[#c4f70e]/30 transition-all group cursor-pointer"
+            className="relative p-3 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden hover:border-[#c4f70e]/30 transition-all group cursor-pointer"
             onClick={onClick}
             role="button"
             tabIndex={0}
@@ -342,22 +347,22 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                 <div className="absolute inset-0 bg-gradient-to-r from-[#c4f70e]/5 to-transparent" />
             </div>
 
-            {/* Main Layout: Large Image Left | Content Right */}
-            <div className="flex gap-4">
-                {/* LEFT: Large Token Avatar - fills full height */}
-                <div className="flex-shrink-0 self-stretch flex items-center">
+            {/* Main Layout: Image Left | Content Right */}
+            <div className="flex gap-3 items-stretch">
+                {/* LEFT: Token Avatar - fills full height */}
+                <div className="flex-shrink-0 flex items-center">
                     <TokenAvatar
                         imageUrl={holding.image_url}
                         symbol={holding.symbol}
                         mint={holding.mint}
-                        size={100}
+                        size={64}
                     />
                 </div>
 
                 {/* RIGHT: All Content */}
                 <div className="flex-1 min-w-0">
                     {/* Row 1: Token Info + PnL */}
-                    <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-start justify-between mb-1">
                         <div>
                             <div className="flex items-center gap-2">
                                 <span className="font-bold text-white text-base">{holding.symbol}</span>
@@ -366,35 +371,45 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                                         e.stopPropagation();
                                         navigator.clipboard.writeText(holding.mint);
                                     }}
-                                    className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-white/10 text-white/60 hover:bg-white/20 transition-colors"
+                                    className="p-1 rounded hover:bg-white/10 transition-colors"
                                     title="Copy Contract Address"
                                 >
-                                    CA
+                                    <Copy className="w-3.5 h-3.5 text-white/40 hover:text-white/70" />
                                 </button>
                             </div>
                             {/* Token Amount */}
-                            <div className="flex items-center gap-1 text-xs mt-1">
+                            <div className="flex items-center gap-1.5 text-xs mt-1">
                                 <span className="font-mono font-semibold tabular-nums text-white/60">
                                     {holding.amount >= 1_000_000
-                                        ? `${(holding.amount / 1_000_000).toFixed(1)}M`
+                                        ? `${Math.round(holding.amount / 1_000_000)}M`
                                         : holding.amount >= 1_000
-                                            ? `${(holding.amount / 1_000).toFixed(1)}K`
-                                            : holding.amount.toFixed(0)
+                                            ? `${Math.round(holding.amount / 1_000)}K`
+                                            : Math.round(holding.amount)
                                     } tokens
                                 </span>
+                                {holding.image_url && (
+                                    <Image
+                                        src={holding.image_url}
+                                        alt={holding.symbol}
+                                        width={14}
+                                        height={14}
+                                        className="rounded-full"
+                                        unoptimized
+                                    />
+                                )}
                             </div>
                         </div>
 
                         {/* PnL Section (right side) - Percentage + SOL below */}
                         <div className="flex flex-col items-end">
-                            {/* PnL Percentage - Hero (or Value if no entry price) */}
+                            {/* PnL Percentage */}
                             {pnlPct !== null ? (
                                 <motion.div
-                                    className={`text-2xl font-bold font-mono tabular-nums min-w-[5ch] ${pnlPct >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}
+                                    className={`text-xl font-bold font-mono tabular-nums ${pnlPct >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}
                                     style={{
                                         textShadow: pnlPct >= 0
-                                            ? "0 0 10px rgba(196,247,14,0.35)"
-                                            : "0 0 10px rgba(239,68,68,0.35)",
+                                            ? "0 0 8px rgba(196,247,14,0.3)"
+                                            : "0 0 8px rgba(239,68,68,0.3)",
                                     }}
                                 >
                                     <CountUp
@@ -406,12 +421,12 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                                     />
                                 </motion.div>
                             ) : (
-                                <div className="text-2xl font-bold font-mono tabular-nums text-white/60">
+                                <div className="text-base font-bold font-mono tabular-nums text-white/40">
                                     —
                                 </div>
                             )}
-                            {/* SOL Value/Profit - Smaller, below percentage */}
-                            <div className={`flex items-center gap-1 text-sm font-mono tabular-nums ${pnlSol !== null ? (pnlSol >= 0 ? "text-green-400/80" : "text-red-400/80") : "text-white/60"}`}>
+                            {/* SOL Value/Profit */}
+                            <div className={`flex items-center gap-1 text-xs font-mono tabular-nums ${pnlSol !== null ? (pnlSol >= 0 ? "text-green-400/80" : "text-red-400/80") : "text-white/60"}`}>
                                 <span>
                                     {pnlSol !== null
                                         ? `${pnlSol >= 0 ? "+" : ""}${pnlSol.toFixed(2)}`
@@ -444,6 +459,9 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                     )}
                 </div>
             </div>
+
+            {/* Fading separator line */}
+            <div className="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         </motion.div>
     );
 }
@@ -481,6 +499,21 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
     // Get positions from context to access entry prices
     const { positions } = usePositions();
 
+    // Log positions data
+    useEffect(() => {
+        console.log("[PortfolioHoldings] 📍 Positions from context:", positions.length);
+        if (positions.length > 0) {
+            console.log("[PortfolioHoldings] 📍 Position details:", positions.map(p => ({
+                symbol: p.tokenSymbol,
+                mint: p.tokenMint?.slice(0, 8) + "...",
+                entryPriceSol: p.entryPriceSol,
+                currentPriceSol: p.currentPriceSol,
+                pnlPct: p.pnlPct,
+                status: p.status,
+            })));
+        }
+    }, [positions]);
+
     // Create a map of mint -> entry price from positions
     const positionEntryPrices = useMemo(() => {
         const map = new Map<string, number>();
@@ -490,6 +523,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
                 map.set(pos.tokenMint, pos.entryPriceSol);
             }
         }
+        console.log("[PortfolioHoldings] 🔑 Position entry prices map:", Object.fromEntries(map));
         return map;
     }, [positions]);
 
@@ -611,6 +645,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
             params.set("min_value_usd", minValueUsd.toString());
 
             const url = buildDevprntApiUrl(`/api/trading/holdings?${params.toString()}`);
+            console.log("[PortfolioHoldings] 📡 Fetching from:", url.toString());
             const response = await fetch(url.toString());
 
             if (!response.ok) {
@@ -619,12 +654,23 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
             }
 
             const result = await response.json();
+            console.log("[PortfolioHoldings] 📦 RAW API Response:", result);
             if (result?.success === false) {
                 throw new Error(result.error || "Failed to load holdings");
             }
 
             const data: OnChainHolding[] = ((result?.data as OnChainHolding[]) || []).filter((h) => (h.value_usd ?? 0) > 0.01);
             data.sort((a, b) => (b.value_usd || 0) - (a.value_usd || 0));
+
+            console.log("[PortfolioHoldings] 📊 Holdings count:", data.length);
+            console.log("[PortfolioHoldings] 🔍 Holdings details:", data.map(h => ({
+                symbol: h.symbol,
+                mint: h.mint.slice(0, 8) + "...",
+                amount: h.amount,
+                price_usd: h.price_usd,
+                value_usd: h.value_usd,
+                market_cap: h.market_cap,
+            })));
 
             setHoldings(data);
             setError(null);
@@ -636,7 +682,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
                 subscribedRef.current = true;
             }
         } catch (err) {
-            console.error("Failed to fetch holdings:", err);
+            console.error("[PortfolioHoldings] ❌ Failed to fetch holdings:", err);
             setError(err instanceof Error ? err.message : "Failed to load holdings");
         } finally {
             setIsLoading(false);
@@ -668,27 +714,18 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
                         {holdings.length}
                     </span>
                 </div>
-                <div className="flex items-center gap-3">
-                    {totalValueSol > 0 && (
-                        <span className="text-[#c4f70e]">
-                            <SolValue solAmount={totalValueSol} size="sm" />
-                        </span>
-                    )}
-                    <button
-                        onClick={fetchHoldings}
-                        disabled={isLoading}
-                        className="p-1.5 hover:bg-white/10 rounded transition-colors"
-                    >
-                        <RefreshCw className={`w-4 h-4 text-white/40 ${isLoading ? "animate-spin" : ""}`} />
-                    </button>
-                </div>
+                {totalValueSol > 0 && (
+                    <span className="text-[#c4f70e]">
+                        <SolValue solAmount={totalValueSol} size="sm" />
+                    </span>
+                )}
             </div>
 
-            {/* Cards - No wrapper */}
-            <div className="space-y-3 max-h-[700px] overflow-y-auto">
+            {/* Cards - With visual separators */}
+            <div className="max-h-[700px] overflow-y-auto space-y-3">
                 {isLoading && holdings.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12">
-                        <RefreshCw className="w-8 h-8 text-[#c4f70e] animate-spin mb-3" />
+                        <Loader2 className="w-8 h-8 text-[#c4f70e] animate-spin mb-3" />
                         <span className="text-sm text-white/50">Loading portfolio...</span>
                     </div>
                 )}
