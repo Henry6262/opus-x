@@ -748,9 +748,9 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
     }, [holdings, livePrices]);
 
     return (
-        <div className="overflow-hidden">
+        <div className="h-full flex flex-col overflow-hidden">
             {/* Header - Outside cards */}
-            <div className="flex items-center justify-between px-1 py-3 mb-3">
+            <div className="flex items-center justify-between px-1 py-3 mb-3 flex-shrink-0">
                 <div className="flex items-center gap-2">
                     <Wallet className="w-6 h-6 text-[#c4f70e]" />
                     <span className="text-lg font-semibold text-white">Portfolio</span>
@@ -768,7 +768,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
             </div>
 
             {/* Cards - With visual separators */}
-            <div className="max-h-[700px] overflow-y-auto space-y-3">
+            <div className="flex-1 overflow-y-auto space-y-3">
                 {isLoading && holdings.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12">
                         <Loader2 className="w-8 h-8 text-[#c4f70e] animate-spin mb-3" />
