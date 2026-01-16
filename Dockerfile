@@ -9,8 +9,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.json ./
 
-# Install dependencies (including tsx for runtime TS compilation)
-RUN npm ci --only=production
+# Install all dependencies (tsx is in devDependencies but needed for runtime)
+RUN npm ci
 
 # Copy WebSocket proxy server
 COPY src/server ./src/server
