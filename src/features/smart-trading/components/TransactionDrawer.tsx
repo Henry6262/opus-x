@@ -95,7 +95,7 @@ function TransactionRow({ tx, index }: TransactionRowProps) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ delay: index * 0.05, duration: 0.3 }}
-            className={`group relative p-3.5 rounded-xl border transition-all duration-200 ${config.bgColor} ${config.borderColor} hover:bg-white/[0.08]`}
+            className={`group relative p-3.5 rounded-xl border transition-all duration-200 bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.1]`}
         >
             {/* Type Badge + Time */}
             <div className="flex items-center justify-between mb-3">
@@ -306,29 +306,29 @@ export function TransactionDrawer({
                                     <Image
                                         src={tokenImage}
                                         alt={tokenSymbol}
-                                        width={36}
-                                        height={36}
+                                        width={48}
+                                        height={48}
                                         className="rounded-xl ring-1 ring-white/10"
                                         unoptimized
                                     />
-                                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#c4f70e] border-2 border-[#0a0a0f]" />
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#c4f70e] border-2 border-[#0a0a0f]" />
                                 </div>
                             ) : (
-                                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#c4f70e]/20 to-[#22d3ee]/20 border border-[#c4f70e]/20 flex items-center justify-center text-xs font-bold text-[#c4f70e]">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#c4f70e]/20 to-[#22d3ee]/20 border border-[#c4f70e]/20 flex items-center justify-center text-sm font-bold text-[#c4f70e]">
                                     {tokenSymbol.slice(0, 2)}
                                 </div>
                             )}
                             <div>
-                                <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                                <h3 className="text-base font-bold text-white flex items-center gap-2">
                                     ${tokenSymbol}
-                                    <span className="text-[10px] font-normal text-white/30 uppercase tracking-wider">History</span>
+                                    <span className="text-[11px] font-normal text-white/30 uppercase tracking-wider">History</span>
                                 </h3>
-                                <p className="text-[11px] text-white/40">{transactions.length} transaction{transactions.length !== 1 ? "s" : ""}</p>
+                                <p className="text-xs text-white/40">{transactions.length} transaction{transactions.length !== 1 ? "s" : ""}</p>
                             </div>
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 transition-all"
+                            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 transition-all cursor-pointer"
                             aria-label="Close drawer"
                         >
                             <X className="w-4 h-4 text-white/50" />

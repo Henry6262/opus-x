@@ -333,6 +333,14 @@ main {
     height: auto;
   }
 
+  /* When terminal is expanded on mobile, boost z-index to overlay everything */
+  .hero-terminal:has(.terminal-drawer:not(.collapsed)) {
+    z-index: 99999;
+    inset: 0;
+    bottom: 0;
+    right: 0;
+  }
+
   /* Mobile terminal drawer - collapsed = FAB, expanded = bottom sheet */
   .hero-terminal .terminal-drawer {
     width: auto;
@@ -480,6 +488,7 @@ main {
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.6);
     animation: mobile-terminal-slide-up 400ms cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 9999;
   }
 
   @keyframes mobile-terminal-slide-up {
@@ -573,6 +582,7 @@ main {
   .dashboard-panel {
     padding-top: var(--space-4) !important;
     margin-top: 48px !important;
+    z-index: 1 !important;
   }
 }
 
@@ -2280,9 +2290,11 @@ button:focus-visible {
 
 /* Terminal scroll to bottom button */
 .terminal-scroll-bottom-btn {
-  position: absolute;
+  position: sticky;
   bottom: var(--space-3);
-  right: var(--space-3);
+  margin-left: auto;
+  margin-right: var(--space-3);
+  margin-top: -40px;
   width: 32px;
   height: 32px;
   display: flex;
