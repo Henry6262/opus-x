@@ -1,0 +1,24 @@
+# Ignore Next.js build artifacts to prevent cache mount creation
+.next/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Ignore Next.js config to prevent framework detection
+next.config.ts
+next.config.js
+next.config.mjs
+
+# Ignore frontend source files (we only need the proxy server)
+src/app/
+src/components/
+src/features/
+src/hooks/
+src/lib/utils.ts
+src/styles/
+public/
+
+# Keep only what's needed for the WebSocket proxy:
+# - src/server/birdeye-proxy.ts
+# - src/types/
+# - package.json
+# - node_modules/ (installed by npm ci)
