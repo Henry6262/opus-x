@@ -12,9 +12,8 @@ COPY tsconfig.json ./
 # Install dependencies (including tsx for runtime TS compilation)
 RUN npm ci --only=production
 
-# Copy source files
+# Copy WebSocket proxy server
 COPY src/server ./src/server
-COPY src/types ./src/types
 
 # Expose the proxy port
 EXPOSE 8081
