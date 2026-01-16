@@ -32,7 +32,7 @@ interface OnChainHolding {
     peak_price: number;
     peak_pnl_pct: number;
     realized_pnl_sol: number;
-    status: "open" | "closed" | "pending";
+    status: "open" | "partially_closed" | "closed" | "pending";
     market_cap: number | null;
     liquidity: number | null;
     volume_24h: number | null;
