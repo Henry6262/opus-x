@@ -43,7 +43,8 @@ export type TerminalEventType =
   | "ai:trade_evaluation"
   | "ai:risk_assessment"
   | "ai:confidence_score"
-  | "ai:final_verdict";
+  | "ai:final_verdict"
+  | "ai:no_market_data";
 
 // ============================================
 // Event Payload Types
@@ -232,6 +233,13 @@ const eventMappings: Record<TerminalEventType, EventMapping> = {
       tokenSymbol: data?.tokenSymbol as string | undefined,
       score: data?.confidence as number | undefined,
       reason: data?.verdict as string | undefined,
+    }),
+  },
+  "ai:no_market_data": {
+    category: "ai_no_data",
+    contextMapper: (data) => ({
+      tokenSymbol: data?.tokenSymbol as string | undefined,
+      reason: data?.reason as string | undefined,
     }),
   },
 

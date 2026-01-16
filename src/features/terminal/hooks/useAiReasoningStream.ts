@@ -29,12 +29,22 @@ interface UseAiReasoningStreamProps {
     throttleMs?: number;
 }
 
-interface AiAnalysisEvent {
-    tokenMint: string;
-    tokenSymbol?: string;
-    decision: string;
-    confidence: number;
+/** AI reasoning event from /ws/trading/reasoning */
+interface AiReasoningEvent {
+    symbol: string;
+    mint: string;
     reasoning: string;
+    conviction: number;
+    will_trade: boolean;
+    timestamp: number;
+}
+
+/** No market data event from /ws/trading/reasoning */
+interface NoMarketDataEvent {
+    symbol: string;
+    mint: string;
+    reason: string;
+    timestamp: number;
 }
 
 interface PriceUpdateEvent {
@@ -110,8 +120,8 @@ export function useAiReasoningStream({
 
     // Parse and emit AI reasoning as multiple thinking steps
     const emitAiReasoning = useCallback(
-        (data: AiAnalysisEvent) => {
-            const symbol = data.tokenSymbol || data.tokenMint.slice(0, 8);
+        (data: AiReasoningEvent) => {
+            const symbol = data.symbol || data.mint.slice(0, 8);
 
             // Reset thinking count for this token
             thinkingCountRef.current.set(symbol, 0);
@@ -137,7 +147,7 @@ export function useAiReasoningStream({
 
             // Emit reasoning steps with delays
             let delay = 300;
-            reasoningParts.slice(0, maxThinkingSteps).forEach((part, index) => {
+            reasoningParts.slice(0, maxThinkingSteps).forEach((part) => {
                 setTimeout(() => {
                     logThinkingStep(symbol, part);
                     setThinkingStep(part);
@@ -145,15 +155,15 @@ export function useAiReasoningStream({
                 delay += 400 + Math.random() * 200;
             });
 
-            // Emit confidence score
+            // Emit conviction score
             setTimeout(() => {
                 throttledLog(
                     {
                         type: "ai:confidence_score",
                         data: {
                             tokenSymbol: symbol,
-                            confidence: Math.round(data.confidence * 100),
-                            factors: data.decision,
+                            confidence: Math.round(data.conviction * 100),
+                            factors: data.will_trade ? "WILL TRADE" : "PASS",
                         },
                         priority: "normal",
                     },
@@ -168,8 +178,8 @@ export function useAiReasoningStream({
                         type: "ai:final_verdict",
                         data: {
                             tokenSymbol: symbol,
-                            confidence: Math.round(data.confidence * 100),
-                            verdict: data.decision,
+                            confidence: Math.round(data.conviction * 100),
+                            verdict: data.will_trade ? "BUY" : "SKIP",
                         },
                         priority: "high",
                     },
@@ -181,13 +191,37 @@ export function useAiReasoningStream({
         [throttledLog, logThinkingStep, startThinking, stopThinking, setThinkingStep, maxThinkingSteps]
     );
 
+    // Handle no market data events
+    const emitNoMarketData = useCallback(
+        (data: NoMarketDataEvent) => {
+            const symbol = data.symbol || data.mint.slice(0, 8);
+
+            throttledLog(
+                {
+                    type: "ai:no_market_data",
+                    data: {
+                        tokenSymbol: symbol,
+                        reason: data.reason,
+                    },
+                    priority: "low",
+                },
+                false
+            );
+        },
+        [throttledLog]
+    );
+
     // Subscribe to WebSocket events via custom event system
     useEffect(() => {
         if (!enabled) return;
 
         // Custom event handlers for AI-related WebSocket events
-        const handleAiAnalysis = (event: CustomEvent<AiAnalysisEvent>) => {
+        const handleAiReasoning = (event: CustomEvent<AiReasoningEvent>) => {
             emitAiReasoning(event.detail);
+        };
+
+        const handleNoMarketData = (event: CustomEvent<NoMarketDataEvent>) => {
+            emitNoMarketData(event.detail);
         };
 
         const handlePriceUpdate = (event: CustomEvent<PriceUpdateEvent>) => {
@@ -274,20 +308,22 @@ export function useAiReasoningStream({
         };
 
         // Listen for custom events dispatched from SmartTradingContext
-        window.addEventListener("terminal:ai_analysis", handleAiAnalysis as EventListener);
+        window.addEventListener("terminal:ai_reasoning", handleAiReasoning as EventListener);
+        window.addEventListener("terminal:no_market_data", handleNoMarketData as EventListener);
         window.addEventListener("terminal:price_update", handlePriceUpdate as EventListener);
         window.addEventListener("terminal:position_opened", handlePositionOpened as EventListener);
         window.addEventListener("terminal:take_profit", handleTakeProfit as EventListener);
         window.addEventListener("terminal:position_closed", handlePositionClosed as EventListener);
 
         return () => {
-            window.removeEventListener("terminal:ai_analysis", handleAiAnalysis as EventListener);
+            window.removeEventListener("terminal:ai_reasoning", handleAiReasoning as EventListener);
+            window.removeEventListener("terminal:no_market_data", handleNoMarketData as EventListener);
             window.removeEventListener("terminal:price_update", handlePriceUpdate as EventListener);
             window.removeEventListener("terminal:position_opened", handlePositionOpened as EventListener);
             window.removeEventListener("terminal:take_profit", handleTakeProfit as EventListener);
             window.removeEventListener("terminal:position_closed", handlePositionClosed as EventListener);
         };
-    }, [enabled, emitAiReasoning, throttledLog]);
+    }, [enabled, emitAiReasoning, emitNoMarketData, throttledLog]);
 }
 
 /**

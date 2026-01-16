@@ -313,6 +313,8 @@ export interface MigrationFeedEvent {
   | "token_added"
   | "market_data_updated"
   | "ai_analysis"
+  | "ai_reasoning"
+  | "no_market_data"
   | "wallet_signal"
   | "migration_expired"
   | "feed_update"

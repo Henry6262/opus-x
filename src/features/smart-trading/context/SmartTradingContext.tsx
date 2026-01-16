@@ -268,7 +268,7 @@ export function SmartTradingProvider({
     connect,
   } = useSharedWebSocket({
     autoConnect: enabled,
-    path: "/ws/trading",
+    path: "/ws/trading/reasoning",
   });
 
   console.log("[SmartTrading] WebSocket initialized:", {
@@ -485,30 +485,32 @@ export function SmartTradingProvider({
       )
     );
 
-    // AI analysis completed - surgical update AND dispatch to terminal
+    // AI reasoning completed - surgical update AND dispatch to terminal
+    // Format: { type: "ai_reasoning", symbol, mint, reasoning, conviction, will_trade, timestamp }
     unsubscribes.push(
-      on<{ tokenMint: string; tokenSymbol?: string; decision: string; confidence: number; reasoning: string }>(
-        "ai_analysis",
+      on<{ symbol: string; mint: string; reasoning: string; conviction: number; will_trade: boolean; timestamp: number }>(
+        "ai_reasoning",
         (data, event) => {
           addActivity(event);
 
           // 🚀 Dispatch to terminal for live streaming AI reasoning
-          dispatchTerminalEvent("ai_analysis", {
-            tokenMint: data.tokenMint,
-            tokenSymbol: data.tokenSymbol || state.rankedMigrations.find(m => m.tokenMint === data.tokenMint)?.tokenSymbol,
-            decision: data.decision,
-            confidence: data.confidence,
+          dispatchTerminalEvent("ai_reasoning", {
+            symbol: data.symbol,
+            mint: data.mint,
             reasoning: data.reasoning,
+            conviction: data.conviction,
+            will_trade: data.will_trade,
+            timestamp: data.timestamp,
           });
 
           setState((prev) => ({
             ...prev,
             rankedMigrations: prev.rankedMigrations.map((rm) => {
-              if (rm.tokenMint === data.tokenMint) {
+              if (rm.tokenMint === data.mint) {
                 return {
                   ...rm,
-                  lastAiDecision: data.decision as Migration["lastAiDecision"],
-                  lastAiConfidence: data.confidence,
+                  lastAiDecision: data.will_trade ? "BUY" : "SKIP" as Migration["lastAiDecision"],
+                  lastAiConfidence: data.conviction,
                   lastAiReasoning: data.reasoning,
                   lastAnalyzedAt: new Date().toISOString(),
                 };
@@ -516,6 +518,25 @@ export function SmartTradingProvider({
               return rm;
             }),
           }));
+        }
+      )
+    );
+
+    // No market data available - dispatch to terminal
+    // Format: { type: "no_market_data", symbol, mint, reason, timestamp }
+    unsubscribes.push(
+      on<{ symbol: string; mint: string; reason: string; timestamp: number }>(
+        "no_market_data",
+        (data, event) => {
+          addActivity(event);
+
+          // 🚀 Dispatch to terminal
+          dispatchTerminalEvent("no_market_data", {
+            symbol: data.symbol,
+            mint: data.mint,
+            reason: data.reason,
+            timestamp: data.timestamp,
+          });
         }
       )
     );

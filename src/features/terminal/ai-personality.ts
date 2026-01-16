@@ -29,7 +29,8 @@ export type MessageCategory =
   | "ai_trade_eval"
   | "ai_risk"
   | "ai_confidence"
-  | "ai_verdict";
+  | "ai_verdict"
+  | "ai_no_data";
 
 export interface MessageContext {
   tokenSymbol?: string;
@@ -212,6 +213,13 @@ const templates: Record<MessageCategory, string[]> = {
     "✅ Decision: {reason} | Confidence: {score}%",
     "🚀 {reason} - {score}% conviction",
   ],
+
+  ai_no_data: [
+    "⚠️ {tokenSymbol}: {reason}",
+    "📵 No data for {tokenSymbol} - {reason}",
+    "🔇 {tokenSymbol} skipped: {reason}",
+    "❌ Cannot evaluate {tokenSymbol}: {reason}",
+  ],
 };
 
 // Track recently used templates to avoid repetition
@@ -337,6 +345,8 @@ export function getCategoryColor(category: MessageCategory): string {
       return "var(--solana-purple)";
     case "ai_verdict":
       return "var(--matrix-green)";
+    case "ai_no_data":
+      return "var(--text-tertiary)";
     default:
       return "var(--text-primary)";
   }
