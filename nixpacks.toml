@@ -12,7 +12,3 @@ cmds = ["true"]
 
 [start]
 cmd = "node --require tsx/cjs --import tsx/esm src/server/birdeye-proxy.ts"
-
-# Explicitly disable Next.js provider
-[providers]
-next = false
