@@ -1,7 +1,5 @@
 "use client";
 
-console.error("🔥🔥🔥 SMART TRADING CONTEXT MODULE LOADED 🔥🔥🔥");
-
 import {
   createContext,
   useContext,
@@ -259,7 +257,7 @@ export function SmartTradingProvider({
   migrationLimit = 20,
   maxActivityItems = 50,
 }: SmartTradingProviderProps) {
-  console.error("🚨🚨🚨 SMART TRADING PROVIDER RENDER START 🚨🚨🚨", { enabled });
+  // Provider rendering
   console.log("[SmartTradingProvider] 🎬 Component rendering - enabled:", enabled);
 
   // WebSocket connection (shared singleton)
@@ -273,7 +271,7 @@ export function SmartTradingProvider({
     path: "/ws/trading",
   });
 
-  console.error("✅✅✅ useSharedWebSocket COMPLETED ✅✅✅", {
+  console.log("[SmartTrading] WebSocket initialized:", {
     connectionStatus,
     clientId,
     hasOn: typeof on === 'function',
@@ -298,7 +296,7 @@ export function SmartTradingProvider({
     error: null,
     lastUpdated: null,
   });
-  console.error("🔵 useState COMPLETED");
+  // State initialized
 
   // Update connection status in state
   useEffect(() => {
@@ -308,11 +306,11 @@ export function SmartTradingProvider({
       clientId,
     }));
   }, [connectionStatus, clientId]);
-  console.error("🔵 connection status useEffect REGISTERED");
+  // Connection status effect registered
 
   // Prevent double-fetch in StrictMode
   const hasFetchedRef = useRef(false);
-  console.error("🔵 hasFetchedRef DECLARED");
+  // Fetch ref initialized
 
   // Add activity item
   const addActivity = useCallback((event: MigrationFeedEvent) => {
@@ -332,42 +330,29 @@ export function SmartTradingProvider({
       activityFeed: [item, ...prev.activityFeed].slice(0, maxActivityItems),
     }));
   }, [maxActivityItems]);
-  console.error("🔵 addActivity DEFINED");
+  // Activity handlers defined
 
   // Clear activity feed
   const clearActivityFeed = useCallback(() => {
     setState((prev) => ({ ...prev, activityFeed: [] }));
   }, []);
-  console.error("🔵 clearActivityFeed DEFINED");
+  // Activity handlers defined
 
   // ============================================
   // SINGLE CONSOLIDATED API CALL - Replaces 7 parallel requests
   // ============================================
   const fetchDashboard = useCallback(async () => {
-    console.error("💎💎💎 fetchDashboard CALLED 💎💎💎", { enabled });
+    console.log("[SmartTrading] Fetching dashboard...");
     if (!enabled) {
-      console.error("❌ fetchDashboard EXITING - not enabled");
+      console.log("[SmartTrading] Dashboard fetch skipped - not enabled");
       return;
     }
-
-    console.error("[SmartTrading] 🔄 Fetching dashboard data via consolidated endpoint...");
 
     try {
       // ONE API call instead of 7!
       const response = await smartTradingService.getDashboardInit();
 
-      console.error("[SmartTrading] ✅ Dashboard init received:", {
-        config: { tradingEnabled: response.config?.tradingEnabled },
-        walletsCount: response.wallets?.length,
-        signalsCount: response.signals?.length,
-        openPositionsCount: response.positions?.open?.length,
-        closedPositionsCount: response.positions?.closed?.length,
-        migrationsCount: response.migrations?.length,
-      });
-
-      // DEBUG: Log stats object before setting state
-      console.error('[SmartTrading] 📊 Stats object from getDashboardInit:', response.stats);
-      console.error('[SmartTrading] 📊 Stats performance:', response.stats?.performance);
+      console.log("[SmartTrading] Dashboard data received");
 
       setState((prev) => ({
         ...prev,
@@ -404,7 +389,7 @@ export function SmartTradingProvider({
         lastUpdated: new Date(),
       }));
     } catch (err) {
-      console.error("[SmartTrading] ❌ Failed to fetch dashboard data:", err);
+      console.error("[SmartTrading] Failed to fetch dashboard data:", err);
       setState((prev) => ({
         ...prev,
         isLoading: false,
@@ -412,7 +397,7 @@ export function SmartTradingProvider({
       }));
     }
   }, [enabled]);
-  console.error("🔵 fetchDashboard DEFINED");
+  // Dashboard fetch function defined
 
   // Fetch migration feed data from devprint API (fallback for persistent data)
   const fetchMigrations = useCallback(async () => {
@@ -429,16 +414,16 @@ export function SmartTradingProvider({
         migrationStats: response.stats,
       }));
     } catch (err) {
-      console.error("[SmartTrading] ❌ Failed to fetch migrations:", err);
+      console.error("[SmartTrading] Failed to fetch migrations:", err);
       // Don't set error for migrations - it's secondary data
     }
   }, [enabled, migrationLimit]);
-  console.error("🔵 fetchMigrations DEFINED");
+  // Migrations fetch function defined
 
   // ============================================
   // WebSocket Event Handlers - Surgical Updates
   // ============================================
-  console.error("🔵 ABOUT TO REGISTER WEBSOCKET EVENT HANDLERS");
+  // Registering WebSocket event handlers
   useEffect(() => {
     if (!enabled) return;
 
@@ -796,24 +781,19 @@ export function SmartTradingProvider({
       unsubscribes.forEach((unsub) => unsub());
     };
   }, [enabled, on, addActivity, fetchDashboard, fetchMigrations]);
-  console.error("🔵 WEBSOCKET EVENT HANDLERS REGISTERED");
+  // WebSocket event handlers registered
 
-  console.error("📍📍📍 ABOUT TO REGISTER INITIAL FETCH useEffect 📍📍📍", {
-    hasFetchDashboard: typeof fetchDashboard === 'function',
-    enabled,
-    hasFetchedRefValue: hasFetchedRef.current
-  });
+  // Initial fetch effect
 
   // Initial fetch (with StrictMode protection)
   useEffect(() => {
-    console.error("⚡⚡⚡ INITIAL FETCH useEffect TRIGGERED ⚡⚡⚡", { hasFetched: hasFetchedRef.current, enabled });
+    // Trigger initial data fetch
     if (hasFetchedRef.current || !enabled) {
-      console.error("❌ SKIPPING FETCH:", { reason: hasFetchedRef.current ? "already fetched" : "disabled" });
+      // Skip fetch - already fetched or not enabled
       return;
     }
     hasFetchedRef.current = true;
 
-    console.error("🚀🚀🚀 CALLING fetchDashboard() 🚀🚀🚀");
     fetchDashboard();
   }, [enabled, fetchDashboard]);
 
