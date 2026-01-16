@@ -31,7 +31,7 @@ function formatTime(date: Date) {
 export function TerminalProvider({
   children,
   initialLogs = [],
-  maxLogs = 80,
+  maxLogs = 20,
 }: {
   children: React.ReactNode;
   initialLogs?: TerminalLogEntry[];
