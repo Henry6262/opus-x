@@ -509,7 +509,7 @@ export function SmartTradingProvider({
               if (rm.tokenMint === data.mint) {
                 return {
                   ...rm,
-                  lastAiDecision: data.will_trade ? "BUY" : "SKIP" as Migration["lastAiDecision"],
+                  lastAiDecision: data.will_trade ? "ENTER" : "PASS" as Migration["lastAiDecision"],
                   lastAiConfidence: data.conviction,
                   lastAiReasoning: data.reasoning,
                   lastAnalyzedAt: new Date().toISOString(),
