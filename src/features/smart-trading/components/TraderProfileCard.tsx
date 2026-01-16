@@ -92,6 +92,8 @@ export function TraderProfileCard({
   const winningTrades = performance?.winningTrades ?? 0;
   const largestWinPercent = performance?.largestWin ?? 0;
   const netPnl = performance?.netPnlSol ?? 0;
+  const profitFactor = performance?.profitFactor ?? 0;
+  const dailyPnL = stats?.trading?.dailyPnL ?? 0;
 
   const isOnStreak = streak.current >= 2 && streak.type === "win";
   const walletAddress = config?.wallet_address || "N/A";
@@ -100,17 +102,46 @@ export function TraderProfileCard({
       ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
       : walletAddress;
 
+  const isHotStreak = streak.current >= 3 && streak.type === "win";
+
   const StatStreak = () => (
-    <div className="flex flex-col gap-1 text-center md:text-left">
-      <div className="text-[9px] md:text-[11px] text-white/40 uppercase tracking-wider">{tProfile("streak")}</div>
-      <div className="flex items-baseline gap-0.5 justify-center md:justify-start">
-        <span className={`text-lg md:text-2xl font-bold font-mono tabular-nums ${isOnStreak ? "text-orange-400" : "text-white"}`}>
-          {streak.current}
-        </span>
-        <span className="text-xs md:text-sm text-white/30 tabular-nums">/{streak.best}</span>
-      </div>
+    <div className="flex items-baseline gap-2 min-w-[90px]">
+      <span className="text-[10px] md:text-xs text-white/40 uppercase tracking-wider">Streak:</span>
+      {isLoading ? (
+        <Skeleton className="h-5 w-12" />
+      ) : (
+        <div className="flex items-center gap-1">
+          {isHotStreak && (
+            <span className="animate-[streak-fire-flicker_0.5s_ease-in-out_infinite_alternate]">🔥</span>
+          )}
+          <span className={`text-sm md:text-lg font-bold font-mono tabular-nums ${
+            streak.type === "win" ? "text-green-400" : "text-red-400"
+          }`}>
+            {streak.current}
+          </span>
+          <span className="text-xs text-white/30">/{streak.best}</span>
+        </div>
+      )}
     </div>
   );
+
+  const StatProfitFactor = () => {
+    const color = profitFactor >= 1.5 ? "text-green-400"
+                : profitFactor >= 1.0 ? "text-yellow-400"
+                : "text-red-400";
+    return (
+      <div className="flex items-baseline gap-2 min-w-[90px]">
+        <span className="text-[10px] md:text-xs text-white/40 uppercase tracking-wider">P/F:</span>
+        {isLoading ? (
+          <Skeleton className="h-5 w-10" />
+        ) : (
+          <span className={`text-sm md:text-lg font-bold font-mono tabular-nums ${color}`}>
+            {profitFactor.toFixed(1)}x
+          </span>
+        )}
+      </div>
+    );
+  };
 
   const StatTrades = () => (
     <div className="flex items-baseline gap-2 min-w-[140px]">
@@ -143,9 +174,9 @@ export function TraderProfileCard({
     <div className="relative pt-20 md:pt-12 pb-16 overflow-hidden md:overflow-visible">
 
       {/* Main pill container */}
-      <div className="relative rounded-full bg-black/50 backdrop-blur-xl border-2 border-[#c4f70e]/30 h-16 md:h-28 ml-16 md:ml-20 mr-2 md:mr-4 max-w-[1100px] mx-auto overflow-visible flex items-center shadow-[0_0_20px_rgba(196,247,14,0.1)] mt-4 md:mt-6">
-        {/* Subtle glow effects */}
-        <div className="absolute -top-20 right-1/4 w-48 h-48 bg-[#c4f70e]/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative rounded-full bg-black/50 backdrop-blur-xl border-[3px] border-[#c4f70e]/30 h-16 md:h-28 ml-16 md:ml-20 mr-2 md:mr-4 max-w-[1100px] mx-auto overflow-visible flex items-center shadow-[0_0_20px_rgba(196,247,14,0.1)] animate-[profile-ambient-breathing_3s_ease-in-out_infinite] mt-4 md:mt-6 z-20">
+          {/* Subtle glow effects */}
+          <div className="absolute -top-20 right-1/4 w-48 h-48 bg-[#c4f70e]/5 rounded-full blur-3xl pointer-events-none" />
 
         {/* Content grid - 3 zones */}
         <div className="relative h-full flex items-center pl-14 md:pl-36 pr-3 md:pr-8 w-full">
@@ -159,9 +190,26 @@ export function TraderProfileCard({
                 <Skeleton className="h-[14px] w-[14px] md:h-[22px] md:w-[22px] rounded-full" />
               </div>
             ) : (
-              <div className={`flex items-center gap-1 md:gap-1.5 text-lg md:text-3xl font-bold font-mono tabular-nums tracking-tight ${netPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
-                <CountUp to={netPnl} duration={1.2} decimals={2} prefix={netPnl >= 0 ? "+" : ""} />
-                <Image src="/logos/solana.png" alt="SOL" width={14} height={14} className="opacity-80 md:w-[22px] md:h-[22px]" />
+              <motion.div
+                key={netPnl}
+                initial={{ backgroundColor: netPnl >= 0 ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)" }}
+                animate={{ backgroundColor: "transparent" }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="rounded-lg"
+              >
+                <div className={`flex items-center gap-1 md:gap-1.5 text-lg md:text-3xl font-bold font-mono tabular-nums tracking-tight ${netPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  <CountUp to={netPnl} duration={1.2} decimals={2} prefix={netPnl >= 0 ? "+" : ""} />
+                  <Image src="/logos/solana.png" alt="SOL" width={14} height={14} className="opacity-80 md:w-[22px] md:h-[22px]" />
+                </div>
+              </motion.div>
+            )}
+            {/* Daily P&L - Desktop only */}
+            {!isLoading && (
+              <div className="hidden md:flex items-center gap-1 mt-1">
+                <span className="text-[8px] text-white/30 uppercase">Today:</span>
+                <span className={`text-xs font-mono tabular-nums ${dailyPnL >= 0 ? "text-green-400/70" : "text-red-400/70"}`}>
+                  {dailyPnL >= 0 ? "+" : ""}{dailyPnL.toFixed(3)}
+                </span>
               </div>
             )}
           </div>
@@ -213,10 +261,12 @@ export function TraderProfileCard({
             </div>
           </div>
 
-          {/* ZONE 3: Secondary stats - Stacked vertically (desktop only) */}
-          <div className="hidden md:flex flex-col justify-center gap-1 pl-6 pr-4 border-l border-white/10">
+          {/* ZONE 3: Secondary stats - 2x2 Grid (desktop only) */}
+          <div className="hidden md:grid grid-cols-2 gap-x-6 gap-y-1.5 pl-6 pr-4 border-l border-white/10">
             <StatTrades />
+            <StatProfitFactor />
             <StatBest />
+            <StatStreak />
           </div>
         </div>
       </div>
@@ -229,7 +279,9 @@ export function TraderProfileCard({
         transition={{ delay: 0.5, duration: 0.3 }}
       >
         {/* Wallet address */}
-        <div className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono text-white/60 min-w-[100px]">
+        <div className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono text-white/60 min-w-[100px] cursor-pointer hover:text-white/80 transition-colors"
+          onClick={() => walletAddress !== "N/A" && navigator.clipboard.writeText(walletAddress)}
+        >
           <Wallet className="w-3 h-3 md:w-4 md:h-4 text-white/50" />
           {config === null ? (
             <Skeleton className="h-3 w-16" />
@@ -238,8 +290,11 @@ export function TraderProfileCard({
               <span>{shortWallet}</span>
               {walletAddress !== "N/A" && (
                 <button
-                  onClick={() => navigator.clipboard.writeText(walletAddress)}
-                  className="text-white/40 hover:text-white transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(walletAddress);
+                  }}
+                  className="text-white/40 hover:text-white transition-colors cursor-pointer"
                   aria-label="Copy wallet address"
                   type="button"
                 >
@@ -265,9 +320,37 @@ export function TraderProfileCard({
         </a>
       </motion.div>
 
+      {/* Mobile Metrics Bar - Shows below pill on mobile only */}
+      <motion.div
+        className="md:hidden flex items-center justify-center gap-4 mt-2 ml-16 px-4"
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6, duration: 0.3 }}
+      >
+        <div className="flex items-center gap-1 text-[10px]">
+          <span className="text-white/40">Today:</span>
+          <span className={dailyPnL >= 0 ? "text-green-400 font-mono tabular-nums" : "text-red-400 font-mono tabular-nums"}>
+            {dailyPnL >= 0 ? "+" : ""}{dailyPnL.toFixed(2)}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 text-[10px]">
+          <span className="text-white/40">P/F:</span>
+          <span className={`font-mono tabular-nums ${profitFactor >= 1.0 ? "text-green-400" : "text-red-400"}`}>
+            {profitFactor.toFixed(1)}x
+          </span>
+        </div>
+        <div className="flex items-center gap-1 text-[10px]">
+          <span className="text-white/40">Streak:</span>
+          {isHotStreak && <span>🔥</span>}
+          <span className={`font-mono tabular-nums ${streak.type === "win" ? "text-green-400" : "text-red-400"}`}>
+            {streak.current}
+          </span>
+        </div>
+      </motion.div>
+
       {/* Avatar with animated glow rings - offset on mobile to avoid overlapping fixed wallet pill */}
       <motion.div
-        className="absolute left-0 top-[44%] md:top-[45%] -translate-y-1/2 w-28 h-28 md:w-44 md:h-44 z-10"
+        className="absolute left-0 top-[44%] md:top-[45%] -translate-y-1/2 w-28 h-28 md:w-44 md:h-44 z-30"
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.4 }}

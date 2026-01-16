@@ -54,6 +54,14 @@ interface AiDecision {
 function parseActivityToDecision(item: ActivityItem): AiDecision | null {
     const data = item.data as Record<string, unknown> | undefined;
 
+    // 🔍 DEBUG: Log the raw activity item to see structure
+    console.log("[AiDecisionFeed] 📦 Raw activity item:", {
+        type: item.type,
+        message: item.message,
+        dataKeys: data ? Object.keys(data) : "no data",
+        data: data,
+    });
+
     switch (item.type) {
         case "ai_analysis": {
             const decision = data?.decision as string;
@@ -145,6 +153,34 @@ function parseActivityToDecision(item: ActivityItem): AiDecision | null {
             };
         }
 
+        case "ai_reasoning": {
+            // AI reasoning event - shows real-time AI thought process
+            const willTrade = data?.will_trade as boolean;
+            const decisionType: DecisionType = willTrade ? "BUY" : "REJECT";
+
+            return {
+                id: item.id,
+                type: decisionType,
+                tokenSymbol: (data?.symbol as string) || "Token",
+                tokenMint: data?.mint as string,
+                confidence: (data?.conviction as number) ?? undefined,
+                reasoning: data?.reasoning as string,
+                timestamp: item.timestamp,
+            };
+        }
+
+        case "no_market_data": {
+            // No market data available - skipping token
+            return {
+                id: item.id,
+                type: "REJECT",
+                tokenSymbol: (data?.symbol as string) || "Token",
+                tokenMint: data?.mint as string,
+                reasoning: (data?.reason as string) || "No market data available",
+                timestamp: item.timestamp,
+            };
+        }
+
         default:
             return null;
     }
@@ -163,151 +199,121 @@ function DecisionCard({ decision }: DecisionCardProps) {
 
     const config = getDecisionConfig(decision.type);
 
-    const timeAgo = useMemo(() => {
-        const seconds = Math.floor((Date.now() - decision.timestamp.getTime()) / 1000);
-        if (seconds < 60) return "just now";
-        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-        return `${Math.floor(seconds / 86400)}d ago`;
+    // Format timestamp as HH:MM:SS
+    const timestamp = useMemo(() => {
+        return decision.timestamp.toLocaleTimeString('en-US', {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
     }, [decision.timestamp]);
 
     return (
         <motion.div
             layout
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9, x: 50 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className={`
-                relative overflow-hidden rounded-xl border backdrop-blur-sm
-                ${config.bgClass} ${config.borderClass}
-                transition-all duration-200 cursor-pointer
-                hover:scale-[1.01] hover:shadow-lg
-            `}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            transition={{ duration: 0.15 }}
+            className="group cursor-pointer hover:bg-white/[0.02] transition-colors font-mono text-[11px] leading-relaxed"
             onClick={() => setIsExpanded(!isExpanded)}
         >
-            {/* Glow effect */}
-            <div className={`absolute inset-0 ${config.glowClass} opacity-20 blur-xl pointer-events-none`} />
+            {/* Log line */}
+            <div className="flex items-start gap-2 py-1.5 px-2">
+                {/* Timestamp */}
+                <span className="text-white/30 flex-shrink-0">[{timestamp}]</span>
 
-            {/* Main content */}
-            <div className="relative p-3">
-                {/* Header row */}
-                <div className="flex items-center gap-3">
-                    {/* Icon */}
-                    <div className={`
-                        flex items-center justify-center w-10 h-10 rounded-lg
-                        ${config.iconBgClass}
-                    `}>
-                        <config.Icon className={`w-5 h-5 ${config.iconClass}`} />
-                    </div>
+                {/* Log level / Decision type */}
+                <span className={`flex-shrink-0 font-bold ${config.textClass}`}>
+                    [{config.label}]
+                </span>
 
-                    {/* Token + Decision */}
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                            <span className={`text-sm font-bold ${config.textClass}`}>
-                                {config.label}
-                            </span>
-                            <span className="font-mono font-semibold text-white text-sm">
-                                ${decision.tokenSymbol}
-                            </span>
-                            {decision.tokenMint && (
-                                <a
-                                    href={`https://solscan.io/token/${decision.tokenMint}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="p-0.5 hover:bg-white/10 rounded transition-colors"
-                                >
-                                    <ExternalLink className="w-3 h-3 text-white/40" />
-                                </a>
-                            )}
-                        </div>
+                {/* Token symbol */}
+                <span className="text-white font-semibold flex-shrink-0">
+                    ${decision.tokenSymbol}
+                </span>
 
-                        {/* Confidence or PnL */}
-                        <div className="flex items-center gap-2 mt-0.5">
-                            {decision.confidence !== undefined && (
-                                <div className="flex items-center gap-1">
-                                    <div className="w-12 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                        <motion.div
-                                            className={`h-full ${config.progressClass}`}
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${decision.confidence * 100}%` }}
-                                            transition={{ duration: 0.5 }}
-                                        />
-                                    </div>
-                                    <span className="text-[10px] text-white/50 font-mono">
-                                        {Math.round(decision.confidence * 100)}%
-                                    </span>
-                                </div>
-                            )}
-                            {decision.pnl !== undefined && (
-                                <span className={`text-sm font-bold font-mono ${decision.pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                    {decision.pnl >= 0 ? "+" : ""}{decision.pnl.toFixed(4)} SOL
-                                </span>
-                            )}
-                            <span className="text-[10px] text-white/30">{timeAgo}</span>
-                        </div>
-                    </div>
+                {/* PnL if available */}
+                {decision.pnl !== undefined && (
+                    <span className={`flex-shrink-0 ${decision.pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        {decision.pnl >= 0 ? "+" : ""}{decision.pnl.toFixed(4)} SOL
+                    </span>
+                )}
 
-                    {/* Expand indicator */}
-                    {decision.reasoning && (
-                        <motion.div
-                            animate={{ rotate: isExpanded ? 180 : 0 }}
-                            className="text-white/30"
-                        >
-                            <ChevronDown className="w-4 h-4" />
-                        </motion.div>
-                    )}
-                </div>
+                {/* Confidence if available */}
+                {decision.confidence !== undefined && (
+                    <span className="text-white/40 flex-shrink-0">
+                        conf:{Math.round(decision.confidence * 100)}%
+                    </span>
+                )}
 
-                {/* Expanded reasoning */}
-                <AnimatePresence>
-                    {isExpanded && decision.reasoning && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                        >
-                            <div className="mt-3 pt-3 border-t border-white/10">
-                                <div className="flex items-start gap-2">
-                                    <Bot className="w-4 h-4 text-[#c4f70e] mt-0.5 flex-shrink-0" />
-                                    <p className="text-xs text-white/70 leading-relaxed">
-                                        {decision.reasoning}
-                                    </p>
-                                </div>
+                {/* Solscan link */}
+                {decision.tokenMint && (
+                    <a
+                        href={`https://solscan.io/token/${decision.tokenMint}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
+                    >
+                        <ExternalLink className="w-3 h-3 text-white/30 hover:text-[#c4f70e]" />
+                    </a>
+                )}
 
-                                {/* Additional details */}
-                                {decision.details && (
-                                    <div className="mt-2 flex flex-wrap gap-2">
-                                        {decision.details.entryPrice && (
-                                            <span className="px-2 py-0.5 text-[10px] font-mono bg-white/5 rounded text-white/50">
-                                                Entry: ${decision.details.entryPrice.toFixed(8)}
-                                            </span>
-                                        )}
-                                        {decision.details.amountSol && (
-                                            <span className="px-2 py-0.5 text-[10px] font-mono bg-white/5 rounded text-white/50">
-                                                Size: {decision.details.amountSol.toFixed(4)} SOL
-                                            </span>
-                                        )}
-                                        {decision.details.multiplier && (
-                                            <span className="px-2 py-0.5 text-[10px] font-mono bg-[#c4f70e]/20 rounded text-[#c4f70e]">
-                                                {decision.details.multiplier}x
-                                            </span>
-                                        )}
-                                        {decision.details.walletLabel && (
-                                            <span className="px-2 py-0.5 text-[10px] font-mono bg-purple-500/20 rounded text-purple-400">
-                                                {decision.details.walletLabel}
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* Expand indicator */}
+                {decision.reasoning && (
+                    <motion.div
+                        animate={{ rotate: isExpanded ? 180 : 0 }}
+                        className="text-white/20 ml-auto"
+                    >
+                        <ChevronDown className="w-3 h-3" />
+                    </motion.div>
+                )}
             </div>
+
+            {/* Expanded reasoning - indented like a log continuation */}
+            <AnimatePresence>
+                {isExpanded && decision.reasoning && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="pl-[72px] pr-2 pb-2 text-white/50">
+                            <span className="text-[#c4f70e]/60">→</span> {decision.reasoning}
+
+                            {/* Additional details as inline tags */}
+                            {decision.details && (
+                                <div className="mt-1 flex flex-wrap gap-1.5">
+                                    {decision.details.entryPrice && (
+                                        <span className="text-white/30">
+                                            entry=${decision.details.entryPrice.toFixed(8)}
+                                        </span>
+                                    )}
+                                    {decision.details.amountSol && (
+                                        <span className="text-white/30">
+                                            size={decision.details.amountSol.toFixed(4)}sol
+                                        </span>
+                                    )}
+                                    {decision.details.multiplier && (
+                                        <span className="text-[#c4f70e]/70">
+                                            {decision.details.multiplier}x
+                                        </span>
+                                    )}
+                                    {decision.details.walletLabel && (
+                                        <span className="text-purple-400/70">
+                                            wallet={decision.details.walletLabel}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 }
@@ -465,20 +471,20 @@ export function AiDecisionFeed({ maxItems = 15, className = "" }: AiDecisionFeed
     }, [decisions.length]);
 
     return (
-        <div className={`h-full flex flex-col rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden ${className}`}>
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 flex-shrink-0">
+        <div className={`h-full flex flex-col rounded-lg bg-black/80 border border-white/5 overflow-hidden ${className}`}>
+            {/* Terminal-style Header */}
+            <div className="flex items-center justify-between px-3 py-2.5 bg-white/[0.02] border-b border-white/5 flex-shrink-0">
                 <div className="flex items-center gap-2">
-                    <Bot className="w-5 h-5 text-[#c4f70e]" />
-                    <span className="text-sm font-semibold text-white">AI Decisions</span>
+                    <Bot className="w-4 h-4 text-[#c4f70e]" />
+                    <span className="text-sm font-mono font-medium text-white/80">ai.log</span>
                 </div>
                 <LiveIndicator />
             </div>
 
-            {/* Decision list */}
+            {/* Decision list - terminal style */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-3 space-y-2"
+                className="flex-1 overflow-y-auto py-2 font-mono"
             >
                 <AnimatePresence mode="popLayout">
                     {decisions.length > 0 ? (
@@ -489,26 +495,20 @@ export function AiDecisionFeed({ maxItems = 15, className = "" }: AiDecisionFeed
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="flex flex-col items-center justify-center py-12 text-white/40"
+                            className="flex flex-col items-center justify-center py-12 text-white/30 font-mono"
                         >
                             {isConnected ? (
                                 <>
-                                    <motion.div
-                                        animate={{
-                                            scale: [1, 1.1, 1],
-                                            rotate: [0, 5, -5, 0]
-                                        }}
-                                        transition={{ duration: 3, repeat: Infinity }}
-                                    >
-                                        <Bot className="w-12 h-12 mb-3 text-[#c4f70e]/50" />
-                                    </motion.div>
-                                    <span className="text-sm font-medium">AI is analyzing markets...</span>
-                                    <span className="text-xs text-white/30 mt-1">Decisions will appear here</span>
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <span className="text-[#c4f70e]">$</span>
+                                        <span className="animate-pulse">waiting for signals...</span>
+                                    </div>
+                                    <span className="text-[10px] text-white/20 mt-2">AI decisions will stream here</span>
                                 </>
                             ) : (
                                 <>
-                                    <WifiOff className="w-12 h-12 mb-3 opacity-50" />
-                                    <span className="text-sm">Connecting to AI feed...</span>
+                                    <WifiOff className="w-6 h-6 mb-2 opacity-40" />
+                                    <span className="text-xs">connecting...</span>
                                 </>
                             )}
                         </motion.div>

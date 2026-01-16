@@ -718,22 +718,33 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
         }, 0);
     }, [holdings, livePrices, solPrice]);
 
+    // Calculate total value in USD
+    const totalValueUsd = useMemo(() => {
+        return holdings.reduce((sum, h) => {
+            const livePrice = livePrices.get(h.mint);
+            const priceUsd = livePrice?.price ?? h.price_usd ?? 0;
+            return sum + (h.amount * priceUsd);
+        }, 0);
+    }, [holdings, livePrices]);
+
     return (
         <div className="overflow-hidden">
             {/* Header - Outside cards */}
             <div className="flex items-center justify-between px-1 py-3 mb-3">
                 <div className="flex items-center gap-2">
-                    <Wallet className="w-5 h-5 text-[#c4f70e]" />
-                    <span className="text-base font-semibold text-white">Portfolio</span>
+                    <Wallet className="w-6 h-6 text-[#c4f70e]" />
+                    <span className="text-lg font-semibold text-white">Portfolio</span>
                     <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-[#c4f70e]/20 text-[#c4f70e]">
                         {holdings.length}
                     </span>
                 </div>
-                {totalValueSol > 0 && (
-                    <span className="text-[#c4f70e]">
-                        <SolValue solAmount={totalValueSol} size="sm" />
-                    </span>
-                )}
+                <div className="flex items-center">
+                    {totalValueSol > 0 && (
+                        <span className="text-white text-[15px] font-semibold">
+                            <SolValue solAmount={totalValueSol} size="sm" />
+                        </span>
+                    )}
+                </div>
             </div>
 
             {/* Cards - With visual separators */}

@@ -191,7 +191,7 @@ main {
   overflow: hidden;
   isolation: isolate;
   /* Ensure fixed wallet inside stays above other elements like TraderProfileCard avatar */
-  z-index: 30;
+  z-index: 50;
 }
 
 .vibr-coder-video {
@@ -600,7 +600,7 @@ main {
     bottom: var(--space-6);
     width: 400px;
     max-height: 280px;
-    z-index: 40;
+    z-index: 60;
   }
 
   .hero-terminal .terminal-drawer {
@@ -628,7 +628,7 @@ main {
   padding: 0 12% var(--space-4) 12% !important;
   padding-bottom: var(--space-12) !important;
   position: relative;
-  z-index: 10;
+  z-index: 40;
 }
 
 /* Mid-large desktop (1300px-1500px) - less overlap */
@@ -2902,7 +2902,7 @@ button:focus-visible {
   position: fixed;
   top: var(--space-4);
   left: var(--space-4);
-  z-index: 50;
+  z-index: 100;
   font-family: var(--font-mono);
   transform-origin: top left;
 }
@@ -4831,5 +4831,60 @@ button:focus-visible {
     to {
       transform: translateY(0);
     }
+  }
+}
+
+/* =============================================
+   TraderProfileCard Premium Effects
+   ============================================= */
+
+/* Animated gradient border rotation */
+@keyframes profile-border-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Ambient breathing glow effect */
+@keyframes profile-ambient-breathing {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(196, 247, 14, 0.1), inset 0 0 30px rgba(196, 247, 14, 0.03);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(196, 247, 14, 0.2), inset 0 0 50px rgba(196, 247, 14, 0.05);
+  }
+}
+
+/* Streak fire flicker effect */
+@keyframes streak-fire-flicker {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scaleY(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1.05);
+  }
+}
+
+/* P&L value flash on change */
+@keyframes pnl-flash-green {
+  0% {
+    background-color: rgba(34, 197, 94, 0.3);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes pnl-flash-red {
+  0% {
+    background-color: rgba(239, 68, 68, 0.3);
+  }
+  100% {
+    background-color: transparent;
   }
 }

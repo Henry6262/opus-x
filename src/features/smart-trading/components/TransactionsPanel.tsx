@@ -158,13 +158,13 @@ export function TransactionsPanel({ maxTransactions = 15 }: TransactionsPanelPro
     return (
         <div className="h-full flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-1 py-2 flex-shrink-0">
+            <div className="flex items-center justify-between px-1 py-3 mb-3 flex-shrink-0">
                 <div
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity flex-1"
                 >
-                    <TrendingUp className="w-5 h-5 text-[#c4f70e]" />
-                    <span className="text-base font-semibold text-white">History</span>
+                    <TrendingUp className="w-6 h-6 text-[#c4f70e]" />
+                    <span className="text-lg font-semibold text-white">History</span>
                     <span className="px-2 py-0.5 text-[11px] font-bold tabular-nums rounded-full bg-[#c4f70e]/20 text-[#c4f70e]">
                         {transactions.length}
                     </span>
@@ -243,13 +243,18 @@ function TransactionCard({ tx }: TransactionCardProps) {
         ? ((tx.current_price / tx.price - 1) * 100)
         : null;
 
+    const openSolscan = () => {
+        window.open(`https://solscan.io/tx/${tx.signature}`, '_blank');
+    };
+
     return (
         <motion.div
             layout
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 10 }}
-            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
+            className="p-2 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors cursor-pointer"
+            onClick={openSolscan}
         >
             <div className="flex items-center gap-2">
                 {/* Avatar */}
@@ -274,6 +279,7 @@ function TransactionCard({ tx }: TransactionCardProps) {
                                 rel="noopener noreferrer"
                                 className="p-0.5 hover:bg-white/10 rounded transition-colors"
                                 title="View on X"
+                                onClick={(e) => e.stopPropagation()}
                             >
                                 <XIcon className="w-3.5 h-3.5 text-white/40 hover:text-white/70" />
                             </a>
@@ -347,6 +353,7 @@ function TransactionCard({ tx }: TransactionCardProps) {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1 text-[10px] text-white/40 hover:text-[#c4f70e] transition-colors"
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <span>tx</span>
                         <ExternalLink className="w-3 h-3" />
