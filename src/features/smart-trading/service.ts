@@ -87,22 +87,58 @@ interface DevprintTradingConfig {
   trading_mode?: 'paper' | 'real';
 }
 
-/** Devprint position from /api/trading/positions */
-interface DevprintPosition {
+/** Devprint holding/position from /api/trading/holdings */
+interface DevprintHolding {
   id: string;
-  token_mint: string;
-  token_symbol: string | null;
-  token_name: string | null;
-  entry_price_usd: number;
-  entry_amount_sol: number;
-  entry_tokens: number;
-  current_price_usd: number | null;
-  status: string;
-  unrealized_pnl: number;
-  realized_pnl: number;
+  mint: string;
+  symbol: string;
+  name: string;
+  entry_price: number;
+  entry_time: string;
+  entry_sol_value: number;
+  initial_quantity: number;
+  current_quantity: number;
+  current_price: number;
+  unrealized_pnl_sol: number;
+  unrealized_pnl_pct: number;
+  peak_price: number;
+  peak_pnl_pct: number;
+  realized_pnl_sol: number;
+  status: "open" | "closed" | "pending";
+  market_cap: number | null;
+  liquidity: number | null;
+  volume_24h: number | null;
+  buy_signature: string | null;
+}
+
+/** Devprint history item from /api/trading/history */
+interface DevprintHistoryItem {
+  id: string;
+  mint: string;
+  token_name: string;
+  ticker: string;
+  entry_price: number;
+  entry_time: string;
+  entry_sol_value: number;
+  entry_liquidity: number;
+  initial_quantity: number;
+  current_quantity: number;
+  current_price: number;
+  current_value_sol: number;
+  unrealized_pnl_sol: number;
+  unrealized_pnl_pct: number;
+  peak_price: number;
+  peak_pnl_pct: number;
+  targets_hit: string[];
+  realized_pnl_sol: number;
+  status: "open" | "closed" | "pending";
+  closed_at: string | null;
+  close_reason: string | null;
+  buy_signature: string | null;
+  sell_transactions: unknown[];
+  buy_criteria: unknown;
   created_at: string;
   updated_at: string;
-  closed_at: string | null;
 }
 
 /** Devprint trading stats from /api/trading/stats */
@@ -256,41 +292,79 @@ function mapDevprintConfig(config: DevprintTradingConfig): TradingConfig {
   };
 }
 
-/** Map devprint position to Position */
-function mapDevprintPosition(pos: DevprintPosition): Position {
+/** Map devprint holding to Position */
+function mapDevprintHolding(h: DevprintHolding): Position {
   return {
-    id: pos.id,
-    signalId: pos.id,
-    tokenMint: pos.token_mint,
-    tokenSymbol: pos.token_symbol,
-    status: pos.status === "open" ? "OPEN" : pos.status === "closed" ? "CLOSED" : "PENDING",
+    id: h.id,
+    signalId: h.id,
+    tokenMint: h.mint,
+    tokenSymbol: h.symbol,
+    status: h.status === "open" ? "OPEN" : h.status === "closed" ? "CLOSED" : "PENDING",
 
-    entryPriceSol: pos.entry_price_usd, // Note: devprint uses USD
-    entryAmountSol: pos.entry_amount_sol,
-    entryTokens: pos.entry_tokens,
-    entryTxSig: null,
+    entryPriceSol: h.entry_price,
+    entryAmountSol: h.entry_sol_value,
+    entryTokens: h.initial_quantity,
+    entryTxSig: h.buy_signature,
 
-    target1Price: pos.entry_price_usd * 2,
+    target1Price: h.entry_price * 2,
     target1Percent: 100,
     target1Hit: false,
     target1TxSig: null,
 
-    target2Price: pos.entry_price_usd * 3,
+    target2Price: h.entry_price * 3,
     target2Hit: false,
     target2TxSig: null,
 
-    stopLossPrice: pos.entry_price_usd * 0.5,
+    stopLossPrice: h.entry_price * 0.5,
     stoppedOut: false,
     stopLossTxSig: null,
 
-    currentPrice: pos.current_price_usd,
-    remainingTokens: pos.entry_tokens,
-    realizedPnlSol: pos.realized_pnl,
-    unrealizedPnl: pos.unrealized_pnl,
+    currentPrice: h.current_price,
+    remainingTokens: h.current_quantity,
+    realizedPnlSol: h.realized_pnl_sol,
+    unrealizedPnl: h.unrealized_pnl_sol,
 
-    createdAt: pos.created_at,
-    updatedAt: pos.updated_at,
-    closedAt: pos.closed_at,
+    createdAt: h.entry_time,
+    updatedAt: h.entry_time,
+    closedAt: h.status === "closed" ? h.entry_time : null,
+  };
+}
+
+/** Map devprint history item to Position */
+function mapDevprintHistoryItem(h: DevprintHistoryItem): Position {
+  return {
+    id: h.id,
+    signalId: h.id,
+    tokenMint: h.mint,
+    tokenSymbol: h.ticker,
+    status: h.status === "open" ? "OPEN" : h.status === "closed" ? "CLOSED" : "PENDING",
+
+    entryPriceSol: h.entry_price,
+    entryAmountSol: h.entry_sol_value,
+    entryTokens: h.initial_quantity,
+    entryTxSig: h.buy_signature,
+
+    target1Price: h.entry_price * 2,
+    target1Percent: 100,
+    target1Hit: h.targets_hit.includes("TP1"),
+    target1TxSig: null,
+
+    target2Price: h.entry_price * 3,
+    target2Hit: h.targets_hit.includes("TP2"),
+    target2TxSig: null,
+
+    stopLossPrice: h.entry_price * 0.5,
+    stoppedOut: h.close_reason?.includes("stop_loss") ?? false,
+    stopLossTxSig: null,
+
+    currentPrice: h.current_price,
+    remainingTokens: h.current_quantity,
+    realizedPnlSol: h.realized_pnl_sol,
+    unrealizedPnl: h.unrealized_pnl_sol,
+
+    createdAt: h.created_at,
+    updatedAt: h.updated_at,
+    closedAt: h.closed_at,
   };
 }
 
@@ -365,21 +439,24 @@ export const smartTradingService = {
   // ============================================
   async getDashboardInit(): Promise<DashboardInitResponse> {
     // Fetch all data in parallel from devprint
-    const [tokensResult, walletsResult, configResult, positionsResult, statsResult] = await Promise.all([
+    const [tokensResult, walletsResult, configResult, holdingsResult, historyResult, statsResult] = await Promise.all([
       fetchDevprint<DevprintToken[]>("/api/tokens?limit=50&order=desc"),
       fetchDevprint<{ wallets: DevprintWallet[] }>("/api/wallets"),
       fetchDevprint<DevprintTradingConfig>("/api/trading/config"),
-      fetchDevprint<DevprintPosition[]>("/api/trading/positions"),
+      fetchDevprint<DevprintHolding[]>("/api/trading/holdings"),
+      fetchDevprint<DevprintHistoryItem[]>("/api/trading/history"),
       fetchDevprint<DevprintTradingStats>("/api/trading/stats"),
     ]);
 
     const tokens = Array.isArray(tokensResult) ? tokensResult : [];
     const wallets = walletsResult.wallets || [];
-    const positions = Array.isArray(positionsResult) ? positionsResult : [];
+    const holdings = Array.isArray(holdingsResult) ? holdingsResult : [];
+    const history = Array.isArray(historyResult) ? historyResult : [];
 
     const mappedWallets = wallets.map(mapDevprintWallet);
     const mappedConfig = mapDevprintConfig(configResult);
-    const mappedPositions = positions.map(mapDevprintPosition);
+    const mappedOpenPositions = holdings.map(mapDevprintHolding);
+    const mappedClosedPositions = history.map(mapDevprintHistoryItem);
     const mappedStats = mapDevprintStats(statsResult, configResult);
     const mappedMigrations = tokens.map((t, i) => mapTokenToMigration(t, i, tokens.length));
 
@@ -389,8 +466,8 @@ export const smartTradingService = {
       wallets: mappedWallets,
       signals: [], // Signals not directly from devprint
       positions: {
-        open: mappedPositions.filter((p) => p.status === "OPEN"),
-        closed: mappedPositions.filter((p) => p.status === "CLOSED"),
+        open: mappedOpenPositions,
+        closed: mappedClosedPositions,
       },
       migrations: mappedMigrations,
       migrationStats: {
@@ -493,16 +570,16 @@ export const smartTradingService = {
     };
   },
 
-  // Positions
+  // Positions (using /api/trading/holdings)
   async getPositions(params?: {
     status?: string;
     limit?: number;
     page?: number;
   }): Promise<PositionsResponse> {
-    const positions = await fetchDevprint<DevprintPosition[]>("/api/trading/positions");
-    const mapped = (Array.isArray(positions) ? positions : []).map(mapDevprintPosition);
+    const holdings = await fetchDevprint<DevprintHolding[]>("/api/trading/holdings");
+    const mapped = (Array.isArray(holdings) ? holdings : []).map(mapDevprintHolding);
 
-    // Filter by status if provided
+    // Filter by status if provided (convert to uppercase for internal use)
     const filtered = params?.status
       ? mapped.filter((p) => p.status === params.status)
       : mapped;
@@ -522,10 +599,10 @@ export const smartTradingService = {
   },
 
   async closePosition(positionId: string): Promise<Position> {
-    const result = await fetchDevprint<DevprintPosition>(`/api/trading/positions/${positionId}/close`, {
+    const result = await fetchDevprint<DevprintHolding>(`/api/trading/holdings/${positionId}/close`, {
       method: "POST",
     });
-    return mapDevprintPosition(result);
+    return mapDevprintHolding(result);
   },
 
   async getHistory(_limit?: number): Promise<import("./types").PortfolioSnapshot[]> {

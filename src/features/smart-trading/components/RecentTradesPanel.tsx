@@ -24,12 +24,11 @@ interface RecentTradesProps {
 
 export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
     const t = useTranslations("dashboard");
-    const { positions, isLoading } = usePositions();
+    const { history, isLoading } = usePositions();
     const [isExpanded, setIsExpanded] = useState(true);
 
-    // Filter for closed positions only (completed trades)
-    const closedTrades = positions
-        .filter((p) => p.status === "CLOSED" || p.status === "STOPPED_OUT")
+    // Use history (closed positions) directly, sorted by most recent first
+    const closedTrades = [...history]
         .sort((a, b) => {
             const dateA = new Date(a.closedAt || a.updatedAt).getTime();
             const dateB = new Date(b.closedAt || b.updatedAt).getTime();

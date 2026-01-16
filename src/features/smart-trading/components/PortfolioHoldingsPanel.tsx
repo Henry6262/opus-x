@@ -718,9 +718,15 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
         }
     }, [effectiveWallet, minValueUsd, subscribeTokenStats]);
 
-    // Fetch holdings on mount
+    // Fetch holdings on mount and poll every 5 seconds
     useEffect(() => {
         fetchHoldings();
+
+        const pollInterval = setInterval(() => {
+            fetchHoldings();
+        }, 5000);
+
+        return () => clearInterval(pollInterval);
     }, [fetchHoldings]);
 
     // Calculate total value
