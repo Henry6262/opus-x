@@ -196,6 +196,7 @@ main {
 .vibr-coder-video {
   width: 100%;
   height: auto;
+  aspect-ratio: 16 / 9;
   display: block;
   object-fit: cover;
   object-position: center;
@@ -302,11 +303,12 @@ main {
     width: 100%;
     margin-top: 0;
     max-height: 280px;
+    aspect-ratio: 16 / 9;
   }
 
   .vibr-coder-video {
     width: 100%;
-    height: auto;
+    height: 100%;
     min-height: 180px;
     max-height: 280px;
     object-fit: cover;
@@ -327,7 +329,7 @@ main {
     position: fixed;
     bottom: var(--space-4);
     right: var(--space-4);
-    z-index: 1000;
+    z-index: 10003;
     width: auto;
     height: auto;
   }
@@ -1389,6 +1391,7 @@ main {
   top: 50%;
   left: 0;
   transform: translate(-100%, -50%);
+  z-index: 10002;
   width: 64px;
   height: 110px;
   display: flex;
@@ -3137,7 +3140,7 @@ button:focus-visible {
   position: fixed;
   top: var(--space-4);
   left: var(--space-4);
-  z-index: 2147483647;
+  z-index: 9999;
   /* TWO-TONE CAPSULE: Black to green gradient */
   background: linear-gradient(
     135deg,
