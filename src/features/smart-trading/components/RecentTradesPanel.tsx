@@ -11,13 +11,13 @@ import {
     ChevronUp,
     Clock,
     Target,
-    XCircle,
+    TrendingDown,
 } from "lucide-react";
 import { usePositions } from "../context";
 import type { Position } from "../types";
 
 // ============================================
-// Recent Trades Panel
+// Trades Panel
 // Shows completed trading rounds (positions that were opened then closed)
 // Different from History which shows raw blockchain transactions
 // ============================================
@@ -53,18 +53,18 @@ export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                 >
-                    <Trophy className="w-6 h-6 text-[#c4f70e]" />
-                    <span className="text-lg font-semibold text-white">{t("recentTrades")}</span>
+                    <Trophy className="w-7 h-7 text-[#c4f70e]" />
+                    <span className="text-lg font-semibold text-white">Trades</span>
                     <span className="px-2 py-0.5 text-[11px] font-bold tabular-nums rounded-full bg-[#c4f70e]/20 text-[#c4f70e]">
                         {closedTrades.length}
                     </span>
                     {/* Win/Loss badges */}
                     {closedTrades.length > 0 && (
                         <div className="flex items-center gap-1.5 ml-1">
-                            <span className="px-1.5 py-0.5 text-[10px] font-bold tabular-nums rounded bg-green-500/20 text-green-400">
+                            <span className="text-[10px] font-bold tabular-nums text-green-400">
                                 {wins}W
                             </span>
-                            <span className="px-1.5 py-0.5 text-[10px] font-bold tabular-nums rounded bg-red-500/20 text-red-400">
+                            <span className="text-[10px] font-bold tabular-nums text-red-400">
                                 {losses}L
                             </span>
                         </div>
@@ -144,7 +144,9 @@ function CompactTradeRow({ trade, index }: CompactTradeRowProps) {
         ? (pnl / trade.entryAmountSol) * 100
         : 0;
 
-    const exitReason = trade.status === "STOPPED_OUT" ? "stop" : "tp";
+    // Determine exit reason based on actual profit/loss, not just status
+    // If profit -> TP (Take Profit), if loss -> SL (Stop Loss)
+    const exitReason = isProfit ? "tp" : "sl";
     const timeHeld = getHoldTime(trade.createdAt, trade.closedAt || trade.updatedAt);
     const timeAgo = getTimeAgo(trade.closedAt || trade.updatedAt);
 
@@ -155,51 +157,40 @@ function CompactTradeRow({ trade, index }: CompactTradeRowProps) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 10 }}
             transition={{ delay: index * 0.03 }}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl bg-black/30 hover:bg-white/5 transition-colors ${
+            className={`flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors ${
                 isProfit ? "hover:bg-green-500/5" : "hover:bg-red-500/5"
             }`}
         >
-            {/* Result Icon */}
-            <div className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center ${
-                isProfit ? "bg-green-500/20" : "bg-red-500/20"
-            }`}>
-                {isProfit ? (
-                    <Trophy className="w-3.5 h-3.5 text-green-400" />
-                ) : (
-                    <Skull className="w-3.5 h-3.5 text-red-400" />
-                )}
-            </div>
+            {/* Token Image - Bigger, no result icon before it */}
+            <TokenImage tokenMint={trade.tokenMint} tokenSymbol={trade.tokenSymbol} size={36} />
 
             {/* Token Info */}
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-                <TokenImage tokenMint={trade.tokenMint} tokenSymbol={trade.tokenSymbol} size={24} />
-                <div className="min-w-0">
-                    <span className="font-mono font-semibold text-white text-sm block truncate">
-                        {trade.tokenSymbol || shortenAddress(trade.tokenMint)}
-                    </span>
-                    <div className="flex items-center gap-1.5 text-[10px] text-white/40">
-                        <Clock className="w-3 h-3" />
-                        <span>{timeHeld}</span>
-                        <span className="text-white/20">•</span>
-                        {exitReason === "tp" ? (
-                            <span className="flex items-center gap-0.5 text-green-400/70">
-                                <Target className="w-3 h-3" />
-                                TP
-                            </span>
-                        ) : (
-                            <span className="flex items-center gap-0.5 text-red-400/70">
-                                <XCircle className="w-3 h-3" />
-                                SL
-                            </span>
-                        )}
-                    </div>
+            <div className="min-w-0 flex-1">
+                <span className="font-mono font-semibold text-white text-sm block truncate">
+                    {trade.tokenSymbol || shortenAddress(trade.tokenMint)}
+                </span>
+                <div className="flex items-center gap-1.5 text-[10px] text-white/40">
+                    <Clock className="w-3 h-3" />
+                    <span>{timeHeld}</span>
+                    <span className="text-white/20">•</span>
+                    {exitReason === "tp" ? (
+                        <span className="flex items-center gap-0.5 text-green-400/70">
+                            <Target className="w-3 h-3" />
+                            TP
+                        </span>
+                    ) : (
+                        <span className="flex items-center gap-0.5 text-red-400/70">
+                            <TrendingDown className="w-3 h-3" />
+                            SL
+                        </span>
+                    )}
                 </div>
             </div>
 
             {/* P&L */}
             <div className="flex-shrink-0 text-right">
                 <div className={`flex items-center justify-end gap-1 font-mono font-bold tabular-nums text-sm ${
-                    isProfit ? "text-green-400" : "text-red-400"
+                    isProfit ? "text-green-400" : "text-white"
                 }`}>
                     {pnl >= 0 ? "+" : ""}{pnl.toFixed(3)}
                     <Image src="/logos/solana.png" alt="SOL" width={12} height={12} className="opacity-80" />
@@ -266,13 +257,13 @@ interface TokenImageProps {
     size?: number;
 }
 
-function TokenImage({ tokenMint, tokenSymbol, size = 24 }: TokenImageProps) {
+function TokenImage({ tokenMint, tokenSymbol, size = 36 }: TokenImageProps) {
     const [imgError, setImgError] = useState(false);
 
     if (imgError) {
         return (
             <div
-                className="rounded-lg bg-white/10 flex items-center justify-center text-[8px] font-bold text-white/60 flex-shrink-0"
+                className="rounded-xl bg-white/10 flex items-center justify-center text-[10px] font-bold text-white/60 flex-shrink-0"
                 style={{ width: size, height: size }}
             >
                 {(tokenSymbol || tokenMint.slice(0, 2)).slice(0, 2).toUpperCase()}
@@ -286,7 +277,7 @@ function TokenImage({ tokenMint, tokenSymbol, size = 24 }: TokenImageProps) {
             alt={tokenSymbol || "Token"}
             width={size}
             height={size}
-            className="rounded-lg flex-shrink-0"
+            className="rounded-xl flex-shrink-0"
             onError={() => setImgError(true)}
             unoptimized
         />

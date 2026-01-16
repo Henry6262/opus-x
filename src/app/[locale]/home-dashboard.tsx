@@ -16,6 +16,7 @@ import { Terminal, TerminalProvider, useTerminalNarrator, useAiReasoningStream }
 import { useAiMood } from "@/hooks/useAiMood";
 import { VibrCoder } from "@/components/VibrCoder";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { MobileBottomBar } from "@/components/MobileBottomBar";
 
 // Map AI mood to VibrCoder animation state
 function getVibrCoderState(
@@ -129,6 +130,9 @@ function DashboardContent() {
             </div>
           )}
         </div>
+
+        {/* Mobile Bottom Bar - Twitter & CA Copy */}
+        <MobileBottomBar />
       </main>
     </>
   );

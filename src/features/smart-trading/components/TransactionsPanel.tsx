@@ -308,7 +308,7 @@ function TransactionCard({ tx }: TransactionCardProps) {
                             </span>
                         ) : (
                             <span className="text-xs text-white/60 inline-flex items-center gap-1">
-                                <span className="text-green-400 font-medium">Sold</span>
+                                <span className="text-red-400 font-medium">Sold</span>
                                 {" "}{formatTokenAmount(tokenAmount)}
                                 {tx.image_url && (
                                     <Image

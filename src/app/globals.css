@@ -180,7 +180,8 @@ main {
   width: 100%;
   position: relative;
   overflow-x: hidden;
-  z-index: 20;
+  /* Lower z-index so dashboard panel content appears above when overlapping */
+  z-index: 1;
 }
 
 /* ===== VIBR CODER VIDEO CONTAINER ===== */
@@ -189,9 +190,7 @@ main {
   width: 100%;
   background: var(--void-black);
   overflow: hidden;
-  isolation: isolate;
-  /* Ensure fixed wallet inside stays above other elements like TraderProfileCard avatar */
-  z-index: 50;
+  /* No z-index here - wallet pill has its own fixed positioning with high z-index */
 }
 
 .vibr-coder-video {
@@ -2091,11 +2090,15 @@ main {
   .cockpit-layout {
     gap: 0;
     padding: 0;
+    /* Extra padding at bottom for mobile bottom bar */
+    padding-bottom: 80px;
   }
 
   .dashboard-panel {
     margin-top: -60px !important;
     padding: 0 8px var(--space-4) 8px !important;
+    /* Extra padding at bottom for mobile bottom bar */
+    padding-bottom: 100px !important;
   }
 
   /* Mobile fade overlays - smaller and lighter to not darken the small video */
