@@ -17,17 +17,28 @@ import { TransactionDrawer } from "./TransactionDrawer";
 // ============================================
 
 interface OnChainHolding {
+    id: string;
     mint: string;
     symbol: string;
     name: string;
-    amount: number;
-    decimals: number;
-    image_url: string | null;
-    price_usd: number | null;
-    value_usd: number | null;
+    entry_price: number;
+    entry_time: string;
+    entry_sol_value: number;
+    initial_quantity: number;
+    current_quantity: number;
+    current_price: number;
+    unrealized_pnl_sol: number;
+    unrealized_pnl_pct: number;
+    peak_price: number;
+    peak_pnl_pct: number;
+    realized_pnl_sol: number;
+    status: "open" | "closed" | "pending";
     market_cap: number | null;
     liquidity: number | null;
     volume_24h: number | null;
+    buy_signature: string | null;
+    // Computed/optional fields for compatibility
+    image_url?: string | null;
 }
 
 interface LivePriceData {
@@ -284,19 +295,18 @@ interface HoldingCardProps {
 
 function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, onClick }: HoldingCardProps) {
     // Use live price if available, otherwise fallback to holding data
-    const currentPriceUsd = livePrice?.price ?? holding.price_usd ?? 0;
-    // IMPORTANT: Use position entry price first (from database), then live data
-    // If no entry price is available, we can't calculate accurate PnL
-    const entryPriceUsd = positionEntryPrice ?? livePrice?.entryPrice;
-    const hasEntryPrice = entryPriceUsd !== undefined && entryPriceUsd > 0;
-    const valueUsd = holding.amount * currentPriceUsd;
-    const entryValueUsd = hasEntryPrice ? holding.amount * entryPriceUsd : 0;
+    const currentPriceUsd = livePrice?.price ?? holding.current_price ?? 0;
+    // Use entry_price directly from the API response
+    const entryPriceUsd = holding.entry_price ?? positionEntryPrice ?? livePrice?.entryPrice ?? 0;
+    const hasEntryPrice = entryPriceUsd > 0;
+    const valueUsd = holding.current_quantity * currentPriceUsd;
+    const entryValueUsd = hasEntryPrice ? holding.current_quantity * entryPriceUsd : 0;
     const valueSol = valueUsd / solPrice;
     const entryValueSol = entryValueUsd / solPrice;
 
-    // PnL calculations - only show real values if we have entry price data
-    const pnlSol = livePrice?.pnlSol ?? (hasEntryPrice && entryValueSol > 0 ? valueSol - entryValueSol : null);
-    const pnlPct = livePrice?.pnlPct ?? (hasEntryPrice && entryPriceUsd > 0 ? ((currentPriceUsd - entryPriceUsd) / entryPriceUsd) * 100 : null);
+    // PnL calculations - use API values first, then calculate if needed
+    const pnlSol = livePrice?.pnlSol ?? holding.unrealized_pnl_sol ?? (hasEntryPrice && entryValueSol > 0 ? valueSol - entryValueSol : null);
+    const pnlPct = livePrice?.pnlPct ?? holding.unrealized_pnl_pct ?? (hasEntryPrice && entryPriceUsd > 0 ? ((currentPriceUsd - entryPriceUsd) / entryPriceUsd) * 100 : null);
 
     const currentMultiplier = livePrice?.multiplier ?? (hasEntryPrice && entryPriceUsd > 0 ? currentPriceUsd / entryPriceUsd : null);
     const goalMultiplier = livePrice?.nextTarget ?? 2;
@@ -380,11 +390,11 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                             {/* Token Amount */}
                             <div className="flex items-center gap-1.5 text-xs mt-1">
                                 <span className="font-mono font-semibold tabular-nums text-white/60">
-                                    {holding.amount >= 1_000_000
-                                        ? `${Math.round(holding.amount / 1_000_000)}M`
-                                        : holding.amount >= 1_000
-                                            ? `${Math.round(holding.amount / 1_000)}K`
-                                            : Math.round(holding.amount)
+                                    {holding.current_quantity >= 1_000_000
+                                        ? `${Math.round(holding.current_quantity / 1_000_000)}M`
+                                        : holding.current_quantity >= 1_000
+                                            ? `${Math.round(holding.current_quantity / 1_000)}K`
+                                            : Math.round(holding.current_quantity)
                                     } tokens
                                 </span>
                                 {holding.image_url && (
@@ -533,7 +543,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
         setSelectedHolding({
             symbol: holding.symbol,
             mint: holding.mint,
-            imageUrl: holding.image_url,
+            imageUrl: holding.image_url ?? null,
         });
         setIsDrawerOpen(true);
     }, []);
@@ -673,17 +683,21 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
                 throw new Error(result.error || "Failed to load holdings");
             }
 
-            const data: OnChainHolding[] = ((result?.data as OnChainHolding[]) || []).filter((h) => (h.value_usd ?? 0) > 0.01);
-            data.sort((a, b) => (b.value_usd || 0) - (a.value_usd || 0));
+            // Filter open positions and sort by value
+            const data: OnChainHolding[] = ((result?.data as OnChainHolding[]) || [])
+                .filter((h) => h.status === "open" && h.current_quantity > 0);
+            // Sort by current value (quantity * price) descending
+            data.sort((a, b) => (b.current_quantity * b.current_price) - (a.current_quantity * a.current_price));
 
             console.log("[PortfolioHoldings] 📊 Holdings count:", data.length);
             console.log("[PortfolioHoldings] 🔍 Holdings details:", data.map(h => ({
                 symbol: h.symbol,
                 mint: h.mint.slice(0, 8) + "...",
-                amount: h.amount,
-                price_usd: h.price_usd,
-                value_usd: h.value_usd,
-                market_cap: h.market_cap,
+                current_quantity: h.current_quantity,
+                current_price: h.current_price,
+                entry_price: h.entry_price,
+                unrealized_pnl_pct: h.unrealized_pnl_pct,
+                status: h.status,
             })));
 
             setHoldings(data);
@@ -713,8 +727,8 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
     const totalValueSol = useMemo(() => {
         return holdings.reduce((sum, h) => {
             const livePrice = livePrices.get(h.mint);
-            const priceUsd = livePrice?.price ?? h.price_usd ?? 0;
-            return sum + (h.amount * priceUsd / solPrice);
+            const priceUsd = livePrice?.price ?? h.current_price ?? 0;
+            return sum + (h.current_quantity * priceUsd / solPrice);
         }, 0);
     }, [holdings, livePrices, solPrice]);
 
@@ -722,8 +736,8 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
     const totalValueUsd = useMemo(() => {
         return holdings.reduce((sum, h) => {
             const livePrice = livePrices.get(h.mint);
-            const priceUsd = livePrice?.price ?? h.price_usd ?? 0;
-            return sum + (h.amount * priceUsd);
+            const priceUsd = livePrice?.price ?? h.current_price ?? 0;
+            return sum + (h.current_quantity * priceUsd);
         }, 0);
     }, [holdings, livePrices]);
 
