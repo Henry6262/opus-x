@@ -3,8 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /**
  * Birdeye WebSocket Hook
  *
- * **SECURITY NOTE**: This implementation temporarily uses client-side API key.
- * TODO: Implement secure WebSocket proxy through Next.js backend to hide the API key
+ * **SECURITY**: Connects to secure WebSocket proxy that hides Birdeye API key server-side.
+ * The proxy runs on localhost:8081 and forwards messages to/from Birdeye's API.
+ * Supports Redis caching and pub/sub for efficient multi-client broadcasting.
  *
  * **STABILITY**: Uses refs to store callbacks to prevent reconnection loops
  */
@@ -29,7 +30,6 @@ export interface BirdeyeOhlcv {
 }
 
 export interface UseBirdeyeWebSocketOptions {
-    apiKey: string;
     chain?: string;
     onTokenStats?: (stats: BirdeyeTokenStats) => void;
     onOhlcv?: (ohlcv: BirdeyeOhlcv) => void;
@@ -50,7 +50,6 @@ export interface UseBirdeyeWebSocketReturn {
 
 export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBirdeyeWebSocketReturn {
     const {
-        apiKey,
         chain = "solana",
         onTokenStats,
         onOhlcv,
@@ -82,8 +81,9 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
     useEffect(() => { onDisconnectRef.current = onDisconnect; }, [onDisconnect]);
     useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
-    // TODO: SECURITY - API key exposed in URL. Need server-side WebSocket proxy
-    const wsUrl = `wss://public-api.birdeye.so/socket/${chain}?x-api-key=${apiKey}`;
+    // Connect to secure WebSocket proxy (hides API key server-side)
+    const wsUrl = process.env.NEXT_PUBLIC_BIRDEYE_WS_URL || "ws://localhost:8081";
+    const wsUrlWithChain = `${wsUrl}?chain=${chain}`;
 
     // Send message to WebSocket
     const sendMessage = useCallback((payload: unknown) => {
@@ -128,13 +128,8 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
         }
     }, []); // No dependencies - use refs for callbacks
 
-    // Connect to WebSocket - stable function that only changes when apiKey or chain changes
+    // Connect to WebSocket proxy - stable function that only changes when chain changes
     const connect = useCallback(() => {
-        if (!apiKey) {
-            console.warn("[BirdeyeWS] No API key provided");
-            return;
-        }
-
         // Prevent multiple simultaneous connection attempts
         if (isConnectingRef.current) {
             console.log("[BirdeyeWS] Connection already in progress, skipping");
@@ -149,8 +144,8 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
         }
 
         isConnectingRef.current = true;
-        console.log("[BirdeyeWS] Connecting to Birdeye WebSocket...");
-        const ws = new WebSocket(wsUrl);
+        console.log("[BirdeyeWS] Connecting to secure WebSocket proxy...");
+        const ws = new WebSocket(wsUrlWithChain);
 
         ws.onopen = () => {
             console.log("[BirdeyeWS] Connected!");
@@ -181,15 +176,10 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
         };
 
         ws.onclose = () => {
-            console.log("[BirdeyeWS] Disconnected");
+            console.log("[BirdeyeWS] Disconnected from proxy");
             setIsConnected(false);
             isConnectingRef.current = false;
             onDisconnectRef.current?.();
-
-            // Only reconnect if we have an API key
-            if (!apiKey) {
-                return;
-            }
 
             // Exponential backoff reconnect (max 30 seconds)
             const delay = Math.min(30000, 1000 * Math.pow(2, reconnectAttemptsRef.current));
@@ -205,7 +195,7 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
         };
 
         wsRef.current = ws;
-    }, [apiKey, wsUrl, handleMessage, sendMessage]); // Only depend on stable values
+    }, [wsUrlWithChain, handleMessage, sendMessage]); // Only depend on stable values
 
     // Subscribe to token stats
     const subscribeTokenStats = useCallback((addresses: string[]) => {
@@ -281,7 +271,7 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
                 wsRef.current.close();
             }
         };
-    }, [apiKey, chain]); // Only reconnect if apiKey or chain changes
+    }, [chain]); // Only reconnect if chain changes
 
     return {
         isConnected,

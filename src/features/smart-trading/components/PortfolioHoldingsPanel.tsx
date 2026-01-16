@@ -51,7 +51,6 @@ interface LivePriceData {
 
 const SOL_PRICE_USD = 185; // Fallback SOL price
 const SOLANA_ICON = "/logos/solana.png";
-const BIRDEYE_API_KEY = process.env.NEXT_PUBLIC_BIRDEYE_API_KEY || "";
 
 // Take Profit Targets (matching the backend)
 const TP_TARGETS = [
@@ -281,17 +280,20 @@ interface HoldingCardProps {
 function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, onClick }: HoldingCardProps) {
     // Use live price if available, otherwise fallback to holding data
     const currentPriceUsd = livePrice?.price ?? holding.price_usd ?? 0;
-    // IMPORTANT: Use position entry price first (from database), then live data, then fallback
-    const entryPriceUsd = positionEntryPrice ?? livePrice?.entryPrice ?? holding.price_usd ?? 0;
+    // IMPORTANT: Use position entry price first (from database), then live data
+    // If no entry price is available, we can't calculate accurate PnL
+    const entryPriceUsd = positionEntryPrice ?? livePrice?.entryPrice;
+    const hasEntryPrice = entryPriceUsd !== undefined && entryPriceUsd > 0;
     const valueUsd = holding.amount * currentPriceUsd;
-    const entryValueUsd = holding.amount * entryPriceUsd;
+    const entryValueUsd = hasEntryPrice ? holding.amount * entryPriceUsd : 0;
     const valueSol = valueUsd / solPrice;
     const entryValueSol = entryValueUsd / solPrice;
 
-    const pnlSol = livePrice?.pnlSol ?? (entryValueSol > 0 ? valueSol - entryValueSol : 0);
-    const pnlPct = livePrice?.pnlPct ?? (entryPriceUsd > 0 ? ((currentPriceUsd - entryPriceUsd) / entryPriceUsd) * 100 : 0);
+    // PnL calculations - only show real values if we have entry price data
+    const pnlSol = livePrice?.pnlSol ?? (hasEntryPrice && entryValueSol > 0 ? valueSol - entryValueSol : null);
+    const pnlPct = livePrice?.pnlPct ?? (hasEntryPrice && entryPriceUsd > 0 ? ((currentPriceUsd - entryPriceUsd) / entryPriceUsd) * 100 : null);
 
-    const currentMultiplier = livePrice?.multiplier ?? (entryPriceUsd > 0 ? currentPriceUsd / entryPriceUsd : 1);
+    const currentMultiplier = livePrice?.multiplier ?? (hasEntryPrice && entryPriceUsd > 0 ? currentPriceUsd / entryPriceUsd : null);
     const goalMultiplier = livePrice?.nextTarget ?? 2;
 
     // Market cap data for progress bar
@@ -299,9 +301,25 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
     const estimatedMcap = currentPriceUsd > 0 ? currentPriceUsd * 1_000_000_000 : undefined;
     const currentMarketCap = livePrice?.marketCap ?? holding.market_cap ?? estimatedMcap;
     // Calculate entry market cap: currentMCap / multiplier (if we have both)
-    const entryMarketCap = currentMarketCap && currentMultiplier > 0
+    const entryMarketCap = currentMarketCap && currentMultiplier && currentMultiplier > 0
         ? currentMarketCap / currentMultiplier
         : undefined;
+
+    // For display: If no entry price, use market cap milestones as targets
+    // Common meme coin milestones: 100K, 1M, 10M, 100M, 1B
+    const mcapMilestones = [100_000, 1_000_000, 10_000_000, 100_000_000, 1_000_000_000];
+    const getNextMilestone = (mcap: number) => mcapMilestones.find(m => m > mcap) ?? mcapMilestones[mcapMilestones.length - 1];
+
+    // Show progress bar if we have market cap data
+    const showProgressBar = currentMarketCap !== undefined && currentMarketCap > 0;
+
+    // Display multiplier or milestone-based progress
+    const displayMultiplier = currentMultiplier ?? (currentMarketCap && entryMarketCap
+        ? currentMarketCap / entryMarketCap
+        : 1);
+    const displayGoal = entryMarketCap
+        ? goalMultiplier
+        : (currentMarketCap ? getNextMilestone(currentMarketCap) / currentMarketCap : 2);
 
     // Check if we have live data (updated within last 10 seconds)
     const hasLiveData = Boolean(livePrice && (Date.now() - livePrice.lastUpdated) < 10000);
@@ -369,26 +387,37 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
 
                         {/* PnL Section (right side) - Percentage + SOL below */}
                         <div className="flex flex-col items-end">
-                            {/* PnL Percentage - Hero */}
-                            <motion.div
-                                className={`text-2xl font-bold font-mono tabular-nums min-w-[5ch] ${pnlPct >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}
-                                style={{
-                                    textShadow: pnlPct >= 0
-                                        ? "0 0 10px rgba(196,247,14,0.35)"
-                                        : "0 0 10px rgba(239,68,68,0.35)",
-                                }}
-                            >
-                                <CountUp
-                                    to={pnlPct}
-                                    duration={0.8}
-                                    decimals={0}
-                                    prefix={pnlPct >= 0 ? "+" : ""}
-                                    suffix="%"
-                                />
-                            </motion.div>
-                            {/* SOL Profit - Smaller, below percentage */}
-                            <div className={`flex items-center gap-1 text-sm font-mono tabular-nums ${pnlSol >= 0 ? "text-green-400/80" : "text-red-400/80"}`}>
-                                <span>{pnlSol >= 0 ? "+" : ""}{pnlSol.toFixed(2)}</span>
+                            {/* PnL Percentage - Hero (or Value if no entry price) */}
+                            {pnlPct !== null ? (
+                                <motion.div
+                                    className={`text-2xl font-bold font-mono tabular-nums min-w-[5ch] ${pnlPct >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}
+                                    style={{
+                                        textShadow: pnlPct >= 0
+                                            ? "0 0 10px rgba(196,247,14,0.35)"
+                                            : "0 0 10px rgba(239,68,68,0.35)",
+                                    }}
+                                >
+                                    <CountUp
+                                        to={pnlPct}
+                                        duration={0.8}
+                                        decimals={0}
+                                        prefix={pnlPct >= 0 ? "+" : ""}
+                                        suffix="%"
+                                    />
+                                </motion.div>
+                            ) : (
+                                <div className="text-2xl font-bold font-mono tabular-nums text-white/60">
+                                    —
+                                </div>
+                            )}
+                            {/* SOL Value/Profit - Smaller, below percentage */}
+                            <div className={`flex items-center gap-1 text-sm font-mono tabular-nums ${pnlSol !== null ? (pnlSol >= 0 ? "text-green-400/80" : "text-red-400/80") : "text-white/60"}`}>
+                                <span>
+                                    {pnlSol !== null
+                                        ? `${pnlSol >= 0 ? "+" : ""}${pnlSol.toFixed(2)}`
+                                        : `${valueSol.toFixed(2)}`
+                                    }
+                                </span>
                                 <Image
                                     src="/logos/solana.png"
                                     alt="SOL"
@@ -403,14 +432,16 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                         </div>
                     </div>
 
-                    {/* Progress Bar for Take Profit */}
-                    <ProgressBar
-                        currentMultiplier={currentMultiplier}
-                        progressOverride={livePrice?.targetProgress}
-                        goalMultiplier={goalMultiplier}
-                        currentMarketCap={currentMarketCap}
-                        entryMarketCap={entryMarketCap}
-                    />
+                    {/* Progress Bar - Show market cap progress (with or without entry price) */}
+                    {showProgressBar && (
+                        <ProgressBar
+                            currentMultiplier={displayMultiplier}
+                            progressOverride={livePrice?.targetProgress}
+                            goalMultiplier={displayGoal}
+                            currentMarketCap={currentMarketCap}
+                            entryMarketCap={entryMarketCap}
+                        />
+                    )}
                 </div>
             </div>
         </motion.div>
@@ -508,9 +539,8 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
         });
     }, []);
 
-    // Initialize Birdeye WebSocket
+    // Initialize Birdeye WebSocket (now connects to secure proxy)
     const { isConnected, subscribeTokenStats } = useBirdeyeWebSocket({
-        apiKey: BIRDEYE_API_KEY,
         onTokenStats: handleTokenStats,
     });
 
