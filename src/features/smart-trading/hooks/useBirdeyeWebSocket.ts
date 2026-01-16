@@ -252,19 +252,21 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
         addresses.forEach((addr) => subscribedTokensRef.current.add(addr));
         setSubscribedTokens(new Set(subscribedTokensRef.current));
 
-        // Railway proxy expects SUBSCRIBE_PRICE with single address + chain
+        // Birdeye API expects SUBSCRIBE_PRICE with queryType, chartType, address, currency
         addresses.forEach((address) => {
             sendMessage({
                 type: "SUBSCRIBE_PRICE",
                 data: {
+                    queryType: "simple",
+                    chartType: "1m",
                     address,
-                    chain,
+                    currency: "usd",
                 },
             });
         });
 
         console.log(`[BirdeyeWS] Subscribed to ${addresses.length} tokens`);
-    }, [sendMessage, chain]);
+    }, [sendMessage]);
 
     // Unsubscribe from token stats
     const unsubscribeTokenStats = useCallback((addresses: string[]) => {
@@ -285,8 +287,9 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
         sendMessage({
             type: "SUBSCRIBE_PRICE",
             data: {
-                address,
+                queryType: "simple",
                 chartType,
+                address,
                 currency: "usd",
             },
         });

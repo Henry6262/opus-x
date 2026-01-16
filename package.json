@@ -7,9 +7,7 @@
     "dev:turbo": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "ws:proxy": "tsx src/server/birdeye-proxy.ts",
-    "dev:all": "concurrently \"npm run dev\" \"npm run ws:proxy\""
+    "lint": "next lint"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

@@ -806,18 +806,26 @@ export function SmartTradingProvider({
   }, [enabled, on, addActivity, fetchDashboard, fetchMigrations]);
   // WebSocket event handlers registered
 
-  // Initial fetch effect
-
-  // Initial fetch (with StrictMode protection)
+  // Initial fetch - using client-side initialization pattern instead of useEffect
+  // (useEffect was not executing reliably, possibly due to SSR/hydration timing)
   useEffect(() => {
-    // Trigger initial data fetch
+    // Only run on client-side after mount
     if (hasFetchedRef.current || !enabled) {
-      // Skip fetch - already fetched or not enabled
       return;
     }
+
+    console.log("[SmartTrading] 🚀 Initializing dashboard data fetch...");
     hasFetchedRef.current = true;
 
-    fetchDashboard();
+    // Use setTimeout to ensure we're in the next tick (after full mount)
+    const timeoutId = setTimeout(() => {
+      console.log("[SmartTrading] 📡 Executing initial dashboard fetch");
+      fetchDashboard();
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [enabled, fetchDashboard]);
 
   // ============================================
@@ -971,6 +979,14 @@ export function SmartTradingProvider({
       clearActivityFeed,
     ]
   );
+
+  console.log("[SmartTrading] 🔷 Provider rendering with state:", {
+    hasPositions: state.positions.length,
+    hasDashboardStats: !!state.dashboardStats,
+    isLoading: state.isLoading,
+    error: state.error,
+    lastUpdated: state.lastUpdated
+  });
 
   return (
     <SmartTradingContext.Provider value={value}>
