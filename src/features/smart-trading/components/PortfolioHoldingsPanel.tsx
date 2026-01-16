@@ -509,7 +509,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
                 mint: p.tokenMint?.slice(0, 8) + "...",
                 entryPriceSol: p.entryPriceSol,
                 currentPrice: p.currentPrice,
-                pnlPct: p.pnlPct,
+                unrealizedPnl: p.unrealizedPnl,
                 status: p.status,
             })));
         }
