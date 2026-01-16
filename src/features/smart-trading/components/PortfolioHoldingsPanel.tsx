@@ -648,27 +648,10 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
             return;
         }
 
-        console.log("[PortfolioHoldings] fetchHoldings called", {
-            effectiveWallet,
-            minValueUsd,
-            subscribeTokenStatsType: typeof subscribeTokenStats,
-        });
-
-        if (!effectiveWallet) {
-            setHoldings([]);
-            setError("Connect wallet or provide ?wallet= parameter");
-            setIsLoading(false);
-            return;
-        }
-
         isFetchingRef.current = true;
         try {
             setIsLoading(true);
-            const params = new URLSearchParams();
-            params.set("wallet", effectiveWallet);
-            params.set("min_value_usd", minValueUsd.toString());
-
-            const url = buildDevprntApiUrl(`/api/trading/holdings?${params.toString()}`);
+            const url = buildDevprntApiUrl("/api/trading/holdings");
             console.log("[PortfolioHoldings] 📡 Fetching from:", url.toString());
             const response = await fetch(url.toString());
 
@@ -716,7 +699,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
             setIsLoading(false);
             isFetchingRef.current = false;
         }
-    }, [effectiveWallet, minValueUsd, subscribeTokenStats]);
+    }, [subscribeTokenStats]);
 
     // Fetch holdings on mount and poll every 5 seconds
     useEffect(() => {

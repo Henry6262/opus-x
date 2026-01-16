@@ -352,8 +352,6 @@ export function SmartTradingProvider({
       // ONE API call instead of 7!
       const response = await smartTradingService.getDashboardInit();
 
-      console.log("[SmartTrading] Dashboard data received");
-
       setState((prev) => ({
         ...prev,
         config: response.config
