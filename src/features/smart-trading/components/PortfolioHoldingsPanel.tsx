@@ -634,28 +634,6 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
         };
     }, [onTradingEvent]);
 
-    // Listen for position opened/closed events to refresh holdings list
-    useEffect(() => {
-        const unsubPositionOpened = onTradingEvent("position_opened", () => {
-            console.log("[PortfolioHoldings] Position opened - refreshing holdings");
-            fetchHoldings();
-        });
-        const unsubPositionClosed = onTradingEvent("position_closed", () => {
-            console.log("[PortfolioHoldings] Position closed - refreshing holdings");
-            fetchHoldings();
-        });
-        const unsubTakeProfit = onTradingEvent("take_profit_triggered", () => {
-            console.log("[PortfolioHoldings] Take profit triggered - refreshing holdings");
-            fetchHoldings();
-        });
-
-        return () => {
-            unsubPositionOpened?.();
-            unsubPositionClosed?.();
-            unsubTakeProfit?.();
-        };
-    }, [onTradingEvent, fetchHoldings]);
-
     useEffect(() => {
         if (!isConnected) return;
         console.log("[Portfolio] Birdeye WebSocket connected");
@@ -728,6 +706,28 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
     useEffect(() => {
         fetchHoldings();
     }, [fetchHoldings]);
+
+    // Listen for position opened/closed events to refresh holdings list
+    useEffect(() => {
+        const unsubPositionOpened = onTradingEvent("position_opened", () => {
+            console.log("[PortfolioHoldings] Position opened - refreshing holdings");
+            fetchHoldings();
+        });
+        const unsubPositionClosed = onTradingEvent("position_closed", () => {
+            console.log("[PortfolioHoldings] Position closed - refreshing holdings");
+            fetchHoldings();
+        });
+        const unsubTakeProfit = onTradingEvent("take_profit_triggered", () => {
+            console.log("[PortfolioHoldings] Take profit triggered - refreshing holdings");
+            fetchHoldings();
+        });
+
+        return () => {
+            unsubPositionOpened?.();
+            unsubPositionClosed?.();
+            unsubTakeProfit?.();
+        };
+    }, [onTradingEvent, fetchHoldings]);
 
     // Calculate total value
     const totalValueSol = useMemo(() => {
