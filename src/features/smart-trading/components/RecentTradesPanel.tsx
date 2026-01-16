@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
+import Image from "next/image";
 import {
     TrendingUp,
     TrendingDown,
@@ -130,6 +131,8 @@ function TradeCard({ trade, t }: TradeCardProps) {
                     ) : (
                         <TrendingDown className="w-4 h-4 text-red-400" />
                     )}
+                    {/* Token image */}
+                    <TokenImage tokenMint={trade.tokenMint} tokenSymbol={trade.tokenSymbol} />
                     <span className="font-mono font-medium text-white text-sm">
                         {trade.tokenSymbol || shortenAddress(trade.tokenMint)}
                     </span>
@@ -143,8 +146,9 @@ function TradeCard({ trade, t }: TradeCardProps) {
                     </a>
                 </div>
                 <div className="text-right">
-                    <div className={`font-mono font-bold tabular-nums text-sm ${isProfit ? "text-green-400" : "text-red-400"}`}>
-                        {formatPnL(trade.realizedPnlSol ?? 0)}
+                    <div className={`flex items-center justify-end gap-1 font-mono font-bold tabular-nums text-sm ${isProfit ? "text-green-400" : "text-red-400"}`}>
+                        {formatPnLValue(trade.realizedPnlSol ?? 0)}
+                        <Image src="/logos/solana.png" alt="SOL" width={14} height={14} />
                     </div>
                     <div className={`text-xs font-mono tabular-nums min-w-[5ch] ${isProfit ? "text-green-400/60" : "text-red-400/60"}`}>
                         {formatPercent(pnlPercent)}
@@ -155,8 +159,9 @@ function TradeCard({ trade, t }: TradeCardProps) {
             {/* Bottom row: Details */}
             <div className="flex items-center justify-between text-[10px] text-white/50">
                 <div className="flex items-center gap-3">
-                    <span className="font-mono tabular-nums">
-                        {t("entry")}: {formatSol(trade.entryAmountSol)}
+                    <span className="flex items-center gap-1 font-mono tabular-nums">
+                        {t("entry")}: {formatSolValue(trade.entryAmountSol)}
+                        <Image src="/logos/solana.png" alt="SOL" width={10} height={10} />
                     </span>
                     <span>•</span>
                     <span className="text-white/35">{exitReason}</span>
@@ -171,14 +176,14 @@ function TradeCard({ trade, t }: TradeCardProps) {
 // Helper Functions
 // ============================================
 
-function formatSol(amount: number | undefined | null): string {
+function formatSolValue(amount: number | undefined | null): string {
     if (amount === undefined || amount === null) return "—";
-    return `${amount.toFixed(4)} SOL`;
+    return amount.toFixed(2);
 }
 
-function formatPnL(pnl: number): string {
+function formatPnLValue(pnl: number): string {
     const sign = pnl >= 0 ? "+" : "";
-    return `${sign}${pnl.toFixed(4)} SOL`;
+    return `${sign}${pnl.toFixed(2)}`;
 }
 
 function formatPercent(value: number): string {
@@ -204,4 +209,40 @@ function getHoldTime(createdAt: string, closedAt: string): string {
 
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays}d ${diffHours % 24}h`;
+}
+
+// ============================================
+// Token Image Component with fallback
+// ============================================
+
+interface TokenImageProps {
+    tokenMint: string;
+    tokenSymbol?: string | null;
+    size?: number;
+}
+
+function TokenImage({ tokenMint, tokenSymbol, size = 20 }: TokenImageProps) {
+    const [imgError, setImgError] = useState(false);
+
+    if (imgError) {
+        return (
+            <div
+                className="rounded-full bg-white/10 flex items-center justify-center text-[8px] font-bold text-white/60"
+                style={{ width: size, height: size }}
+            >
+                {(tokenSymbol || tokenMint.slice(0, 2)).slice(0, 2).toUpperCase()}
+            </div>
+        );
+    }
+
+    return (
+        <Image
+            src={`https://img.fotofolio.xyz/?url=https://dd.dexscreener.com/ds-data/tokens/solana/${tokenMint}.png`}
+            alt={tokenSymbol || "Token"}
+            width={size}
+            height={size}
+            className="rounded-full"
+            onError={() => setImgError(true)}
+        />
+    );
 }

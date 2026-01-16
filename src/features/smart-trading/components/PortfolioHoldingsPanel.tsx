@@ -7,7 +7,7 @@ import { Wallet, Copy, Loader2 } from "lucide-react";
 import { CountUp } from "@/components/animations/CountUp";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 import { useSearchParams } from "next/navigation";
-import { useBirdeyeWebSocket, type BirdeyeTokenStats } from "../hooks/useBirdeyeWebSocket";
+import { useBirdeyeWebSocket, type BirdeyeTokenStats, type BirdeyeTransaction } from "../hooks/useBirdeyeWebSocket";
 import { useSharedWebSocket } from "../hooks/useWebSocket";
 import { usePositions } from "../context/SmartTradingContext";
 import { TransactionDrawer } from "./TransactionDrawer";
@@ -584,9 +584,42 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
         });
     }, []);
 
+    // Handle transaction updates (real-time price from trades)
+    const handleTransaction = useCallback((tx: { address: string; price: number; side: "buy" | "sell" }) => {
+        // Update SOL price if it's a SOL transaction
+        if (tx.address === "So11111111111111111111111111111111111111112") {
+            if (tx.price > 0) {
+                setSolPrice(tx.price);
+            }
+            return;
+        }
+
+        // Update live prices with transaction data
+        setLivePrices((prev) => {
+            const newMap = new Map(prev);
+            const prevEntry = newMap.get(tx.address);
+            newMap.set(tx.address, {
+                price: tx.price,
+                priceChange24h: prevEntry?.priceChange24h,
+                volume24h: prevEntry?.volume24h,
+                liquidity: prevEntry?.liquidity,
+                marketCap: prevEntry?.marketCap,
+                entryPrice: prevEntry?.entryPrice,
+                pnlPct: prevEntry?.pnlPct,
+                pnlSol: prevEntry?.pnlSol,
+                multiplier: prevEntry?.multiplier,
+                targetProgress: prevEntry?.targetProgress,
+                nextTarget: prevEntry?.nextTarget,
+                lastUpdated: Date.now(),
+            });
+            return newMap;
+        });
+    }, []);
+
     // Initialize Birdeye WebSocket (now connects to secure proxy)
-    const { isConnected, subscribeTokenStats } = useBirdeyeWebSocket({
+    const { isConnected, subscribeTokenStats, subscribeTransactions } = useBirdeyeWebSocket({
         onTokenStats: handleTokenStats,
+        onTransaction: handleTransaction,
     });
 
     // Listen to trading WebSocket price updates as a secondary live source
@@ -666,13 +699,42 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
                 throw new Error(result.error || "Failed to load holdings");
             }
 
-            // Filter open positions and sort by value
-            const data: OnChainHolding[] = ((result?.data as OnChainHolding[]) || [])
-                .filter((h) => h.status === "open" && h.current_quantity > 0);
+            // LOG: Status breakdown BEFORE filtering
+            const rawData = (result?.data as OnChainHolding[]) || [];
+            console.log("[PortfolioHoldings] 🔍 BEFORE FILTER - Total positions from API:", rawData.length);
+            const statusBreakdown = rawData.reduce((acc, h) => {
+                acc[h.status] = (acc[h.status] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>);
+            console.log("[PortfolioHoldings] 📊 Status breakdown:", statusBreakdown);
+            console.log("[PortfolioHoldings] 🎯 Positions by status:", rawData.map(h => ({
+                symbol: h.symbol,
+                status: h.status,
+                qty: h.current_quantity,
+                price: h.current_price,
+            })));
+
+            // Filter open AND partially_closed positions (both have quantity) and sort by value
+            const data: OnChainHolding[] = rawData
+                .filter((h) => (h.status === "open" || h.status === "partially_closed") && h.current_quantity > 0);
             // Sort by current value (quantity * price) descending
             data.sort((a, b) => (b.current_quantity * b.current_price) - (a.current_quantity * a.current_price));
 
-            console.log("[PortfolioHoldings] 📊 Holdings count:", data.length);
+            console.log("[PortfolioHoldings] ✅ AFTER FILTER - Holdings count:", data.length);
+
+            // LOG: What got filtered out?
+            const filteredOut = rawData.filter((h) =>
+                !((h.status === "open" || h.status === "partially_closed") && h.current_quantity > 0)
+            );
+            if (filteredOut.length > 0) {
+                console.log("[PortfolioHoldings] ❌ Filtered out " + filteredOut.length + " positions:");
+                filteredOut.forEach(h => {
+                    const reason = h.current_quantity === 0
+                        ? "quantity = 0"
+                        : `status = ${h.status} (not open/partially_closed)`;
+                    console.log(`  - ${h.symbol}: ${reason}`);
+                });
+            }
             console.log("[PortfolioHoldings] 🔍 Holdings details:", data.map(h => ({
                 symbol: h.symbol,
                 mint: h.mint.slice(0, 8) + "...",
@@ -689,8 +751,12 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
             // Subscribe to price updates for all holdings
             if (data.length > 0 && !subscribedRef.current) {
                 const mints = data.map((h) => h.mint);
+                // Subscribe to token stats (5-10s updates)
                 subscribeTokenStats(mints);
+                // Subscribe to transactions (real-time trade updates)
+                subscribeTransactions(mints);
                 subscribedRef.current = true;
+                console.log(`[PortfolioHoldings] 💱 Subscribed to TXS for ${mints.length} tokens`);
             }
         } catch (err) {
             console.error("[PortfolioHoldings] ❌ Failed to fetch holdings:", err);
@@ -699,7 +765,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
             setIsLoading(false);
             isFetchingRef.current = false;
         }
-    }, [subscribeTokenStats]);
+    }, [subscribeTokenStats, subscribeTransactions]);
 
     // Fetch holdings on mount only - WebSocket provides real-time price updates
     // No polling needed since price_update events come via trading WebSocket

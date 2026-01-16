@@ -103,7 +103,13 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
 
     // Connect to Rust backend WebSocket proxy (hides API key server-side)
     const wsUrl = process.env.NEXT_PUBLIC_BIRDEYE_WS_URL || "ws://localhost:3001/ws/birdeye";
-    const wsUrlWithChain = `${wsUrl}?chain=${chain}`;
+
+    // Properly construct URL with chain parameter (avoid duplicates)
+    const url = new URL(wsUrl);
+    if (!url.searchParams.has('chain')) {
+        url.searchParams.set('chain', chain);
+    }
+    const wsUrlWithChain = url.toString();
 
     // Send message to WebSocket
     const sendMessage = useCallback((payload: unknown) => {
@@ -119,32 +125,34 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
             const type = data.type;
             const payload = data.data;
 
-            if (type === "TOKEN_STATS_DATA" && payload && onTokenStatsRef.current) {
-                // Extract 24h data from trade_data intervals
-                const trade24h = payload.trade_data?.["24h"];
+            // PRICE_DATA from Railway proxy (used for both token stats and OHLCV)
+            if ((type === "PRICE_DATA" || type === "BASE_QUOTE_PRICE_DATA") && payload) {
+                // If subscribed via subscribeTokenStats, trigger onTokenStats callback
+                if (onTokenStatsRef.current) {
+                    const stats: BirdeyeTokenStats = {
+                        address: payload.address || payload.tokenAddress || payload.baseAddress,
+                        price: payload.c ?? payload.close ?? payload.price ?? payload.priceUsd ?? 0,
+                        priceChange24h: payload.priceChange24h ?? payload.price_change_24h,
+                        volume24h: payload.v ?? payload.volume ?? payload.volume24h ?? payload.v24hUSD,
+                        liquidity: payload.liquidity ?? payload.liquidityUSD,
+                        marketCap: payload.marketcap ?? payload.mc ?? payload.marketCap,
+                    };
+                    onTokenStatsRef.current(stats);
+                }
 
-                const stats: BirdeyeTokenStats = {
-                    address: payload.address || payload.tokenAddress,
-                    price: payload.price ?? payload.priceUsd ?? 0,
-                    priceChange24h: trade24h?.price_change ?? payload.priceChange24h ?? payload.price_change_24h,
-                    volume24h: trade24h?.volume ?? payload.volume24h ?? payload.v24hUSD,
-                    liquidity: payload.liquidity ?? payload.liquidityUSD,
-                    marketCap: payload.marketcap ?? payload.mc ?? payload.marketCap,
-                };
-                onTokenStatsRef.current(stats);
-            }
-
-            if ((type === "PRICE_DATA" || type === "BASE_QUOTE_PRICE_DATA") && payload && onOhlcvRef.current) {
-                const ohlcv: BirdeyeOhlcv = {
-                    address: payload.address || payload.baseAddress,
-                    open: payload.o ?? payload.open ?? 0,
-                    high: payload.h ?? payload.high ?? 0,
-                    low: payload.l ?? payload.low ?? 0,
-                    close: payload.c ?? payload.close ?? payload.price ?? 0,
-                    volume: payload.v ?? payload.volume ?? 0,
-                    timestamp: payload.unixTime ?? payload.t ?? Date.now(),
-                };
-                onOhlcvRef.current(ohlcv);
+                // If subscribed via subscribeOhlcv, trigger onOhlcv callback
+                if (onOhlcvRef.current) {
+                    const ohlcv: BirdeyeOhlcv = {
+                        address: payload.address || payload.baseAddress,
+                        open: payload.o ?? payload.open ?? 0,
+                        high: payload.h ?? payload.high ?? 0,
+                        low: payload.l ?? payload.low ?? 0,
+                        close: payload.c ?? payload.close ?? payload.price ?? 0,
+                        volume: payload.v ?? payload.volume ?? 0,
+                        timestamp: payload.unixTime ?? payload.t ?? Date.now(),
+                    };
+                    onOhlcvRef.current(ohlcv);
+                }
             }
 
             if (type === "TXS_DATA" && payload && onTransactionRef.current) {
@@ -194,21 +202,15 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
             // Resubscribe to previously tracked tokens
             if (subscribedTokensRef.current.size > 0) {
                 const addresses = Array.from(subscribedTokensRef.current);
-                sendMessage({
-                    type: "SUBSCRIBE_TOKEN_STATS",
-                    data: {
-                        address: addresses,
-                        select: {
-                            price: true,
-                            trade_data: {
-                                volume: true,
-                                price_change: true,
-                                intervals: ["24h"],
-                            },
-                            liquidity: true,
-                            marketcap: true,
+                // Railway proxy expects SUBSCRIBE_PRICE with single address + chain
+                addresses.forEach((address) => {
+                    sendMessage({
+                        type: "SUBSCRIBE_PRICE",
+                        data: {
+                            address,
+                            chain,
                         },
-                    },
+                    });
                 });
             }
         };
@@ -250,34 +252,31 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
         addresses.forEach((addr) => subscribedTokensRef.current.add(addr));
         setSubscribedTokens(new Set(subscribedTokensRef.current));
 
-        sendMessage({
-            type: "SUBSCRIBE_TOKEN_STATS",
-            data: {
-                address: addresses,
-                select: {
-                    price: true,
-                    trade_data: {
-                        volume: true,
-                        price_change: true,
-                        intervals: ["24h"],
-                    },
-                    liquidity: true,
-                    marketcap: true,
+        // Railway proxy expects SUBSCRIBE_PRICE with single address + chain
+        addresses.forEach((address) => {
+            sendMessage({
+                type: "SUBSCRIBE_PRICE",
+                data: {
+                    address,
+                    chain,
                 },
-            },
+            });
         });
 
         console.log(`[BirdeyeWS] Subscribed to ${addresses.length} tokens`);
-    }, [sendMessage]);
+    }, [sendMessage, chain]);
 
     // Unsubscribe from token stats
     const unsubscribeTokenStats = useCallback((addresses: string[]) => {
         addresses.forEach((addr) => subscribedTokensRef.current.delete(addr));
         setSubscribedTokens(new Set(subscribedTokensRef.current));
 
-        sendMessage({
-            type: "UNSUBSCRIBE_TOKEN_STATS",
-            data: { address: addresses },
+        // Railway proxy expects UNSUBSCRIBE_PRICE with single address
+        addresses.forEach((address) => {
+            sendMessage({
+                type: "UNSUBSCRIBE_PRICE",
+                data: { address },
+            });
         });
     }, [sendMessage]);
 
