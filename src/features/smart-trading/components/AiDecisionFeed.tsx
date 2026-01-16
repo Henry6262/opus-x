@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
@@ -13,7 +13,6 @@ import {
     DollarSign,
     Target,
     ExternalLink,
-    ChevronDown,
     WifiOff,
     Zap,
 } from "lucide-react";
@@ -187,8 +186,6 @@ interface DecisionCardProps {
 }
 
 function DecisionCard({ decision }: DecisionCardProps) {
-    const [isExpanded, setIsExpanded] = useState(false);
-
     const config = getDecisionConfig(decision.type);
 
     // Format timestamp as HH:MM:SS
@@ -208,8 +205,7 @@ function DecisionCard({ decision }: DecisionCardProps) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 10 }}
             transition={{ duration: 0.15 }}
-            className="group cursor-pointer hover:bg-white/[0.02] transition-colors font-mono text-[11px] leading-relaxed"
-            onClick={() => setIsExpanded(!isExpanded)}
+            className="group hover:bg-white/[0.02] transition-colors font-mono text-[11px] leading-relaxed"
         >
             {/* Log line */}
             <div className="flex items-start gap-2 py-1.5 px-2">
@@ -246,66 +242,45 @@ function DecisionCard({ decision }: DecisionCardProps) {
                         href={`https://solscan.io/token/${decision.tokenMint}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
                         className="opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
                     >
                         <ExternalLink className="w-3 h-3 text-white/30 hover:text-[#c4f70e]" />
                     </a>
                 )}
-
-                {/* Expand indicator */}
-                {decision.reasoning && (
-                    <motion.div
-                        animate={{ rotate: isExpanded ? 180 : 0 }}
-                        className="text-white/20 ml-auto"
-                    >
-                        <ChevronDown className="w-3 h-3" />
-                    </motion.div>
-                )}
             </div>
 
-            {/* Expanded reasoning - indented like a log continuation */}
-            <AnimatePresence>
-                {isExpanded && decision.reasoning && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="overflow-hidden"
-                    >
-                        <div className="pl-[72px] pr-2 pb-2 text-white/50">
-                            <span className="text-[#c4f70e]/60">→</span> {decision.reasoning}
+            {/* Reasoning - always visible */}
+            {decision.reasoning && (
+                <div className="pl-[72px] pr-2 pb-2 text-white/50">
+                    <span className="text-[#c4f70e]/60">→</span> {decision.reasoning}
 
-                            {/* Additional details as inline tags */}
-                            {decision.details && (
-                                <div className="mt-1 flex flex-wrap gap-1.5">
-                                    {decision.details.entryPrice && (
-                                        <span className="text-white/30">
-                                            entry=${decision.details.entryPrice.toFixed(8)}
-                                        </span>
-                                    )}
-                                    {decision.details.amountSol && (
-                                        <span className="text-white/30">
-                                            size={decision.details.amountSol.toFixed(4)}sol
-                                        </span>
-                                    )}
-                                    {decision.details.multiplier && (
-                                        <span className="text-[#c4f70e]/70">
-                                            {decision.details.multiplier}x
-                                        </span>
-                                    )}
-                                    {decision.details.walletLabel && (
-                                        <span className="text-purple-400/70">
-                                            wallet={decision.details.walletLabel}
-                                        </span>
-                                    )}
-                                </div>
+                    {/* Additional details as inline tags */}
+                    {decision.details && (
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                            {decision.details.entryPrice && (
+                                <span className="text-white/30">
+                                    entry=${decision.details.entryPrice.toFixed(8)}
+                                </span>
+                            )}
+                            {decision.details.amountSol && (
+                                <span className="text-white/30">
+                                    size={decision.details.amountSol.toFixed(4)}sol
+                                </span>
+                            )}
+                            {decision.details.multiplier && (
+                                <span className="text-[#c4f70e]/70">
+                                    {decision.details.multiplier}x
+                                </span>
+                            )}
+                            {decision.details.walletLabel && (
+                                <span className="text-purple-400/70">
+                                    wallet={decision.details.walletLabel}
+                                </span>
                             )}
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    )}
+                </div>
+            )}
         </motion.div>
     );
 }
