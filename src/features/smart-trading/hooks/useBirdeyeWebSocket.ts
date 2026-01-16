@@ -29,10 +29,22 @@ export interface BirdeyeOhlcv {
     timestamp: number;
 }
 
+export interface BirdeyeTransaction {
+    address: string;
+    txHash: string;
+    blockTime: number;
+    price: number;
+    side: "buy" | "sell";
+    volumeUSD: number;
+    source: string; // "raydium", "orca", etc.
+    owner: string;
+}
+
 export interface UseBirdeyeWebSocketOptions {
     chain?: string;
     onTokenStats?: (stats: BirdeyeTokenStats) => void;
     onOhlcv?: (ohlcv: BirdeyeOhlcv) => void;
+    onTransaction?: (tx: BirdeyeTransaction) => void;
     onConnect?: () => void;
     onDisconnect?: () => void;
     onError?: (error: Event) => void;
@@ -44,8 +56,11 @@ export interface UseBirdeyeWebSocketReturn {
     unsubscribeTokenStats: (addresses: string[]) => void;
     subscribeOhlcv: (address: string, chartType?: string) => void;
     unsubscribeOhlcv: (address: string) => void;
+    subscribeTransactions: (addresses: string[]) => void;
+    unsubscribeTransactions: (addresses: string[]) => void;
     disconnect: () => void;
     subscribedTokens: Set<string>;
+    subscribedTxTokens: Set<string>;
 }
 
 export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBirdeyeWebSocketReturn {
@@ -53,6 +68,7 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
         chain = "solana",
         onTokenStats,
         onOhlcv,
+        onTransaction,
         onConnect,
         onDisconnect,
         onError,
@@ -63,6 +79,8 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
     const [isConnected, setIsConnected] = useState(false);
     const subscribedTokensRef = useRef<Set<string>>(new Set());
     const [subscribedTokens, setSubscribedTokens] = useState<Set<string>>(new Set());
+    const subscribedTxTokensRef = useRef<Set<string>>(new Set());
+    const [subscribedTxTokens, setSubscribedTxTokens] = useState<Set<string>>(new Set());
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const reconnectAttemptsRef = useRef(0);
     const isConnectingRef = useRef(false);
@@ -70,6 +88,7 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
     // Store callbacks in refs to prevent reconnection loops
     const onTokenStatsRef = useRef(onTokenStats);
     const onOhlcvRef = useRef(onOhlcv);
+    const onTransactionRef = useRef(onTransaction);
     const onConnectRef = useRef(onConnect);
     const onDisconnectRef = useRef(onDisconnect);
     const onErrorRef = useRef(onError);
@@ -77,12 +96,13 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
     // Update callback refs when they change (without triggering reconnection)
     useEffect(() => { onTokenStatsRef.current = onTokenStats; }, [onTokenStats]);
     useEffect(() => { onOhlcvRef.current = onOhlcv; }, [onOhlcv]);
+    useEffect(() => { onTransactionRef.current = onTransaction; }, [onTransaction]);
     useEffect(() => { onConnectRef.current = onConnect; }, [onConnect]);
     useEffect(() => { onDisconnectRef.current = onDisconnect; }, [onDisconnect]);
     useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
-    // Connect to secure WebSocket proxy (hides API key server-side)
-    const wsUrl = process.env.NEXT_PUBLIC_BIRDEYE_WS_URL || "ws://localhost:8081";
+    // Connect to Rust backend WebSocket proxy (hides API key server-side)
+    const wsUrl = process.env.NEXT_PUBLIC_BIRDEYE_WS_URL || "ws://localhost:3001/ws/birdeye";
     const wsUrlWithChain = `${wsUrl}?chain=${chain}`;
 
     // Send message to WebSocket
@@ -100,13 +120,16 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
             const payload = data.data;
 
             if (type === "TOKEN_STATS_DATA" && payload && onTokenStatsRef.current) {
+                // Extract 24h data from trade_data intervals
+                const trade24h = payload.trade_data?.["24h"];
+
                 const stats: BirdeyeTokenStats = {
                     address: payload.address || payload.tokenAddress,
                     price: payload.price ?? payload.priceUsd ?? 0,
-                    priceChange24h: payload.priceChange24h ?? payload.price_change_24h,
-                    volume24h: payload.volume24h ?? payload.v24hUSD,
+                    priceChange24h: trade24h?.price_change ?? payload.priceChange24h ?? payload.price_change_24h,
+                    volume24h: trade24h?.volume ?? payload.volume24h ?? payload.v24hUSD,
                     liquidity: payload.liquidity ?? payload.liquidityUSD,
-                    marketCap: payload.mc ?? payload.marketCap,
+                    marketCap: payload.marketcap ?? payload.mc ?? payload.marketCap,
                 };
                 onTokenStatsRef.current(stats);
             }
@@ -122,6 +145,20 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
                     timestamp: payload.unixTime ?? payload.t ?? Date.now(),
                 };
                 onOhlcvRef.current(ohlcv);
+            }
+
+            if (type === "TXS_DATA" && payload && onTransactionRef.current) {
+                const tx: BirdeyeTransaction = {
+                    address: payload.address || payload.token,
+                    txHash: payload.txHash || payload.signature,
+                    blockTime: payload.blockTime || payload.blockUnixTime || Date.now() / 1000,
+                    price: payload.price || 0,
+                    side: payload.side || (payload.type === "buy" ? "buy" : "sell"),
+                    volumeUSD: payload.volumeUSD || payload.volume || 0,
+                    source: payload.source || payload.platform || "unknown",
+                    owner: payload.owner || payload.from || "",
+                };
+                onTransactionRef.current(tx);
             }
         } catch (err) {
             console.warn("[BirdeyeWS] Failed to parse message:", err);
@@ -161,7 +198,16 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
                     type: "SUBSCRIBE_TOKEN_STATS",
                     data: {
                         address: addresses,
-                        select: { price: true, priceChange24h: true, volume24h: true, liquidity: true, mc: true },
+                        select: {
+                            price: true,
+                            trade_data: {
+                                volume: true,
+                                price_change: true,
+                                intervals: ["24h"],
+                            },
+                            liquidity: true,
+                            marketcap: true,
+                        },
                     },
                 });
             }
@@ -208,7 +254,16 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
             type: "SUBSCRIBE_TOKEN_STATS",
             data: {
                 address: addresses,
-                select: { price: true, priceChange24h: true, volume24h: true, liquidity: true, mc: true },
+                select: {
+                    price: true,
+                    trade_data: {
+                        volume: true,
+                        price_change: true,
+                        intervals: ["24h"],
+                    },
+                    liquidity: true,
+                    marketcap: true,
+                },
             },
         });
 
@@ -246,6 +301,40 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
         });
     }, [sendMessage]);
 
+    // Subscribe to transactions (swap events)
+    const subscribeTransactions = useCallback((addresses: string[]) => {
+        if (!addresses.length) return;
+
+        addresses.forEach((addr) => subscribedTxTokensRef.current.add(addr));
+        setSubscribedTxTokens(new Set(subscribedTxTokensRef.current));
+
+        addresses.forEach((address) => {
+            sendMessage({
+                type: "SUBSCRIBE_TXS",
+                data: {
+                    queryType: "simple",
+                    address,
+                    txsType: "swap",
+                },
+            });
+        });
+
+        console.log(`[BirdeyeWS] Subscribed to transactions for ${addresses.length} tokens`);
+    }, [sendMessage]);
+
+    // Unsubscribe from transactions
+    const unsubscribeTransactions = useCallback((addresses: string[]) => {
+        addresses.forEach((addr) => subscribedTxTokensRef.current.delete(addr));
+        setSubscribedTxTokens(new Set(subscribedTxTokensRef.current));
+
+        addresses.forEach((address) => {
+            sendMessage({
+                type: "UNSUBSCRIBE_TXS",
+                data: { address },
+            });
+        });
+    }, [sendMessage]);
+
     // Disconnect manually
     const disconnect = useCallback(() => {
         console.log("[BirdeyeWS] Manual disconnect");
@@ -279,7 +368,10 @@ export function useBirdeyeWebSocket(options: UseBirdeyeWebSocketOptions): UseBir
         unsubscribeTokenStats,
         subscribeOhlcv,
         unsubscribeOhlcv,
+        subscribeTransactions,
+        unsubscribeTransactions,
         disconnect,
         subscribedTokens,
+        subscribedTxTokens,
     };
 }
