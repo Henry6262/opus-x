@@ -464,24 +464,53 @@ export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSoc
 
   // Auto-connect on first mount for this path (client-side only)
   useEffect(() => {
-    // Only run on client
-    if (typeof window === "undefined") return;
-    if (!autoConnect) return;
+    console.log(`[SharedWebSocket:${path}] Auto-connect effect triggered`, {
+      isClient: typeof window !== "undefined",
+      autoConnect,
+      hasInitiated: socketState.hasInitiatedConnection,
+      socketReadyState: socketState.socket?.readyState,
+      isConnecting: socketState.isConnecting,
+    });
 
-    // Check if already initiated connection (prevents duplicate connections in StrictMode)
-    if (socketState.hasInitiatedConnection) {
+    // Only run on client
+    if (typeof window === "undefined") {
+      console.log(`[SharedWebSocket:${path}] Skipping - SSR`);
+      return;
+    }
+    if (!autoConnect) {
+      console.log(`[SharedWebSocket:${path}] Skipping - autoConnect false`);
       return;
     }
 
-    // Check if already connected or connecting
+    // Check if already connected or connecting FIRST (before hasInitiated check)
     if (socketState.socket?.readyState === WebSocket.OPEN || socketState.socket?.readyState === WebSocket.CONNECTING || socketState.isConnecting) {
+      console.log(`[SharedWebSocket:${path}] Skipping - already connected/connecting`, {
+        readyState: socketState.socket?.readyState,
+        isConnecting: socketState.isConnecting,
+      });
+      return;
+    }
+
+    // If socket is null or closed, reset the hasInitiated flag
+    if (!socketState.socket || socketState.socket.readyState === WebSocket.CLOSED) {
+      if (socketState.hasInitiatedConnection) {
+        console.log(`[SharedWebSocket:${path}] Resetting hasInitiatedConnection - socket is null/closed`);
+        socketState.hasInitiatedConnection = false;
+      }
+    }
+
+    // Check if already initiated connection (prevents duplicate connections in StrictMode)
+    // This check only applies when socket is actively connecting/connected
+    if (socketState.hasInitiatedConnection) {
+      console.log(`[SharedWebSocket:${path}] Skipping - already initiated (but socket should be active)`);
       return;
     }
 
     // Set flag BEFORE calling connect
+    console.log(`[SharedWebSocket:${path}] Calling connect()...`);
     socketState.hasInitiatedConnection = true;
     connect();
-  }, [autoConnect, connect, socketState]);
+  }, [autoConnect, connect, socketState, path]);
 
   return {
     status,

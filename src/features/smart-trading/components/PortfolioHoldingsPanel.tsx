@@ -494,6 +494,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
     const walletFromQuery = searchParams?.get("wallet") || undefined;
     const effectiveWallet = useMemo(() => walletAddress ?? walletFromQuery, [walletAddress, walletFromQuery]);
     const subscribedRef = useRef(false);
+    const isFetchingRef = useRef(false);
     const { status: tradingWsStatus, on: onTradingEvent } = useSharedWebSocket({ path: "/ws/trading" });
 
     // Get positions from context to access entry prices
@@ -631,6 +632,18 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
 
     // Fetch initial holdings (one-time from Helius via backend, or direct if available)
     const fetchHoldings = useCallback(async () => {
+        // Prevent overlapping fetches
+        if (isFetchingRef.current) {
+            console.log("[PortfolioHoldings] Fetch already in progress, skipping...");
+            return;
+        }
+
+        console.log("[PortfolioHoldings] fetchHoldings called", {
+            effectiveWallet,
+            minValueUsd,
+            subscribeTokenStatsType: typeof subscribeTokenStats,
+        });
+
         if (!effectiveWallet) {
             setHoldings([]);
             setError("Connect wallet or provide ?wallet= parameter");
@@ -638,6 +651,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
             return;
         }
 
+        isFetchingRef.current = true;
         try {
             setIsLoading(true);
             const params = new URLSearchParams();
@@ -686,6 +700,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
             setError(err instanceof Error ? err.message : "Failed to load holdings");
         } finally {
             setIsLoading(false);
+            isFetchingRef.current = false;
         }
     }, [effectiveWallet, minValueUsd, subscribeTokenStats]);
 
