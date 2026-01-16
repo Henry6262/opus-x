@@ -634,6 +634,28 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
         };
     }, [onTradingEvent]);
 
+    // Listen for position opened/closed events to refresh holdings list
+    useEffect(() => {
+        const unsubPositionOpened = onTradingEvent("position_opened", () => {
+            console.log("[PortfolioHoldings] Position opened - refreshing holdings");
+            fetchHoldings();
+        });
+        const unsubPositionClosed = onTradingEvent("position_closed", () => {
+            console.log("[PortfolioHoldings] Position closed - refreshing holdings");
+            fetchHoldings();
+        });
+        const unsubTakeProfit = onTradingEvent("take_profit_triggered", () => {
+            console.log("[PortfolioHoldings] Take profit triggered - refreshing holdings");
+            fetchHoldings();
+        });
+
+        return () => {
+            unsubPositionOpened?.();
+            unsubPositionClosed?.();
+            unsubTakeProfit?.();
+        };
+    }, [onTradingEvent, fetchHoldings]);
+
     useEffect(() => {
         if (!isConnected) return;
         console.log("[Portfolio] Birdeye WebSocket connected");
@@ -701,15 +723,10 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
         }
     }, [subscribeTokenStats]);
 
-    // Fetch holdings on mount and poll every 5 seconds
+    // Fetch holdings on mount only - WebSocket provides real-time price updates
+    // No polling needed since price_update events come via trading WebSocket
     useEffect(() => {
         fetchHoldings();
-
-        const pollInterval = setInterval(() => {
-            fetchHoldings();
-        }, 5000);
-
-        return () => clearInterval(pollInterval);
     }, [fetchHoldings]);
 
     // Calculate total value
