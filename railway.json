@@ -1,0 +1,12 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "echo 'No build needed for proxy server'"
+  },
+  "deploy": {
+    "startCommand": "node --require tsx/cjs --import tsx/esm src/server/birdeye-proxy.ts",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
+}
