@@ -411,7 +411,7 @@ interface AiDecisionFeedProps {
     className?: string;
 }
 
-export function AiDecisionFeed({ maxItems = 15, className = "" }: AiDecisionFeedProps) {
+export function AiDecisionFeed({ maxItems = 50, className = "" }: AiDecisionFeedProps) {
     const { activityFeed } = useActivityFeed();
     const { isConnected } = useConnectionStatus();
     const scrollRef = useRef<HTMLDivElement>(null);
