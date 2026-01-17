@@ -25,6 +25,8 @@ import type {
   MigrationFeedEvent,
   Migration,
   DashboardMigrationStats,
+  HoldingsSnapshotData,
+  HoldingData,
 } from "../types";
 
 // ============================================
@@ -757,6 +759,109 @@ export function SmartTradingProvider({
         dispatchTerminalEvent("position_closed", payload);
 
         // Refetch to update positions and history
+        fetchDashboard();
+      })
+    );
+
+    // NEW: Holdings Snapshot - Full state update every 2 seconds
+    unsubscribes.push(
+      on<HoldingsSnapshotData>("holdings_snapshot", (data, _event) => {
+        // Safety check
+        if (!data || !Array.isArray(data.holdings)) {
+          console.warn("[SmartTrading] Invalid holdings_snapshot data:", data);
+          return;
+        }
+
+        console.log(
+          `[SmartTrading] holdings_snapshot: ${data.holdings.length} positions, total PnL: ${data.total_unrealized_pnl_sol?.toFixed(4)} SOL`
+        );
+
+        // Map backend HoldingData to frontend Position format
+        const mappedPositions: Position[] = data.holdings
+          .filter((h) => h.status === "open" || h.status === "partially_closed")
+          .map((holding: HoldingData) => ({
+            id: holding.id,
+            signalId: "", // Not available in snapshot
+            tokenMint: holding.mint,
+            tokenSymbol: holding.symbol,
+            status: holding.status === "open" ? "OPEN" : "PARTIALLY_CLOSED",
+
+            // Entry
+            entryPriceSol: holding.entry_price,
+            entryAmountSol: holding.entry_sol_value,
+            entryTokens: holding.initial_quantity,
+            entryTxSig: holding.buy_signature,
+
+            // Targets (preserve existing or use defaults)
+            target1Price: 0,
+            target1Percent: 0,
+            target1Hit: false,
+            target2Price: 0,
+            target2Hit: false,
+            stopLossPrice: 0,
+            stoppedOut: false,
+
+            // Current state
+            currentPrice: holding.current_price,
+            remainingTokens: holding.current_quantity,
+            unrealizedPnl: holding.unrealized_pnl_sol,
+            realizedPnlSol: holding.realized_pnl_sol,
+
+            // Timestamps
+            createdAt: holding.entry_time,
+            updatedAt: new Date().toISOString(),
+
+            // Extra data for display
+            peakPrice: holding.peak_price,
+            peakPnlPct: holding.peak_pnl_pct,
+            marketCap: holding.market_cap,
+            liquidity: holding.liquidity,
+            volume24h: holding.volume_24h,
+          } as Position));
+
+        setState((prev) => ({
+          ...prev,
+          positions: mappedPositions,
+          // Update dashboard stats with snapshot totals
+          dashboardStats: prev.dashboardStats
+            ? {
+                ...prev.dashboardStats,
+                totalUnrealizedPnL: data.total_unrealized_pnl_sol,
+                totalRealizedPnL: data.total_realized_pnl_sol,
+                openPositions: data.open_position_count,
+              }
+            : prev.dashboardStats,
+        }));
+      })
+    );
+
+    // NEW: Stop Loss Triggered
+    unsubscribes.push(
+      on<{
+        mint: string;
+        ticker: string;
+        stop_price: number;
+        realized_loss: number;
+      }>("stop_loss_triggered", (data, event) => {
+        const payload = (data ?? (event as unknown as Record<string, any>)) as typeof data;
+        if (!payload || !payload.mint) {
+          console.warn("[SmartTrading] Invalid stop_loss_triggered data:", payload);
+          return;
+        }
+
+        addActivity({
+          ...event,
+          type: "position_closed",
+          data: {
+            ...payload,
+            message: `🛑 Stop loss hit: ${payload.ticker} - ${payload.realized_loss.toFixed(4)} SOL`,
+          },
+        });
+
+        // Dispatch to terminal
+        dispatchTerminalEvent("stop_loss", payload);
+
+        // Refetch to update positions
         fetchDashboard();
       })
     );

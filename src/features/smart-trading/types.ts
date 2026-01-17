@@ -324,10 +324,44 @@ export interface MigrationFeedEvent {
   | "position_opened"
   | "price_update"
   | "take_profit_triggered"
-  | "position_closed";
+  | "position_closed"
+  | "holdings_snapshot"
+  | "stop_loss_triggered";
   data?: unknown;
   timestamp: number;
   clientId?: string;
+}
+
+// Holdings snapshot from backend WebSocket (sent every 2s on position changes)
+export interface HoldingsSnapshotData {
+  holdings: HoldingData[];
+  total_unrealized_pnl_sol: number;
+  total_realized_pnl_sol: number;
+  open_position_count: number;
+  timestamp: number;
+}
+
+export interface HoldingData {
+  id: string;
+  mint: string;
+  symbol: string;
+  name: string;
+  entry_price: number;
+  entry_time: string;
+  entry_sol_value: number;
+  initial_quantity: number;
+  current_quantity: number;
+  current_price: number;
+  unrealized_pnl_sol: number;
+  unrealized_pnl_pct: number;
+  peak_price: number;
+  peak_pnl_pct: number;
+  realized_pnl_sol: number;
+  status: "open" | "partially_closed" | "closed";
+  market_cap: number | null;
+  liquidity: number | null;
+  volume_24h: number | null;
+  buy_signature: string | null;
 }
 
 // ============================================
