@@ -5,6 +5,9 @@
  * Calculates PnL based on initial detection price vs current price
  */
 
+// Only log in development for mobile performance
+const isDev = process.env.NODE_ENV === "development";
+
 export interface TokenPrice {
   mint: string;
   usdPrice: number;
@@ -45,7 +48,7 @@ async function fetchJupiterPrices(mints: string[]): Promise<Map<string, TokenPri
   const url = `https://api.jup.ag/price/v3?ids=${idsParam}`;
 
   try {
-    console.log(`[PriceTracking] Fetching Jupiter prices for ${mints.length} tokens`);
+    if (isDev) console.log(`[PriceTracking] Fetching Jupiter prices for ${mints.length} tokens`);
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -74,7 +77,7 @@ async function fetchJupiterPrices(mints: string[]): Promise<Map<string, TokenPri
       });
     }
 
-    console.log(`[PriceTracking] Jupiter returned ${prices.size}/${mints.length} prices`);
+    if (isDev) console.log(`[PriceTracking] Jupiter returned ${prices.size}/${mints.length} prices`);
     return prices;
   } catch (error) {
     console.error('[PriceTracking] Jupiter fetch failed:', error);
@@ -95,7 +98,7 @@ async function fetchDexScreenerPrices(mints: string[]): Promise<Map<string, Toke
   const url = `https://api.dexscreener.com/latest/dex/tokens/${addressesParam}`;
 
   try {
-    console.log(`[PriceTracking] Fetching DexScreener prices for ${mints.length} tokens`);
+    if (isDev) console.log(`[PriceTracking] Fetching DexScreener prices for ${mints.length} tokens`);
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -150,7 +153,7 @@ async function fetchDexScreenerPrices(mints: string[]): Promise<Map<string, Toke
       });
     }
 
-    console.log(`[PriceTracking] DexScreener returned ${prices.size}/${mints.length} prices`);
+    if (isDev) console.log(`[PriceTracking] DexScreener returned ${prices.size}/${mints.length} prices`);
     return prices;
   } catch (error) {
     console.error('[PriceTracking] DexScreener fetch failed:', error);
@@ -178,11 +181,11 @@ export async function fetchTokenPrices(mints: string[]): Promise<Map<string, Tok
   }
 
   if (uncachedMints.length === 0) {
-    console.log(`[PriceTracking] All ${mints.length} prices served from cache`);
+    if (isDev) console.log(`[PriceTracking] All ${mints.length} prices served from cache`);
     return results;
   }
 
-  console.log(`[PriceTracking] Fetching prices for ${uncachedMints.length} uncached tokens`);
+  if (isDev) console.log(`[PriceTracking] Fetching prices for ${uncachedMints.length} uncached tokens`);
 
   // Try DexScreener first (primary source - provides market cap data)
   const dexScreenerPrices = await fetchDexScreenerPrices(uncachedMints);
@@ -193,7 +196,7 @@ export async function fetchTokenPrices(mints: string[]): Promise<Map<string, Tok
   // Fallback to Jupiter for missing tokens
   let jupiterPrices = new Map<string, TokenPrice>();
   if (missingMints.length > 0) {
-    console.log(`[PriceTracking] ${missingMints.length} tokens not found on DexScreener, trying Jupiter`);
+    if (isDev) console.log(`[PriceTracking] ${missingMints.length} tokens not found on DexScreener, trying Jupiter`);
     jupiterPrices = await fetchJupiterPrices(missingMints);
   }
 
@@ -208,8 +211,10 @@ export async function fetchTokenPrices(mints: string[]): Promise<Map<string, Tok
     });
   }
 
-  console.log(`[PriceTracking] Final results: ${results.size}/${mints.length} prices found`);
-  console.log(`[PriceTracking] Sources: ${dexScreenerPrices.size} DexScreener, ${jupiterPrices.size} Jupiter, ${mints.length - uncachedMints.length} cached`);
+  if (isDev) {
+    console.log(`[PriceTracking] Final results: ${results.size}/${mints.length} prices found`);
+    console.log(`[PriceTracking] Sources: ${dexScreenerPrices.size} DexScreener, ${jupiterPrices.size} Jupiter, ${mints.length - uncachedMints.length} cached`);
+  }
 
   return results;
 }
@@ -264,7 +269,7 @@ export async function calculateTokenPnL(
     });
   }
 
-  console.log(`[PriceTracking] Fetched market data for ${results.size}/${tokens.length} tokens`);
+  if (isDev) console.log(`[PriceTracking] Fetched market data for ${results.size}/${tokens.length} tokens`);
 
   return results;
 }
@@ -274,5 +279,5 @@ export async function calculateTokenPnL(
  */
 export function clearPriceCache(): void {
   priceCache.clear();
-  console.log('[PriceTracking] Price cache cleared');
+  if (isDev) console.log('[PriceTracking] Price cache cleared');
 }

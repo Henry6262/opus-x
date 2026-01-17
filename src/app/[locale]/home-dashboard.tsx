@@ -1,7 +1,6 @@
 "use client";
 
-
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense, useEffect, useRef } from "react";
 import {
   SmartTradingDashboard,
   SmartTradingProvider,
@@ -12,11 +11,73 @@ import {
   useWalletSignals,
 } from "@/features/smart-trading";
 import { TraderProfileCard } from "@/features/smart-trading/components/TraderProfileCard";
-import { Terminal, TerminalProvider, useTerminalNarrator, useAiReasoningStream } from "@/features/terminal";
+import { TerminalProvider, useTerminalNarrator, useAiReasoningStream } from "@/features/terminal";
 import { useAiMood } from "@/hooks/useAiMood";
-import { VibrCoder } from "@/components/VibrCoder";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MobileBottomBar } from "@/components/MobileBottomBar";
+
+// Lazy load heavy components for better initial load performance
+const VibrCoder = lazy(() => import("@/components/VibrCoder").then(m => ({ default: m.VibrCoder })));
+const Terminal = lazy(() => import("@/features/terminal").then(m => ({ default: m.Terminal })));
+
+// Lightweight loading placeholder for VibrCoder
+function VibrCoderSkeleton() {
+  return (
+    <div className="w-full aspect-video bg-black/50 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="w-16 h-16 border-2 border-brand-primary/30 border-t-brand-primary rounded-full animate-spin" />
+    </div>
+  );
+}
+
+// Lightweight loading placeholder for Terminal
+function TerminalSkeleton() {
+  return (
+    <div className="w-full h-[200px] bg-black/30 rounded-lg border border-white/10 p-4">
+      <div className="space-y-2">
+        <div className="h-3 bg-white/10 rounded w-3/4 animate-pulse" />
+        <div className="h-3 bg-white/10 rounded w-1/2 animate-pulse" />
+        <div className="h-3 bg-white/10 rounded w-2/3 animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+// Simple hook to defer rendering until element is near viewport (mobile optimization)
+function useInView(rootMargin = "100px") {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isInView, setIsInView] = useState(false);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect(); // Only trigger once
+        }
+      },
+      { rootMargin }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [rootMargin]);
+
+  return { ref, isInView };
+}
+
+// Skeleton for deferred dashboard content
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="h-32 bg-white/5 rounded-lg" />
+      <div className="h-48 bg-white/5 rounded-lg" />
+      <div className="h-64 bg-white/5 rounded-lg" />
+    </div>
+  );
+}
 
 // Map AI mood to VibrCoder animation state
 function getVibrCoderState(
@@ -46,16 +107,15 @@ export function HomeDashboard() {
 function DashboardContent() {
   const activeView: ActiveView = "smart-trading";
 
+  // Defer below-fold content for faster initial mobile load
+  const { ref: dashboardRef, isInView: dashboardInView } = useInView("200px");
+
   // Smart Trading data from unified WebSocket-first context (live updates!)
   const { config } = useSmartTradingConfig();
   const { dashboardStats } = useDashboardStats();
   const { positions, history } = usePositions();
   const { rankedMigrations } = useMigrationFeedContext();
   const { signals } = useWalletSignals();
-
-  // DEBUG: Log what dashboardStats contains before passing to TraderProfileCard
-  console.log('[HomeDashboard] dashboardStats from context:', dashboardStats);
-  console.log('[HomeDashboard] dashboardStats.performance:', dashboardStats?.performance);
 
   // Memoize narrator state to prevent infinite re-renders (object reference stability)
   const narratorState = useMemo(
@@ -100,14 +160,18 @@ function DashboardContent() {
           <div className="absolute top-14 right-2 md:top-4 md:right-4 z-20">
             <LanguageSwitcher className="shadow-[0_10px_30px_rgba(0,0,0,0.35)] border-white/15 bg-black/50 backdrop-blur-xl scale-75 md:scale-100 origin-top-right" />
           </div>
-          <VibrCoder
-            state={getVibrCoderState(aiMood)}
-            statusText={aiMood.toUpperCase()}
-            reason={reason}
-            pnl={pnl}
-          />
+          <Suspense fallback={<VibrCoderSkeleton />}>
+            <VibrCoder
+              state={getVibrCoderState(aiMood)}
+              statusText={aiMood.toUpperCase()}
+              reason={reason}
+              pnl={pnl}
+            />
+          </Suspense>
           <div className="hero-terminal">
-            <Terminal />
+            <Suspense fallback={<TerminalSkeleton />}>
+              <Terminal />
+            </Suspense>
           </div>
         </div>
 
@@ -123,12 +187,18 @@ function DashboardContent() {
             />
           </div>
 
-          {/* Feature Content */}
-          {activeView === "smart-trading" && (
-            <div className="space-y-4">
-              <SmartTradingDashboard />
-            </div>
-          )}
+          {/* Feature Content - deferred until scrolled into view for mobile perf */}
+          <div ref={dashboardRef}>
+            {activeView === "smart-trading" && (
+              dashboardInView ? (
+                <div className="space-y-4">
+                  <SmartTradingDashboard />
+                </div>
+              ) : (
+                <DashboardSkeleton />
+              )
+            )}
+          </div>
         </div>
 
         {/* Mobile Bottom Bar - Twitter & CA Copy */}

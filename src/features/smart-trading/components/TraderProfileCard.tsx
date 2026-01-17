@@ -92,7 +92,6 @@ export function TraderProfileCard({
   const winningTrades = performance?.winningTrades ?? 0;
   const largestWinPercent = performance?.largestWin ?? 0;
   const netPnl = performance?.netPnlSol ?? 0;
-  const profitFactor = performance?.profitFactor ?? 0;
   const dailyPnL = stats?.trading?.dailyPnL ?? 0;
 
   const isOnStreak = streak.current >= 2 && streak.type === "win";
@@ -124,24 +123,6 @@ export function TraderProfileCard({
       )}
     </div>
   );
-
-  const StatProfitFactor = () => {
-    const color = profitFactor >= 1.5 ? "text-green-400"
-                : profitFactor >= 1.0 ? "text-yellow-400"
-                : "text-red-400";
-    return (
-      <div className="flex items-baseline gap-2 min-w-[90px]">
-        <span className="text-[10px] md:text-xs text-white/40 uppercase tracking-wider">P/F:</span>
-        {isLoading ? (
-          <Skeleton className="h-5 w-10" />
-        ) : (
-          <span className={`text-sm md:text-lg font-bold font-mono tabular-nums ${color}`}>
-            {profitFactor.toFixed(1)}x
-          </span>
-        )}
-      </div>
-    );
-  };
 
   const StatTrades = () => (
     <div className="flex items-baseline gap-2 min-w-[140px]">
@@ -261,10 +242,9 @@ export function TraderProfileCard({
             </div>
           </div>
 
-          {/* ZONE 3: Secondary stats - 2x2 Grid (desktop only) */}
+          {/* ZONE 3: Secondary stats - Grid (desktop only) */}
           <div className="hidden md:grid grid-cols-2 gap-x-6 gap-y-1.5 pl-6 pr-4 border-l border-white/10">
             <StatTrades />
-            <StatProfitFactor />
             <StatBest />
             <StatStreak />
           </div>
@@ -331,12 +311,6 @@ export function TraderProfileCard({
           <span className="text-white/40">Today:</span>
           <span className={dailyPnL >= 0 ? "text-green-400 font-mono tabular-nums" : "text-red-400 font-mono tabular-nums"}>
             {dailyPnL >= 0 ? "+" : ""}{dailyPnL.toFixed(2)}
-          </span>
-        </div>
-        <div className="flex items-center gap-1 text-[10px]">
-          <span className="text-white/40">P/F:</span>
-          <span className={`font-mono tabular-nums ${profitFactor >= 1.0 ? "text-green-400" : "text-red-400"}`}>
-            {profitFactor.toFixed(1)}x
           </span>
         </div>
         <div className="flex items-center gap-1 text-[10px]">

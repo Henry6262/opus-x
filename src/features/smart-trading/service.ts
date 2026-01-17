@@ -1,4 +1,8 @@
 import { buildDevprntApiUrl } from "@/lib/devprnt";
+
+// Only log in development for performance
+const isDev = process.env.NODE_ENV === "development";
+
 import type {
   TradingConfig,
   TrackedWallet,
@@ -166,7 +170,7 @@ async function fetchDevprint<T>(
 ): Promise<T> {
   const url = buildDevprntApiUrl(path);
 
-  console.log(`[fetchDevprint] ${options?.method || "GET"} ${url.toString()}`);
+  if (isDev) console.log(`[fetchDevprint] ${options?.method || "GET"} ${url.toString()}`);
 
   const response = await fetch(url.toString(), {
     ...options,
@@ -376,16 +380,18 @@ function mapDevprintStats(
   const solBalance = config?.sol_balance ?? 0;
   const isLiveMode = config?.trading_mode === 'real';
 
-  // DEBUG: Log raw stats from API
-  console.log('[mapDevprintStats] RAW API stats:', stats);
-  console.log('[mapDevprintStats] RAW API stats details:', {
-    winning_trades: stats.winning_trades,
-    losing_trades: stats.losing_trades,
-    win_rate: stats.win_rate,
-    best_trade_pct: stats.best_trade_pct,
-    worst_trade_pct: stats.worst_trade_pct,
-    total_pnl: stats.total_pnl,
-  });
+  // DEBUG: Log raw stats from API (dev only)
+  if (isDev) {
+    console.log('[mapDevprintStats] RAW API stats:', stats);
+    console.log('[mapDevprintStats] RAW API stats details:', {
+      winning_trades: stats.winning_trades,
+      losing_trades: stats.losing_trades,
+      win_rate: stats.win_rate,
+      best_trade_pct: stats.best_trade_pct,
+      worst_trade_pct: stats.worst_trade_pct,
+      total_pnl: stats.total_pnl,
+    });
+  }
 
   const mappedResult = {
     trading: {
@@ -422,9 +428,11 @@ function mapDevprintStats(
     strongSignalsToday: 0,
   };
 
-  // DEBUG: Log mapped result
-  console.log('[mapDevprintStats] MAPPED result:', mappedResult);
-  console.log('[mapDevprintStats] MAPPED performance:', mappedResult.performance);
+  // DEBUG: Log mapped result (dev only)
+  if (isDev) {
+    console.log('[mapDevprintStats] MAPPED result:', mappedResult);
+    console.log('[mapDevprintStats] MAPPED performance:', mappedResult.performance);
+  }
 
   return mappedResult;
 }

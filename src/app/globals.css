@@ -2935,7 +2935,7 @@ button:focus-visible {
   position: fixed;
   top: var(--space-4);
   left: var(--space-4);
-  z-index: 100;
+  z-index: 10000;
   font-family: var(--font-mono);
   transform-origin: top left;
 }

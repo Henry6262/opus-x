@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import type { PumpTokenWithTweet } from "../types";
 import type { TokenPnL } from "@/lib/priceTracking";
 import { TokenCard } from "./TokenCard";
@@ -7,6 +7,10 @@ import type { AiEntryAnalysis } from "../hooks/useAiEntryAnalysis";
 
 // Re-export for convenience
 export type { RetracementAnalysisResult };
+
+// Pagination constants - mobile-friendly defaults
+const INITIAL_PAGE_SIZE = 10;
+const LOAD_MORE_SIZE = 10;
 
 interface TokensTableProps {
   tokens: PumpTokenWithTweet[];
@@ -21,6 +25,27 @@ interface TokensTableProps {
 
 export function TokensTable({ tokens, isLoading, onRefresh, pnlData, retracementResults, aiEntryResults, currentlyAnalyzing, aiAnalyzing }: TokensTableProps) {
   const [newTokenIds, setNewTokenIds] = useState<Set<string>>(new Set());
+  const [visibleCount, setVisibleCount] = useState(INITIAL_PAGE_SIZE);
+
+  // Paginated tokens for rendering (memoized for performance)
+  const visibleTokens = useMemo(() => {
+    return tokens.slice(0, visibleCount);
+  }, [tokens, visibleCount]);
+
+  const hasMore = visibleCount < tokens.length;
+  const remainingCount = tokens.length - visibleCount;
+
+  // Load more handler
+  const loadMore = useCallback(() => {
+    setVisibleCount((prev) => Math.min(prev + LOAD_MORE_SIZE, tokens.length));
+  }, [tokens.length]);
+
+  // Reset pagination when tokens change significantly (e.g., filter change)
+  useEffect(() => {
+    if (tokens.length < visibleCount) {
+      setVisibleCount(Math.min(INITIAL_PAGE_SIZE, tokens.length));
+    }
+  }, [tokens.length, visibleCount]);
 
   // Track new tokens for animation
   useEffect(() => {
@@ -89,9 +114,9 @@ export function TokensTable({ tokens, isLoading, onRefresh, pnlData, retracement
           </div>
         </div>
       ) : (
-        /* Token cards grid */
+        /* Token cards grid with pagination */
         <div className="space-y-2">
-          {tokens.map((token) => (
+          {visibleTokens.map((token) => (
             <TokenCard
               key={token.mint}
               token={token}
@@ -103,6 +128,19 @@ export function TokensTable({ tokens, isLoading, onRefresh, pnlData, retracement
               isAiAnalyzing={aiAnalyzing === token.mint}
             />
           ))}
+
+          {/* Load More Button */}
+          {hasMore && (
+            <button
+              onClick={loadMore}
+              className="w-full py-3 mt-4 text-sm font-mono text-white/60 hover:text-matrix-green
+                         bg-white/5 hover:bg-white/10 border border-white/10 hover:border-matrix-green/30
+                         rounded-lg transition-all duration-200 active:scale-[0.98]"
+            >
+              Load {Math.min(LOAD_MORE_SIZE, remainingCount)} more
+              <span className="text-white/40 ml-1">({remainingCount} remaining)</span>
+            </button>
+          )}
         </div>
       )}
     </div>
