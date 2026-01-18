@@ -42,7 +42,8 @@ function TokenAvatar({ symbol, mint }: { symbol: string; mint: string }) {
 // Helpers
 // ============================================
 
-function formatCurrency(value: number): string {
+function formatCurrency(value: number | undefined | null): string {
+  if (!value) return "$0";
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
   return `$${value.toFixed(0)}`;
@@ -113,7 +114,7 @@ export function WatchlistCard({ token }: WatchlistCardProps) {
         </div>
         <div className="flex items-center gap-1">
           <Users className="w-3 h-3 text-white/40" />
-          <span className="text-white/70 font-mono">{token.metrics.holder_count.toLocaleString()}</span>
+          <span className="text-white/70 font-mono">{(token.metrics.holder_count ?? 0).toLocaleString()}</span>
         </div>
       </div>
     </motion.div>
