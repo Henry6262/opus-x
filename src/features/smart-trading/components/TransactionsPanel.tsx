@@ -129,19 +129,21 @@ export function TransactionsPanel({ maxTransactions = 15 }: TransactionsPanelPro
         setError(null);
         try {
             const url = buildDevprntApiUrl(`/api/trading/transactions?limit=${maxTransactions}`);
-            console.log("[TransactionsPanel] 📡 Fetching from:", url.toString());
             const response = await fetch(url.toString());
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const result = await response.json();
-            console.log("[TransactionsPanel] 📦 RAW API Response:", result);
-            console.log("[TransactionsPanel] 📊 Transactions count:", result.data?.length || 0);
-            if (result.data?.length > 0) {
-                console.log("[TransactionsPanel] 🔍 First transaction:", JSON.stringify(result.data[0], null, 2));
-                console.log("[TransactionsPanel] 🔍 Transaction signatures:", result.data.map((tx: EnrichedTransaction) => tx.signature?.slice(0, 20) + "..."));
+
+            // Handle both formats: { data: [...] } or { data: { items: [...] } }
+            let items: EnrichedTransaction[] = [];
+            if (Array.isArray(result.data)) {
+                items = result.data;
+            } else if (result.data && Array.isArray(result.data.items)) {
+                items = result.data.items;
             }
-            setTransactions(result.data || []);
+
+            setTransactions(items);
         } catch (err) {
-            console.error("[TransactionsPanel] ❌ Failed to fetch transactions:", err);
+            console.error("[TransactionsPanel] Failed to fetch transactions:", err);
             setError("Failed to load transactions");
         } finally {
             setIsLoading(false);

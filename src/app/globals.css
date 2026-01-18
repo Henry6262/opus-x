@@ -76,6 +76,61 @@
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
   --radius-full: 9999px;
+
+  /* ===== Z-INDEX SCALE =====
+   * Centralized z-index management to prevent stacking context conflicts.
+   *
+   * LAYER HIERARCHY (bottom to top):
+   * - Base content (0-10)
+   * - Elevated content (20-40)
+   * - Sticky/Fixed elements (50-100)
+   * - Dropdowns/Tooltips (200-300)
+   * - Modals/Sheets (400-500)
+   * - Toasts/Notifications (600-700)
+   * - Terminal overlay (800-900)
+   * - Critical overlays (1000+)
+   * ========================================== */
+
+  /* Base - Default content flow */
+  --z-base: 0;
+  --z-below: -1;
+
+  /* Elevated - Cards, panels with shadows */
+  --z-elevated: 10;
+  --z-elevated-high: 20;
+
+  /* Sticky - Fixed elements like headers, sidebars */
+  --z-sticky: 50;
+  --z-sticky-high: 60;
+
+  /* Fixed UI - Persistent elements like wallet pill, bottom bar */
+  --z-fixed: 100;
+  --z-fixed-high: 150;
+
+  /* Dropdowns - Menus, tooltips, popovers */
+  --z-dropdown: 200;
+  --z-tooltip: 250;
+  --z-popover: 300;
+
+  /* Sheets - Side drawers, bottom sheets */
+  --z-sheet-backdrop: 400;
+  --z-sheet: 450;
+
+  /* Modals - Dialog overlays */
+  --z-modal-backdrop: 500;
+  --z-modal: 550;
+
+  /* Toast - Notifications (always visible) */
+  --z-toast: 600;
+
+  /* Terminal - AI terminal overlay (can expand full screen) */
+  --z-terminal-collapsed: 100;
+  --z-terminal-backdrop: 800;
+  --z-terminal-expanded: 850;
+
+  /* Critical - Things that must be on top of everything */
+  --z-critical: 1000;
+  --z-max: 9999;
   }
 }
 
@@ -329,14 +384,14 @@ main {
     position: fixed;
     bottom: var(--space-4);
     right: var(--space-4);
-    z-index: 10003;
+    z-index: var(--z-terminal-collapsed);
     width: auto;
     height: auto;
   }
 
   /* When terminal is expanded on mobile, boost z-index to overlay everything */
   .hero-terminal:has(.terminal-drawer:not(.collapsed)) {
-    z-index: 99999;
+    z-index: var(--z-terminal-expanded);
     inset: 0;
     bottom: 0;
     right: 0;
@@ -489,7 +544,7 @@ main {
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.6);
     animation: mobile-terminal-slide-up 400ms cubic-bezier(0.22, 1, 0.36, 1);
-    z-index: 9999;
+    z-index: var(--z-terminal-expanded);
   }
 
   @keyframes mobile-terminal-slide-up {
@@ -1391,7 +1446,7 @@ main {
   top: 50%;
   left: 0;
   transform: translate(-100%, -50%);
-  z-index: 10002;
+  z-index: var(--z-elevated-high);
   width: 64px;
   height: 110px;
   display: flex;
@@ -1412,7 +1467,6 @@ main {
   transition:
     all 300ms cubic-bezier(0.4, 0, 0.2, 1),
     transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 20;
   box-shadow:
     -6px 0 24px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
@@ -2935,7 +2989,7 @@ button:focus-visible {
   position: fixed;
   top: var(--space-4);
   left: var(--space-4);
-  z-index: 10000;
+  z-index: var(--z-fixed);
   font-family: var(--font-mono);
   transform-origin: top left;
 }
@@ -2947,7 +3001,7 @@ button:focus-visible {
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  z-index: 99998;
+  z-index: var(--z-sheet-backdrop);
   cursor: pointer;
   opacity: 1;
 }
@@ -3140,7 +3194,7 @@ button:focus-visible {
   position: fixed;
   top: var(--space-4);
   left: var(--space-4);
-  z-index: 9999;
+  z-index: var(--z-fixed);
   /* TWO-TONE CAPSULE: Black to green gradient */
   background: linear-gradient(
     135deg,
@@ -3662,7 +3716,7 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 99999;
+  z-index: var(--z-sheet);
 }
 
 .portfolio-wallet-expanded {
@@ -4167,7 +4221,7 @@ button:focus-visible {
     max-height: 100vh;
     border-radius: 0;
     padding: var(--space-3);
-    z-index: 99999;
+    z-index: var(--z-sheet);
     animation: wallet-slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 

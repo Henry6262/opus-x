@@ -50,7 +50,7 @@ export function MobileBottomBar() {
     }, []);
 
     return (
-        <div className="social-links-bar fixed z-[10001] bottom-4 left-8 md:bottom-auto md:top-[72px] md:left-4">
+        <div className="social-links-bar fixed z-[150] bottom-4 left-8 md:bottom-auto md:top-[72px] md:left-4">
             {/* Icon buttons container with local backdrop - mobile only */}
             <div className="relative flex items-center gap-3">
                 {/* Backdrop pill behind buttons - mobile only */}

@@ -155,7 +155,7 @@ export function TraderProfileCard({
     <div className="relative pt-20 md:pt-12 pb-16 overflow-hidden md:overflow-visible">
 
       {/* Main pill container */}
-      <div className="relative rounded-full bg-black/50 backdrop-blur-xl border-[3px] border-[#c4f70e]/30 h-16 md:h-28 ml-16 md:ml-20 mr-2 md:mr-4 max-w-[1100px] mx-auto overflow-visible flex items-center shadow-[0_0_20px_rgba(196,247,14,0.1)] animate-[profile-ambient-breathing_3s_ease-in-out_infinite] mt-4 md:mt-6 z-20">
+      <div className="relative rounded-full bg-black/50 backdrop-blur-xl border-[3px] border-[#c4f70e]/30 h-16 md:h-28 ml-16 md:ml-20 mr-2 md:mr-4 max-w-[1100px] mx-auto overflow-visible flex items-center shadow-[0_0_20px_rgba(196,247,14,0.1)] animate-[profile-ambient-breathing_3s_ease-in-out_infinite] mt-4 md:mt-6 z-[20]">
           {/* Subtle glow effects */}
           <div className="absolute -top-20 right-1/4 w-48 h-48 bg-[#c4f70e]/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -324,7 +324,7 @@ export function TraderProfileCard({
 
       {/* Avatar with animated glow rings - offset on mobile to avoid overlapping fixed wallet pill */}
       <motion.div
-        className="absolute left-0 top-[44%] md:top-[45%] -translate-y-1/2 w-28 h-28 md:w-44 md:h-44 z-30"
+        className="absolute left-0 top-[44%] md:top-[45%] -translate-y-1/2 w-28 h-28 md:w-44 md:h-44 z-[30]"
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.4 }}
