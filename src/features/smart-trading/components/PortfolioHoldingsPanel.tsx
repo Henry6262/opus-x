@@ -29,7 +29,7 @@ interface OnChainHolding {
     peak_price: number;
     peak_pnl_pct: number;
     realized_pnl_sol: number;
-    status: "open" | "partially_closed" | "closed" | "pending";
+    status: "open" | "partially_closed" | "partiallyclosed" | "closed" | "pending";
     market_cap: number | null;
     liquidity: number | null;
     volume_24h: number | null;
@@ -586,7 +586,7 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
 
             // Filter open AND partially_closed positions (both have quantity) and sort by value
             const data: OnChainHolding[] = rawData
-                .filter((h) => (h.status === "open" || h.status === "partially_closed") && h.current_quantity > 0);
+                .filter((h) => (h.status === "open" || h.status === "partially_closed" || h.status === "partiallyclosed") && h.current_quantity > 0);
             // Sort by current value (quantity * price) descending
             data.sort((a, b) => (b.current_quantity * b.current_price) - (a.current_quantity * a.current_price));
 
@@ -594,14 +594,14 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
 
             // LOG: What got filtered out?
             const filteredOut = rawData.filter((h) =>
-                !((h.status === "open" || h.status === "partially_closed") && h.current_quantity > 0)
+                !((h.status === "open" || h.status === "partially_closed" || h.status === "partiallyclosed") && h.current_quantity > 0)
             );
             if (filteredOut.length > 0) {
                 console.log("[PortfolioHoldings] ❌ Filtered out " + filteredOut.length + " positions:");
                 filteredOut.forEach(h => {
                     const reason = h.current_quantity === 0
                         ? "quantity = 0"
-                        : `status = ${h.status} (not open/partially_closed)`;
+                        : `status = ${h.status} (not open/partiallyclosed)`;
                     console.log(`  - ${h.symbol}: ${reason}`);
                 });
             }
@@ -669,7 +669,7 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
 
             // Filter and sort holdings (same logic as fetchHoldings)
             const filteredHoldings = data.holdings
-                .filter((h) => (h.status === "open" || h.status === "partially_closed") && h.current_quantity > 0)
+                .filter((h) => (h.status === "open" || h.status === "partially_closed" || h.status === "partiallyclosed") && h.current_quantity > 0)
                 .sort((a, b) => (b.current_quantity * b.current_price) - (a.current_quantity * a.current_price));
 
             console.log("[PortfolioHoldings] ✅ After filter:", filteredHoldings.length, "holdings");
