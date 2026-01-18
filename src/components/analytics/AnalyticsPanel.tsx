@@ -34,11 +34,13 @@ import {
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
-import { format } from "date-fns";
+import { format, subHours, subDays, startOfHour, startOfDay, isAfter } from "date-fns";
 
 // ============================================
 // TYPES
 // ============================================
+
+type Timeframe = "1H" | "4H" | "1D" | "7D" | "30D" | "ALL";
 
 interface AnalysisLog {
   id: string;
@@ -93,7 +95,7 @@ function StatCard({ label, value, suffix, decimals = 0, color = BRAND.primary, s
 }) {
   return (
     <motion.div
-      className="relative overflow-hidden rounded-lg bg-white/[0.02] border border-white/[0.04] p-4"
+      className="relative overflow-hidden rounded-xl bg-white/[0.02] border border-white/[0.08] p-4"
       whileHover={{ backgroundColor: "rgba(255,255,255,0.03)" }}
       transition={{ duration: 0.2 }}
     >
@@ -118,7 +120,7 @@ function RadialCard({ value, label, subLabel }: { value: number; label: string; 
 
   return (
     <motion.div
-      className="relative overflow-hidden rounded-lg bg-white/[0.02] border border-white/[0.04] p-4 flex items-center gap-4"
+      className="relative overflow-hidden rounded-xl bg-white/[0.02] border border-white/[0.08] p-4 flex items-center gap-4"
       whileHover={{ backgroundColor: "rgba(255,255,255,0.03)" }}
       transition={{ duration: 0.2 }}
     >
@@ -138,7 +140,7 @@ function RadialCard({ value, label, subLabel }: { value: number; label: string; 
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-lg font-semibold font-mono text-white">{value}%</span>
+          <span className="text-lg font-semibold font-mono text-white">{Math.round(value)}%</span>
         </div>
       </div>
       <div>
@@ -234,9 +236,48 @@ function ChartToggle({
 
 function ChartHeader({ label, children }: { label: string; children?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between mb-3">
-      <h3 className="text-[10px] text-white/30 uppercase tracking-widest">{label}</h3>
+    <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/[0.06]">
+      <h3 className="text-[11px] text-white/50 uppercase tracking-widest font-medium">{label}</h3>
       {children}
+    </div>
+  );
+}
+
+// ============================================
+// TIMEFRAME TOGGLE
+// ============================================
+
+const TIMEFRAMES: { value: Timeframe; label: string }[] = [
+  { value: "1H", label: "1H" },
+  { value: "4H", label: "4H" },
+  { value: "1D", label: "1D" },
+  { value: "7D", label: "7D" },
+  { value: "30D", label: "30D" },
+  { value: "ALL", label: "ALL" },
+];
+
+function TimeframeToggle({
+  value,
+  onChange,
+}: {
+  value: Timeframe;
+  onChange: (v: Timeframe) => void;
+}) {
+  return (
+    <div className="flex items-center gap-0.5 bg-white/[0.03] rounded-full p-0.5">
+      {TIMEFRAMES.map((tf) => (
+        <button
+          key={tf.value}
+          onClick={() => onChange(tf.value)}
+          className={`px-2 py-0.5 text-[8px] uppercase tracking-wider rounded-full transition-all ${
+            value === tf.value
+              ? "bg-white/10 text-white"
+              : "text-white/25 hover:text-white/40"
+          }`}
+        >
+          {tf.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -287,7 +328,7 @@ function Gauge({ value, max = 100, label, color = BRAND.primary }: {
           style={{ backgroundColor: color }}
         />
       </div>
-      <div className="text-lg font-semibold font-mono mt-1" style={{ color }}>{value}%</div>
+      <div className="text-lg font-semibold font-mono mt-1" style={{ color }}>{Math.round(value)}%</div>
       <div className="text-[9px] text-white/30 uppercase tracking-wider">{label}</div>
     </div>
   );
@@ -334,51 +375,148 @@ export function AnalyticsPanel() {
   const [pnlChartType, setPnlChartType] = useState<"area" | "bar" | "line" | "composed">("area");
   const [decisionChartType, setDecisionChartType] = useState<"donut" | "bar" | "funnel">("donut");
   const [analysisChartType, setAnalysisChartType] = useState<"scatter" | "histogram" | "treemap">("scatter");
+  const [timeframe, setTimeframe] = useState<Timeframe>("7D");
 
-  // P&L data from real positions - grouped by day
+  // P&L data from real positions - grouped by timeframe
   const { pnlData, dailyPnlData } = useMemo(() => {
     const cumulative: { date: string; pnl: number }[] = [];
-    const daily: { date: string; pnl: number; fill: string }[] = [];
+    const periodData: { date: string; pnl: number; fill: string }[] = [];
+
+    // Determine time range and grouping based on timeframe
+    const now = new Date();
+    let startDate: Date;
+    let intervals: Date[] = [];
+    let formatStr: string;
+    let groupKeyFn: (d: Date) => string;
+
+    switch (timeframe) {
+      case "1H":
+        startDate = subHours(now, 1);
+        // 5-minute intervals for 1H (12 points)
+        for (let i = 12; i >= 0; i--) {
+          const d = new Date(now.getTime() - i * 5 * 60 * 1000);
+          intervals.push(d);
+        }
+        formatStr = "HH:mm";
+        groupKeyFn = (d: Date) => {
+          const mins = Math.floor(d.getMinutes() / 5) * 5;
+          return format(new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), mins), "HH:mm");
+        };
+        break;
+      case "4H":
+        startDate = subHours(now, 4);
+        // 15-minute intervals for 4H (16 points)
+        for (let i = 16; i >= 0; i--) {
+          const d = new Date(now.getTime() - i * 15 * 60 * 1000);
+          intervals.push(d);
+        }
+        formatStr = "HH:mm";
+        groupKeyFn = (d: Date) => {
+          const mins = Math.floor(d.getMinutes() / 15) * 15;
+          return format(new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), mins), "HH:mm");
+        };
+        break;
+      case "1D":
+        startDate = subDays(now, 1);
+        // Hourly intervals for 1D (24 points)
+        for (let i = 24; i >= 0; i--) {
+          intervals.push(subHours(now, i));
+        }
+        formatStr = "HH:mm";
+        groupKeyFn = (d: Date) => format(startOfHour(d), "HH:mm");
+        break;
+      case "7D":
+        startDate = subDays(now, 7);
+        // Daily intervals for 7D
+        for (let i = 7; i >= 0; i--) {
+          intervals.push(subDays(now, i));
+        }
+        formatStr = "MMM d";
+        groupKeyFn = (d: Date) => format(startOfDay(d), "MMM d");
+        break;
+      case "30D":
+        startDate = subDays(now, 30);
+        // Daily intervals for 30D
+        for (let i = 30; i >= 0; i--) {
+          intervals.push(subDays(now, i));
+        }
+        formatStr = "MMM d";
+        groupKeyFn = (d: Date) => format(startOfDay(d), "MMM d");
+        break;
+      case "ALL":
+      default:
+        // Find earliest position date or use 90 days
+        const earliestPos = positions.length > 0
+          ? positions.reduce((min, p) => {
+              const d = new Date(p.createdAt);
+              return d < min ? d : min;
+            }, new Date())
+          : subDays(now, 90);
+        startDate = earliestPos;
+        const daysDiff = Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        // Weekly intervals if > 60 days, daily otherwise
+        if (daysDiff > 60) {
+          const weeks = Math.ceil(daysDiff / 7);
+          for (let i = weeks; i >= 0; i--) {
+            intervals.push(subDays(now, i * 7));
+          }
+          formatStr = "MMM d";
+          groupKeyFn = (d: Date) => {
+            const weekStart = new Date(d);
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            return format(weekStart, "MMM d");
+          };
+        } else {
+          for (let i = daysDiff; i >= 0; i--) {
+            intervals.push(subDays(now, i));
+          }
+          formatStr = "MMM d";
+          groupKeyFn = (d: Date) => format(startOfDay(d), "MMM d");
+        }
+        break;
+    }
 
     if (positions.length === 0) {
-      // Generate placeholder data if no positions
-      let total = 0;
-      for (let i = 30; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateStr = format(date, "MMM d");
-        cumulative.push({ date: dateStr, pnl: total });
-        daily.push({ date: dateStr, pnl: 0, fill: BRAND.primary });
-      }
-      return { pnlData: cumulative, dailyPnlData: daily };
+      // Generate placeholder data
+      intervals.forEach((d) => {
+        const dateStr = format(d, formatStr);
+        cumulative.push({ date: dateStr, pnl: 0 });
+        periodData.push({ date: dateStr, pnl: 0, fill: BRAND.primary });
+      });
+      return { pnlData: cumulative, dailyPnlData: periodData };
     }
 
-    // Group positions by date and calculate daily P&L
-    const pnlByDate = new Map<string, number>();
+    // Filter positions within timeframe and group by period
+    const pnlByPeriod = new Map<string, number>();
     positions.forEach((pos) => {
-      const dateStr = format(new Date(pos.closedAt || pos.createdAt), "MMM d");
-      const pnl = pos.realizedPnlSol + (pos.unrealizedPnl || 0);
-      pnlByDate.set(dateStr, (pnlByDate.get(dateStr) || 0) + pnl);
+      const posDate = new Date(pos.closedAt || pos.createdAt);
+      if (isAfter(posDate, startDate)) {
+        const key = groupKeyFn(posDate);
+        const pnl = pos.realizedPnlSol + (pos.unrealizedPnl || 0);
+        pnlByPeriod.set(key, (pnlByPeriod.get(key) || 0) + pnl);
+      }
     });
 
-    // Build cumulative data for last 30 days
+    // Build cumulative data
     let total = 0;
-    for (let i = 30; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = format(date, "MMM d");
-      const dayPnl = pnlByDate.get(dateStr) || 0;
-      total += dayPnl;
-      cumulative.push({ date: dateStr, pnl: parseFloat(total.toFixed(4)) });
-      daily.push({
-        date: dateStr,
-        pnl: parseFloat(dayPnl.toFixed(4)),
-        fill: dayPnl >= 0 ? BRAND.primary : BRAND.red
-      });
-    }
+    const seenKeys = new Set<string>();
+    intervals.forEach((d) => {
+      const dateStr = format(d, formatStr);
+      if (seenKeys.has(dateStr)) return; // Skip duplicates
+      seenKeys.add(dateStr);
 
-    return { pnlData: cumulative, dailyPnlData: daily };
-  }, [positions]);
+      const periodPnl = pnlByPeriod.get(dateStr) || 0;
+      total += periodPnl;
+      cumulative.push({ date: dateStr, pnl: parseFloat(total.toFixed(4)) });
+      periodData.push({
+        date: dateStr,
+        pnl: parseFloat(periodPnl.toFixed(4)),
+        fill: periodPnl >= 0 ? BRAND.primary : BRAND.red
+      });
+    });
+
+    return { pnlData: cumulative, dailyPnlData: periodData };
+  }, [positions, timeframe]);
 
   const decisionData = useMemo(() => [
     { name: "Enter", value: stats.enterDecisions, color: BRAND.primary, fill: BRAND.primary },
@@ -427,24 +565,106 @@ export function AnalyticsPanel() {
     }));
   }, [recentLogs]);
 
-  // Composed chart data (P&L + Trade Volume)
+  // Composed chart data (P&L + Trade Volume) - uses same timeframe as main chart
   const composedData = useMemo(() => {
-    let cumulative = 0;
-    const data = [];
-    for (let i = 30; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dayPnl = (Math.random() - 0.4) * 0.5;
-      cumulative += dayPnl;
-      const trades = Math.floor(Math.random() * 8) + 1;
-      data.push({
-        date: format(date, "MMM d"),
-        pnl: parseFloat(cumulative.toFixed(2)),
-        trades,
-      });
+    const data: { date: string; pnl: number; trades: number }[] = [];
+    const now = new Date();
+    let startDate: Date;
+    let intervals: Date[] = [];
+    let formatStr: string;
+    let groupKeyFn: (d: Date) => string;
+
+    // Use same timeframe logic as pnlData
+    switch (timeframe) {
+      case "1H":
+        startDate = subHours(now, 1);
+        for (let i = 12; i >= 0; i--) {
+          intervals.push(new Date(now.getTime() - i * 5 * 60 * 1000));
+        }
+        formatStr = "HH:mm";
+        groupKeyFn = (d: Date) => {
+          const mins = Math.floor(d.getMinutes() / 5) * 5;
+          return format(new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), mins), "HH:mm");
+        };
+        break;
+      case "4H":
+        startDate = subHours(now, 4);
+        for (let i = 16; i >= 0; i--) {
+          intervals.push(new Date(now.getTime() - i * 15 * 60 * 1000));
+        }
+        formatStr = "HH:mm";
+        groupKeyFn = (d: Date) => {
+          const mins = Math.floor(d.getMinutes() / 15) * 15;
+          return format(new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), mins), "HH:mm");
+        };
+        break;
+      case "1D":
+        startDate = subDays(now, 1);
+        for (let i = 24; i >= 0; i--) {
+          intervals.push(subHours(now, i));
+        }
+        formatStr = "HH:mm";
+        groupKeyFn = (d: Date) => format(startOfHour(d), "HH:mm");
+        break;
+      case "7D":
+        startDate = subDays(now, 7);
+        for (let i = 7; i >= 0; i--) {
+          intervals.push(subDays(now, i));
+        }
+        formatStr = "MMM d";
+        groupKeyFn = (d: Date) => format(startOfDay(d), "MMM d");
+        break;
+      case "30D":
+        startDate = subDays(now, 30);
+        for (let i = 30; i >= 0; i--) {
+          intervals.push(subDays(now, i));
+        }
+        formatStr = "MMM d";
+        groupKeyFn = (d: Date) => format(startOfDay(d), "MMM d");
+        break;
+      case "ALL":
+      default:
+        startDate = subDays(now, 90);
+        for (let i = 90; i >= 0; i--) {
+          intervals.push(subDays(now, i));
+        }
+        formatStr = "MMM d";
+        groupKeyFn = (d: Date) => format(startOfDay(d), "MMM d");
+        break;
     }
+
+    // Group positions by period
+    const pnlByPeriod = new Map<string, number>();
+    const tradesByPeriod = new Map<string, number>();
+    positions.forEach((pos) => {
+      const posDate = new Date(pos.closedAt || pos.createdAt);
+      if (isAfter(posDate, startDate)) {
+        const key = groupKeyFn(posDate);
+        const pnl = pos.realizedPnlSol + (pos.unrealizedPnl || 0);
+        pnlByPeriod.set(key, (pnlByPeriod.get(key) || 0) + pnl);
+        tradesByPeriod.set(key, (tradesByPeriod.get(key) || 0) + 1);
+      }
+    });
+
+    // Build composed data
+    let cumulative = 0;
+    const seenKeys = new Set<string>();
+    intervals.forEach((d) => {
+      const dateStr = format(d, formatStr);
+      if (seenKeys.has(dateStr)) return;
+      seenKeys.add(dateStr);
+
+      const periodPnl = pnlByPeriod.get(dateStr) || 0;
+      cumulative += periodPnl;
+      data.push({
+        date: dateStr,
+        pnl: parseFloat(cumulative.toFixed(4)),
+        trades: tradesByPeriod.get(dateStr) || 0,
+      });
+    });
+
     return data;
-  }, []);
+  }, [positions, timeframe]);
 
   // Treemap data from real holdings
   const treemapData = useMemo(() => {
@@ -622,7 +842,7 @@ export function AnalyticsPanel() {
         />
         <StatCard
           label="Win Rate"
-          value={hasData ? stats.winRate : 0}
+          value={hasData ? Math.round(stats.winRate) : 0}
           suffix="%"
           color={stats.winRate > 50 ? BRAND.primary : BRAND.amber}
           subtext="Profitable trades"
@@ -645,19 +865,22 @@ export function AnalyticsPanel() {
       {/* Charts Grid */}
       <div className="grid grid-cols-12 gap-4">
         {/* P&L Chart */}
-        <div className="col-span-12 lg:col-span-7">
+        <div className="col-span-12 lg:col-span-7 bg-white/[0.02] border border-white/[0.08] rounded-xl p-4">
           <ChartHeader label="P&L Performance">
-            <ChartToggle
-              options={[
-                { value: "area", label: "Area" },
-                { value: "bar", label: "Bar" },
-                { value: "composed", label: "P&L+Vol" },
-              ]}
-              value={pnlChartType}
-              onChange={(v) => setPnlChartType(v as "area" | "bar" | "line" | "composed")}
-            />
+            <div className="flex items-center gap-2">
+              <TimeframeToggle value={timeframe} onChange={setTimeframe} />
+              <ChartToggle
+                options={[
+                  { value: "area", label: "Area" },
+                  { value: "bar", label: "Bar" },
+                  { value: "composed", label: "P&L+Vol" },
+                ]}
+                value={pnlChartType}
+                onChange={(v) => setPnlChartType(v as "area" | "bar" | "line" | "composed")}
+              />
+            </div>
           </ChartHeader>
-          <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4">
+          <div className="mt-2">
             <ResponsiveContainer width="100%" height={160}>
               {pnlChartType === "area" ? (
                 <AreaChart data={pnlData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
@@ -725,7 +948,7 @@ export function AnalyticsPanel() {
         </div>
 
         {/* Decisions Chart */}
-        <div className="col-span-6 lg:col-span-2">
+        <div className="col-span-6 lg:col-span-2 bg-white/[0.02] border border-white/[0.08] rounded-xl p-4">
           <ChartHeader label="Decisions">
             <ChartToggle
               options={[
@@ -736,7 +959,7 @@ export function AnalyticsPanel() {
               onChange={(v) => setDecisionChartType(v as "donut" | "bar" | "funnel")}
             />
           </ChartHeader>
-          <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4 h-[196px] flex flex-col">
+          <div className="h-[160px] flex flex-col">
             <div className="flex-1 flex items-center justify-center">
               {hasData ? (
                 decisionChartType === "donut" ? (
@@ -791,7 +1014,7 @@ export function AnalyticsPanel() {
         </div>
 
         {/* Analysis Chart */}
-        <div className="col-span-6 lg:col-span-3">
+        <div className="col-span-6 lg:col-span-3 bg-white/[0.02] border border-white/[0.08] rounded-xl p-4">
           <ChartHeader label={analysisChartType === "treemap" ? "Portfolio" : "Confidence Analysis"}>
             <ChartToggle
               options={[
@@ -802,7 +1025,7 @@ export function AnalyticsPanel() {
               onChange={(v) => setAnalysisChartType(v as "scatter" | "histogram" | "treemap")}
             />
           </ChartHeader>
-          <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4 h-[196px] flex flex-col">
+          <div className="h-[160px] flex flex-col">
             <div className="flex-1">
               {analysisChartType === "scatter" ? (
                 scatterData.length > 0 ? (
@@ -862,21 +1085,23 @@ export function AnalyticsPanel() {
 
       {/* Gauges Row */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4 flex justify-center">
-          <Gauge value={stats.winRate || 0} label="Win Rate" color={stats.winRate > 50 ? BRAND.primary : BRAND.amber} />
+        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex justify-center">
+          <Gauge value={Math.round(stats.winRate) || 0} label="Win Rate" color={stats.winRate > 50 ? BRAND.primary : BRAND.amber} />
         </div>
-        <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4 flex justify-center">
+        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex justify-center">
           <Gauge value={hasData && stats.totalAnalyzed > 0 ? Math.round((stats.enterDecisions / stats.totalAnalyzed) * 100) : 0} label="Entry Rate" color={BRAND.primary} />
         </div>
-        <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4 flex justify-center">
-          <Gauge value={stats.avgConfidence || 0} label="AI Confidence" color="#9945ff" />
+        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex justify-center">
+          <Gauge value={Math.round(stats.avgConfidence) || 0} label="AI Confidence" color="#9945ff" />
         </div>
       </div>
 
       {/* Decision Log */}
-      <div>
-        <Label>Recent Decisions</Label>
-        <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg px-4 py-3 max-h-[220px] overflow-y-auto custom-scrollbar">
+      <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4">
+        <div className="mb-2 pb-2 border-b border-white/[0.06]">
+          <h3 className="text-[11px] text-white/50 uppercase tracking-widest font-medium">Recent Decisions</h3>
+        </div>
+        <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
           {recentLogs.length > 0 ? (
             recentLogs.map((log, i) => <DecisionRow key={log.id} log={log} index={i} />)
           ) : (
