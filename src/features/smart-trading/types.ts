@@ -347,7 +347,11 @@ export interface MigrationFeedEvent {
   | "take_profit_triggered"
   | "position_closed"
   | "holdings_snapshot"
-  | "stop_loss_triggered";
+  | "stop_loss_triggered"
+  | "watchlist_added"
+  | "watchlist_updated"
+  | "watchlist_removed"
+  | "watchlist_graduated";
   data?: unknown;
   timestamp: number;
   clientId?: string;
@@ -383,6 +387,103 @@ export interface HoldingData {
   liquidity: number | null;
   volume_24h: number | null;
   buy_signature: string | null;
+}
+
+// ============================================
+// WATCHLIST TYPES
+// ============================================
+
+/** Metrics snapshot for a watchlist token */
+export interface WatchlistMetrics {
+  liquidity_usd: number;
+  volume_24h_usd: number;
+  market_cap_usd: number;
+  holder_count: number;
+  price_usd: number;
+}
+
+/** Result of a watchlist check */
+export interface WatchlistCheckResult {
+  passed: boolean;
+  failed_checks: string[];
+  improving: boolean;
+  checked_at: string;
+}
+
+/** A token being watched for potential trading opportunity */
+export interface WatchlistToken {
+  mint: string;
+  symbol: string;
+  name: string;
+  added_at: string;
+  last_check_at: string;
+  check_count: number;
+  watch_reasons: string[];
+  metrics: WatchlistMetrics;
+  last_result: WatchlistCheckResult;
+  detection_source?: string | null;
+  migration_detected_at?: number | null;
+}
+
+/** Watchlist statistics */
+export interface WatchlistStats {
+  total_watching: number;
+  improving_count: number;
+  avg_check_count: number;
+  oldest_token_age_secs: number;
+}
+
+/** Response from /api/trading/watchlist */
+export interface WatchlistResponse {
+  tokens: WatchlistToken[];
+  stats: WatchlistStats;
+}
+
+/** WebSocket event: Token added to watchlist */
+export interface WatchlistAddedEvent {
+  mint: string;
+  symbol: string;
+  name: string;
+  watch_reasons: string[];
+  liquidity_usd: number;
+  volume_24h_usd: number;
+  holder_count: number;
+  timestamp: number;
+}
+
+/** WebSocket event: Watchlist token updated */
+export interface WatchlistUpdatedEvent {
+  mint: string;
+  symbol: string;
+  check_count: number;
+  improving: boolean;
+  liquidity_usd: number;
+  volume_24h_usd: number;
+  holder_count: number;
+  failed_checks: string[];
+  timestamp: number;
+}
+
+/** WebSocket event: Token removed from watchlist */
+export interface WatchlistRemovedEvent {
+  mint: string;
+  symbol: string;
+  reason: string;
+  total_checks: number;
+  watched_duration_secs: number;
+  timestamp: number;
+}
+
+/** WebSocket event: Token graduated from watchlist */
+export interface WatchlistGraduatedEvent {
+  mint: string;
+  symbol: string;
+  total_checks: number;
+  watched_duration_secs: number;
+  final_liquidity_usd: number;
+  final_volume_24h_usd: number;
+  final_holder_count: number;
+  timestamp: number;
 }
 
 // ============================================

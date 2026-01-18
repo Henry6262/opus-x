@@ -1,6 +1,7 @@
 "use client";
 
 import { PortfolioHoldingsPanel } from "./components/PortfolioHoldingsPanel";
+import { WatchlistPanel } from "./components/WatchlistPanel";
 import { AiDecisionFeed } from "./components/AiDecisionFeed";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,10 +34,12 @@ export function SmartTradingDashboard() {
 
         <TabsContent value="trading" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
-            {/* Left Column: Portfolio Holdings + AI Log (desktop) */}
+            {/* Left Column: Portfolio Holdings + Watchlist + AI Log (desktop) */}
             <div className="lg:col-span-3 flex flex-col gap-4">
               {/* Portfolio - dynamic height based on items, max 3 visible */}
               <PortfolioHoldingsPanel maxVisibleItems={3} />
+              {/* Watchlist - tokens being monitored before qualifying for trading */}
+              <WatchlistPanel />
               {/* AI Log - sits right under portfolio on desktop */}
               <div className="hidden lg:block h-[320px]">
                 <AiDecisionFeed maxItems={15} />

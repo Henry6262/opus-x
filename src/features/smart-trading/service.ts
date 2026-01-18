@@ -18,6 +18,7 @@ import type {
   MigrationFeedStats,
   RankedMigration,
   DashboardInitResponse,
+  WatchlistResponse,
 } from "./types";
 import { SignalSource } from "./types";
 
@@ -698,6 +699,17 @@ export const smartTradingService = {
   async getHistory(_limit?: number): Promise<import("./types").PortfolioSnapshot[]> {
     // Not implemented in devprint yet
     return [];
+  },
+
+  // ============================================
+  // WATCHLIST - Tokens being monitored
+  // ============================================
+
+  /**
+   * Get current watchlist state (tokens being monitored before they qualify for trading)
+   */
+  async getWatchlist(): Promise<WatchlistResponse> {
+    return fetchDevprint<WatchlistResponse>("/api/trading/watchlist");
   },
 
   // ============================================

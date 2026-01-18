@@ -12,3 +12,5 @@ export { OnChainHoldingsPanel } from "./OnChainHoldingsPanel";
 export { PortfolioHoldingsPanel } from "./PortfolioHoldingsPanel";
 export { TransactionDrawer } from "./TransactionDrawer";
 export { HistoryPanel } from "./HistoryPanel";
+export { WatchlistCard } from "./WatchlistCard";
+export { WatchlistPanel } from "./WatchlistPanel";
