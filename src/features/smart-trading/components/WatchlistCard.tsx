@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { motion } from "motion/react";
-import { Copy } from "lucide-react";
+import { Copy, Users } from "lucide-react";
 import type { WatchlistToken } from "../types";
 
 // ============================================
@@ -102,18 +102,18 @@ export function WatchlistCard({ token }: WatchlistCardProps) {
       </div>
 
       {/* Right: Metrics stacked */}
-      <div className="ml-auto text-right text-[10px] space-y-0.5">
-        <div className="flex items-center justify-end gap-2">
+      <div className="ml-auto text-[10px] space-y-0.5">
+        <div className="flex items-center gap-1">
           <span className="text-white/40">Liq</span>
-          <span className="text-white/70 font-mono w-14">{formatCurrency(token.metrics.liquidity_usd)}</span>
+          <span className="text-white/70 font-mono">{formatCurrency(token.metrics.liquidity_usd)}</span>
         </div>
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center gap-1">
           <span className="text-white/40">Vol</span>
-          <span className="text-white/70 font-mono w-14">{formatCurrency(token.metrics.volume_24h_usd)}</span>
+          <span className="text-white/70 font-mono">{formatCurrency(token.metrics.volume_24h_usd)}</span>
         </div>
-        <div className="flex items-center justify-end gap-2">
-          <span className="text-white/40">Holders</span>
-          <span className="text-white/70 font-mono w-14">{token.metrics.holder_count.toLocaleString()}</span>
+        <div className="flex items-center gap-1">
+          <Users className="w-3 h-3 text-white/40" />
+          <span className="text-white/70 font-mono">{token.metrics.holder_count.toLocaleString()}</span>
         </div>
       </div>
     </motion.div>
