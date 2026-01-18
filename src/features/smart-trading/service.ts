@@ -19,6 +19,7 @@ import type {
   RankedMigration,
   DashboardInitResponse,
   WatchlistResponse,
+  BuyCriteriaResult,
 } from "./types";
 import { SignalSource } from "./types";
 
@@ -115,6 +116,7 @@ interface DevprintHolding {
   liquidity: number | null;
   volume_24h: number | null;
   buy_signature: string | null;
+  buy_criteria: BuyCriteriaResult | null;
 }
 
 /** Devprint history item from /api/trading/history */
@@ -142,7 +144,8 @@ interface DevprintHistoryItem {
   close_reason: string | null;
   buy_signature: string | null;
   sell_transactions: unknown[];
-  buy_criteria: unknown;
+  /** AI reasoning - why we decided to buy this token */
+  buy_criteria: BuyCriteriaResult | null;
   created_at: string;
   updated_at: string;
 }

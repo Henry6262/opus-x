@@ -366,6 +366,62 @@ export interface HoldingsSnapshotData {
   timestamp: number;
 }
 
+/** Individual criteria check result from AI evaluation */
+export interface CriteriaCheck {
+  name: string;
+  passed: boolean;
+  skipped: boolean;
+  value: number;
+  threshold: number;
+  reason: string | null;
+}
+
+/** Dynamic confidence score breakdown */
+export interface DynamicConfidenceScore {
+  total_score: number;
+  volume_score: number;
+  holder_score: number;
+  price_score: number;
+  momentum_score: number;
+}
+
+/** Momentum analysis details */
+export interface MomentumAnalysis {
+  price_change_5m: number;
+  volume_change_5m: number;
+  holder_change_5m: number;
+  trend: "bullish" | "bearish" | "neutral";
+}
+
+/** Bundle analysis for bot detection */
+export interface BundleAnalysis {
+  is_bundled: boolean;
+  bundle_percentage: number;
+  unique_wallets: number;
+  suspicious_patterns: string[];
+}
+
+/** Full buy criteria result - AI reasoning for why we bought */
+export interface BuyCriteriaResult {
+  passed: boolean;
+  confidence_check: CriteriaCheck;
+  market_cap_check: CriteriaCheck;
+  liquidity_check: CriteriaCheck;
+  volume_check: CriteriaCheck;
+  holder_count_check: CriteriaCheck;
+  holder_check: CriteriaCheck;
+  dev_risk_check: CriteriaCheck;
+  security_check: CriteriaCheck;
+  bundle_check: CriteriaCheck;
+  trend_check: CriteriaCheck;
+  dynamic_confidence_check: CriteriaCheck;
+  momentum_check: CriteriaCheck;
+  rejection_reasons: string[];
+  dynamic_confidence?: DynamicConfidenceScore;
+  momentum_analysis?: MomentumAnalysis;
+  bundle_analysis?: BundleAnalysis;
+}
+
 export interface HoldingData {
   id: string;
   mint: string;
@@ -387,6 +443,8 @@ export interface HoldingData {
   liquidity: number | null;
   volume_24h: number | null;
   buy_signature: string | null;
+  /** AI reasoning - why we decided to buy this token */
+  buy_criteria: BuyCriteriaResult | null;
 }
 
 // ============================================

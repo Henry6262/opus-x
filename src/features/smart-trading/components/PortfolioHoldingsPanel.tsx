@@ -3,15 +3,18 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { Wallet, Copy, Loader2, Clock, TrendingUp, ArrowUpRight } from "lucide-react";
+import { Wallet, Copy, Loader2, Clock, TrendingUp, ArrowUpRight, Brain } from "lucide-react";
 import { CountUp } from "@/components/animations/CountUp";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 import { useSharedWebSocket } from "../hooks/useWebSocket";
 import { TransactionDrawer } from "./TransactionDrawer";
+import { AiReasoningDrawer } from "./AiReasoningDrawer";
 
 // ============================================
 // Types
 // ============================================
+
+import type { BuyCriteriaResult } from "../types";
 
 interface OnChainHolding {
     id: string;
@@ -34,6 +37,8 @@ interface OnChainHolding {
     liquidity: number | null;
     volume_24h: number | null;
     buy_signature: string | null;
+    /** AI reasoning - why we decided to buy this token */
+    buy_criteria: BuyCriteriaResult | null;
     // Computed/optional fields for compatibility
     image_url?: string | null;
 }
@@ -316,6 +321,7 @@ interface HoldingCardProps {
     holding: OnChainHolding;
     index: number;
     onClick?: () => void;
+    onAiClick?: () => void;
 }
 
 function HoldingCard({ holding, index, onClick }: HoldingCardProps) {
