@@ -279,7 +279,7 @@ export function WatchlistPanel() {
               <AnimatePresence mode="popLayout">
                 {state.tokens.map((token, index) => (
                   <WatchlistCard
-                    key={token.mint}
+                    key={`${token.mint}-${index}`}
                     token={token}
                     index={index}
                     isGraduating={graduatingMints.has(token.mint)}

@@ -781,7 +781,7 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
                 <AnimatePresence mode="popLayout">
                     {holdings.map((holding, index) => (
                         <HoldingCard
-                            key={holding.mint}
+                            key={`${holding.mint}-${index}`}
                             holding={holding}
                             index={index}
                             onClick={() => handleHoldingClick(holding)}
