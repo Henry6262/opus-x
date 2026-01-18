@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
+import { smartTradingService } from "@/features/smart-trading/service";
+import type { DashboardStatsResponse, Position } from "@/features/smart-trading/types";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Area,
@@ -10,6 +12,7 @@ import {
   BarChart,
   Line,
   LineChart,
+  ComposedChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -20,6 +23,10 @@ import {
   Scatter,
   RadialBarChart,
   RadialBar,
+  Treemap,
+  FunnelChart,
+  Funnel,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   Legend,
@@ -53,6 +60,11 @@ interface Stats {
   watchDecisions: number;
   winRate: number;
   totalPnl: number;
+  // From trading API
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  avgConfidence: number;
 }
 
 // Brand colors
@@ -230,41 +242,143 @@ function ChartHeader({ label, children }: { label: string; children?: React.Reac
 }
 
 // ============================================
+// GAUGE COMPONENT
+// ============================================
+
+function Gauge({ value, max = 100, label, color = BRAND.primary }: {
+  value: number;
+  max?: number;
+  label: string;
+  color?: string;
+}) {
+  const percentage = Math.min((value / max) * 100, 100);
+  const rotation = (percentage / 100) * 180 - 90; // -90 to 90 degrees
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative w-24 h-12 overflow-hidden">
+        {/* Background arc */}
+        <div
+          className="absolute bottom-0 left-0 w-24 h-24 rounded-full border-8 border-white/5"
+          style={{ clipPath: "polygon(0 50%, 100% 50%, 100% 100%, 0 100%)" }}
+        />
+        {/* Filled arc */}
+        <div
+          className="absolute bottom-0 left-0 w-24 h-24 rounded-full border-8"
+          style={{
+            borderColor: color,
+            clipPath: "polygon(0 50%, 100% 50%, 100% 100%, 0 100%)",
+            transform: `rotate(${rotation - 90}deg)`,
+            transformOrigin: "center center",
+            opacity: 0.3
+          }}
+        />
+        {/* Needle */}
+        <motion.div
+          className="absolute bottom-0 left-1/2 w-0.5 h-10 origin-bottom"
+          style={{ backgroundColor: color }}
+          initial={{ rotate: -90 }}
+          animate={{ rotate: rotation }}
+          transition={{ duration: 1, ease: "easeOut" }}
+        />
+        {/* Center dot */}
+        <div
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full"
+          style={{ backgroundColor: color }}
+        />
+      </div>
+      <div className="text-lg font-semibold font-mono mt-1" style={{ color }}>{value}%</div>
+      <div className="text-[9px] text-white/30 uppercase tracking-wider">{label}</div>
+    </div>
+  );
+}
+
+// ============================================
+// CUSTOM TREEMAP CONTENT
+// ============================================
+
+const CustomTreemapContent = ({ x, y, width, height, name, value, color }: any) => {
+  if (width < 30 || height < 30) return null;
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={height} fill={color} stroke="rgba(0,0,0,0.3)" strokeWidth={1} rx={4} />
+      {width > 50 && height > 40 && (
+        <>
+          <text x={x + width / 2} y={y + height / 2 - 6} textAnchor="middle" fill="white" fontSize={11} fontWeight="600">
+            {name}
+          </text>
+          <text x={x + width / 2} y={y + height / 2 + 10} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize={9}>
+            {value}%
+          </text>
+        </>
+      )}
+    </g>
+  );
+};
+
+// ============================================
 // MAIN
 // ============================================
 
 export function AnalyticsPanel() {
   const [stats, setStats] = useState<Stats>({
-    totalAnalyzed: 0, enterDecisions: 0, passDecisions: 0, watchDecisions: 0, winRate: 0, totalPnl: 0,
+    totalAnalyzed: 0, enterDecisions: 0, passDecisions: 0, watchDecisions: 0,
+    winRate: 0, totalPnl: 0, totalTrades: 0, winningTrades: 0, losingTrades: 0, avgConfidence: 0,
   });
   const [recentLogs, setRecentLogs] = useState<AnalysisLog[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [holdings, setHoldings] = useState<{ name: string; value: number; color: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Chart type states
-  const [pnlChartType, setPnlChartType] = useState<"area" | "bar" | "line">("area");
-  const [decisionChartType, setDecisionChartType] = useState<"donut" | "bar" | "radial">("donut");
-  const [analysisChartType, setAnalysisChartType] = useState<"scatter" | "histogram">("scatter");
+  const [pnlChartType, setPnlChartType] = useState<"area" | "bar" | "line" | "composed">("area");
+  const [decisionChartType, setDecisionChartType] = useState<"donut" | "bar" | "funnel">("donut");
+  const [analysisChartType, setAnalysisChartType] = useState<"scatter" | "histogram" | "treemap">("scatter");
 
-  // P&L data - both cumulative and daily
+  // P&L data from real positions - grouped by day
   const { pnlData, dailyPnlData } = useMemo(() => {
     const cumulative: { date: string; pnl: number }[] = [];
     const daily: { date: string; pnl: number; fill: string }[] = [];
+
+    if (positions.length === 0) {
+      // Generate placeholder data if no positions
+      let total = 0;
+      for (let i = 30; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = format(date, "MMM d");
+        cumulative.push({ date: dateStr, pnl: total });
+        daily.push({ date: dateStr, pnl: 0, fill: BRAND.primary });
+      }
+      return { pnlData: cumulative, dailyPnlData: daily };
+    }
+
+    // Group positions by date and calculate daily P&L
+    const pnlByDate = new Map<string, number>();
+    positions.forEach((pos) => {
+      const dateStr = format(new Date(pos.closedAt || pos.createdAt), "MMM d");
+      const pnl = pos.realizedPnlSol + (pos.unrealizedPnl || 0);
+      pnlByDate.set(dateStr, (pnlByDate.get(dateStr) || 0) + pnl);
+    });
+
+    // Build cumulative data for last 30 days
     let total = 0;
     for (let i = 30; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const dayPnl = (Math.random() - 0.4) * 0.5;
-      total += dayPnl;
       const dateStr = format(date, "MMM d");
-      cumulative.push({ date: dateStr, pnl: parseFloat(total.toFixed(2)) });
+      const dayPnl = pnlByDate.get(dateStr) || 0;
+      total += dayPnl;
+      cumulative.push({ date: dateStr, pnl: parseFloat(total.toFixed(4)) });
       daily.push({
         date: dateStr,
-        pnl: parseFloat(dayPnl.toFixed(2)),
+        pnl: parseFloat(dayPnl.toFixed(4)),
         fill: dayPnl >= 0 ? BRAND.primary : BRAND.red
       });
     }
+
     return { pnlData: cumulative, dailyPnlData: daily };
-  }, []);
+  }, [positions]);
 
   const decisionData = useMemo(() => [
     { name: "Enter", value: stats.enterDecisions, color: BRAND.primary, fill: BRAND.primary },
@@ -313,6 +427,65 @@ export function AnalyticsPanel() {
     }));
   }, [recentLogs]);
 
+  // Composed chart data (P&L + Trade Volume)
+  const composedData = useMemo(() => {
+    let cumulative = 0;
+    const data = [];
+    for (let i = 30; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dayPnl = (Math.random() - 0.4) * 0.5;
+      cumulative += dayPnl;
+      const trades = Math.floor(Math.random() * 8) + 1;
+      data.push({
+        date: format(date, "MMM d"),
+        pnl: parseFloat(cumulative.toFixed(2)),
+        trades,
+      });
+    }
+    return data;
+  }, []);
+
+  // Treemap data from real holdings
+  const treemapData = useMemo(() => {
+    const colors = [BRAND.primary, "#14f195", "#9945ff", BRAND.amber, BRAND.red, "#00d4ff"];
+
+    if (holdings.length > 0) {
+      return holdings;
+    }
+
+    // Calculate from open positions if no holdings data
+    if (positions.length > 0) {
+      const openPositions = positions.filter(p => p.status === "OPEN");
+      const totalValue = openPositions.reduce((sum, p) => sum + p.entryAmountSol, 0);
+
+      if (totalValue > 0) {
+        return openPositions.map((p, i) => ({
+          name: p.tokenSymbol || "???",
+          value: Math.round((p.entryAmountSol / totalValue) * 100),
+          color: colors[i % colors.length],
+        }));
+      }
+    }
+
+    // Placeholder data
+    return [
+      { name: "No positions", value: 100, color: "rgba(255,255,255,0.1)" },
+    ];
+  }, [holdings, positions]);
+
+  // Funnel data (trade pipeline) - using real trading stats
+  const funnelData = useMemo(() => {
+    const analyzed = stats.totalAnalyzed || stats.totalTrades || 0;
+    const entered = stats.enterDecisions || stats.totalTrades || 0;
+    const profitable = stats.winningTrades || Math.round(entered * (stats.winRate / 100)) || 0;
+    return [
+      { name: "Analyzed", value: analyzed || 1, fill: "rgba(255,255,255,0.2)" },
+      { name: "Traded", value: entered || 0, fill: BRAND.amber },
+      { name: "Profitable", value: profitable || 0, fill: BRAND.primary },
+    ];
+  }, [stats]);
+
   useEffect(() => {
     fetchAnalytics();
     const interval = setInterval(fetchAnalytics, 30000);
@@ -320,7 +493,44 @@ export function AnalyticsPanel() {
   }, []);
 
   async function fetchAnalytics() {
-    if (!supabase) { setLoading(false); return; }
+    try {
+      // Fetch from both Supabase (AI logs) and trading API (positions/stats) in parallel
+      const [supabaseData, tradingData] = await Promise.all([
+        fetchSupabaseData(),
+        fetchTradingData(),
+      ]);
+
+      // Merge stats from both sources
+      setStats({
+        // From Supabase AI logs
+        totalAnalyzed: supabaseData.total || tradingData.totalTrades || 0,
+        enterDecisions: supabaseData.enters || 0,
+        passDecisions: supabaseData.passes || 0,
+        watchDecisions: supabaseData.watches || 0,
+        // From Trading API (more accurate)
+        winRate: tradingData.winRate || (supabaseData.enters && supabaseData.total
+          ? Math.round((supabaseData.enters / supabaseData.total) * 100) : 0),
+        totalPnl: tradingData.totalPnl || 0,
+        totalTrades: tradingData.totalTrades || 0,
+        winningTrades: tradingData.winningTrades || 0,
+        losingTrades: tradingData.losingTrades || 0,
+        avgConfidence: supabaseData.avgConfidence || 0,
+      });
+
+      if (supabaseData.logs) setRecentLogs(supabaseData.logs as AnalysisLog[]);
+      if (tradingData.positions) setPositions(tradingData.positions);
+      if (tradingData.holdings) setHoldings(tradingData.holdings);
+
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchSupabaseData() {
+    if (!supabase) return { total: 0, enters: 0, passes: 0, watches: 0, logs: [], avgConfidence: 0 };
+
     try {
       const [{ count: total }, { count: enters }, { count: passes }, { count: watches }, { data: logs }] =
         await Promise.all([
@@ -330,19 +540,54 @@ export function AnalyticsPanel() {
           supabase.from("token_ai_analysis_log").select("*", { count: "exact", head: true }).in("decision", ["WATCH", "WAIT"]),
           supabase.from("token_ai_analysis_log").select("*").order("analyzed_at", { ascending: false }).limit(20),
         ]);
-      setStats({
-        totalAnalyzed: total || 0,
-        enterDecisions: enters || 0,
-        passDecisions: passes || 0,
-        watchDecisions: watches || 0,
-        winRate: enters && total ? Math.round((enters / total) * 100) : 0,
-        totalPnl: 2.4,
-      });
-      if (logs) setRecentLogs(logs as AnalysisLog[]);
+
+      // Calculate average confidence from logs
+      const avgConfidence = logs && logs.length > 0
+        ? Math.round(logs.reduce((sum, log: any) => sum + (log.confidence || 0), 0) / logs.length * 100)
+        : 0;
+
+      return { total: total || 0, enters: enters || 0, passes: passes || 0, watches: watches || 0, logs: logs || [], avgConfidence };
     } catch (error) {
-      console.error("Error fetching analytics:", error);
-    } finally {
-      setLoading(false);
+      console.error("Error fetching Supabase data:", error);
+      return { total: 0, enters: 0, passes: 0, watches: 0, logs: [], avgConfidence: 0 };
+    }
+  }
+
+  async function fetchTradingData() {
+    try {
+      const dashboardData = await smartTradingService.getDashboardInit();
+      const { stats: dashboardStats, positions: positionsData } = dashboardData;
+
+      // Combine open and closed positions
+      const allPositions = [...(positionsData.open || []), ...(positionsData.closed || [])];
+
+      // Calculate holdings from open positions
+      const colors = [BRAND.primary, "#14f195", "#9945ff", BRAND.amber, BRAND.red, "#00d4ff"];
+      const openPositions = positionsData.open || [];
+      const totalValue = openPositions.reduce((sum, p) => sum + p.entryAmountSol, 0);
+      const holdingsData = totalValue > 0
+        ? openPositions.map((p, i) => ({
+            name: p.tokenSymbol || "???",
+            value: Math.round((p.entryAmountSol / totalValue) * 100),
+            color: colors[i % colors.length],
+          }))
+        : [];
+
+      return {
+        totalTrades: dashboardStats.performance.totalTrades,
+        winningTrades: dashboardStats.performance.winningTrades,
+        losingTrades: dashboardStats.performance.losingTrades,
+        winRate: dashboardStats.performance.winRate,
+        totalPnl: dashboardStats.performance.netPnlSol,
+        positions: allPositions,
+        holdings: holdingsData,
+      };
+    } catch (error) {
+      console.error("Error fetching trading data:", error);
+      return {
+        totalTrades: 0, winningTrades: 0, losingTrades: 0, winRate: 0, totalPnl: 0,
+        positions: [], holdings: [],
+      };
     }
   }
 
@@ -406,10 +651,10 @@ export function AnalyticsPanel() {
               options={[
                 { value: "area", label: "Area" },
                 { value: "bar", label: "Bar" },
-                { value: "line", label: "Line" },
+                { value: "composed", label: "P&L+Vol" },
               ]}
               value={pnlChartType}
-              onChange={(v) => setPnlChartType(v as "area" | "bar" | "line")}
+              onChange={(v) => setPnlChartType(v as "area" | "bar" | "line" | "composed")}
             />
           </ChartHeader>
           <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4">
@@ -450,17 +695,30 @@ export function AnalyticsPanel() {
                   </Bar>
                 </BarChart>
               ) : (
-                <LineChart data={pnlData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <ComposedChart data={composedData} margin={{ top: 5, right: 30, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="pnlGradient2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={BRAND.primary} stopOpacity={0.2} />
+                      <stop offset="100%" stopColor={BRAND.primary} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
                   <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} interval="preserveStartEnd" />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} tickFormatter={(v) => `${v > 0 ? "+" : ""}${v}`} width={35} />
+                  <YAxis yAxisId="pnl" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} tickFormatter={(v) => `${v > 0 ? "+" : ""}${v}`} width={35} />
+                  <YAxis yAxisId="trades" orientation="right" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.15)", fontSize: 9 }} width={25} />
                   <Tooltip content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
                     const d = payload[0].payload;
-                    return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white/50">Cumulative:</span> <span className="text-white font-mono ml-1">{d.pnl > 0 ? "+" : ""}{d.pnl} SOL</span></div>;
+                    return (
+                      <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]">
+                        <div><span className="text-white/50">P&L:</span> <span className="text-white font-mono ml-1" style={{ color: BRAND.primary }}>{d.pnl > 0 ? "+" : ""}{d.pnl} SOL</span></div>
+                        <div><span className="text-white/50">Trades:</span> <span className="text-white font-mono ml-1" style={{ color: BRAND.amber }}>{d.trades}</span></div>
+                      </div>
+                    );
                   }} />
-                  <Line type="monotone" dataKey="pnl" stroke={BRAND.primary} strokeWidth={2} dot={false} />
-                </LineChart>
+                  <Area yAxisId="pnl" type="monotone" dataKey="pnl" stroke={BRAND.primary} strokeWidth={1.5} fill="url(#pnlGradient2)" />
+                  <Bar yAxisId="trades" dataKey="trades" fill={BRAND.amber} opacity={0.4} radius={[2, 2, 0, 0]} />
+                </ComposedChart>
               )}
             </ResponsiveContainer>
           </div>
@@ -472,10 +730,10 @@ export function AnalyticsPanel() {
             <ChartToggle
               options={[
                 { value: "donut", label: "Donut" },
-                { value: "bar", label: "Bar" },
+                { value: "funnel", label: "Funnel" },
               ]}
               value={decisionChartType}
-              onChange={(v) => setDecisionChartType(v as "donut" | "bar" | "radial")}
+              onChange={(v) => setDecisionChartType(v as "donut" | "bar" | "funnel")}
             />
           </ChartHeader>
           <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4 h-[196px] flex flex-col">
@@ -496,32 +754,37 @@ export function AnalyticsPanel() {
                   </ResponsiveContainer>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={decisionData} layout="vertical" margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                      <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} />
-                      <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} width={45} />
+                    <FunnelChart>
                       <Tooltip content={({ active, payload }) => {
                         if (!active || !payload?.length) return null;
                         const d = payload[0].payload;
-                        return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span style={{ color: d.color }}>{d.name}</span> <span className="text-white/70 font-mono ml-1">{d.value}</span></div>;
+                        return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white">{d.name}</span> <span className="text-white/70 font-mono ml-1">{d.value}</span></div>;
                       }} />
-                      <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                        {decisionData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
+                      <Funnel dataKey="value" data={funnelData} isAnimationActive>
+                        <LabelList position="center" fill="white" fontSize={10} fontWeight={600} formatter={(v: number) => v} />
+                      </Funnel>
+                    </FunnelChart>
                   </ResponsiveContainer>
                 )
               ) : <span className="text-xs text-white/20">No data</span>}
             </div>
             {hasData && (
               <div className="flex justify-center gap-3 pt-2 border-t border-white/[0.04]">
-                {decisionData.map((d) => (
-                  <div key={d.name} className="flex items-center gap-1.5 text-[10px]">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
-                    <span className="text-white/40">{d.name}</span>
-                  </div>
-                ))}
+                {decisionChartType === "donut" ? (
+                  decisionData.map((d) => (
+                    <div key={d.name} className="flex items-center gap-1.5 text-[10px]">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
+                      <span className="text-white/40">{d.name}</span>
+                    </div>
+                  ))
+                ) : (
+                  funnelData.map((d) => (
+                    <div key={d.name} className="flex items-center gap-1.5 text-[10px]">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.fill }} />
+                      <span className="text-white/40">{d.name}</span>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -529,14 +792,14 @@ export function AnalyticsPanel() {
 
         {/* Analysis Chart */}
         <div className="col-span-6 lg:col-span-3">
-          <ChartHeader label="Confidence Analysis">
+          <ChartHeader label={analysisChartType === "treemap" ? "Portfolio" : "Confidence Analysis"}>
             <ChartToggle
               options={[
                 { value: "scatter", label: "Scatter" },
-                { value: "histogram", label: "Dist" },
+                { value: "treemap", label: "Alloc" },
               ]}
               value={analysisChartType}
-              onChange={(v) => setAnalysisChartType(v as "scatter" | "histogram")}
+              onChange={(v) => setAnalysisChartType(v as "scatter" | "histogram" | "treemap")}
             />
           </ChartHeader>
           <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4 h-[196px] flex flex-col">
@@ -560,26 +823,53 @@ export function AnalyticsPanel() {
                 ) : <div className="h-full flex items-center justify-center text-xs text-white/20">No data</div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={confidenceHistogram} margin={{ top: 5, right: 5, bottom: 5, left: -15 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                    <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 8 }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} />
+                  <Treemap
+                    data={treemapData}
+                    dataKey="value"
+                    aspectRatio={4/3}
+                    stroke="rgba(0,0,0,0.3)"
+                    content={<CustomTreemapContent />}
+                  >
                     <Tooltip content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const d = payload[0].payload;
-                      return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white">{d.range}</span><br/><span className="text-white/50">Total: {d.total}</span></div>;
+                      return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white font-medium">{d.name}</span> <span className="text-white/70 font-mono ml-1">{d.value}%</span></div>;
                     }} />
-                    <Bar dataKey="wins" stackId="a" fill={BRAND.primary} radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="losses" stackId="a" fill={BRAND.red} radius={[2, 2, 0, 0]} />
-                  </BarChart>
+                  </Treemap>
                 </ResponsiveContainer>
               )}
             </div>
             <div className="flex justify-center gap-4 pt-2 border-t border-white/[0.04]">
-              <div className="flex items-center gap-1.5 text-[10px]"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: BRAND.primary }} /><span className="text-white/40">{analysisChartType === "scatter" ? "Traded" : "Wins"}</span></div>
-              <div className="flex items-center gap-1.5 text-[10px]"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: BRAND.red }} /><span className="text-white/40">{analysisChartType === "scatter" ? "Passed" : "Losses"}</span></div>
+              {analysisChartType === "scatter" ? (
+                <>
+                  <div className="flex items-center gap-1.5 text-[10px]"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: BRAND.primary }} /><span className="text-white/40">Traded</span></div>
+                  <div className="flex items-center gap-1.5 text-[10px]"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: BRAND.red }} /><span className="text-white/40">Passed</span></div>
+                </>
+              ) : (
+                <>
+                  {treemapData.slice(0, 3).map((d) => (
+                    <div key={d.name} className="flex items-center gap-1.5 text-[10px]">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
+                      <span className="text-white/40">{d.name}</span>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Gauges Row */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4 flex justify-center">
+          <Gauge value={stats.winRate || 0} label="Win Rate" color={stats.winRate > 50 ? BRAND.primary : BRAND.amber} />
+        </div>
+        <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4 flex justify-center">
+          <Gauge value={hasData && stats.totalAnalyzed > 0 ? Math.round((stats.enterDecisions / stats.totalAnalyzed) * 100) : 0} label="Entry Rate" color={BRAND.primary} />
+        </div>
+        <div className="bg-white/[0.02] border border-white/[0.04] rounded-lg p-4 flex justify-center">
+          <Gauge value={stats.avgConfidence || 0} label="AI Confidence" color="#9945ff" />
         </div>
       </div>
 
