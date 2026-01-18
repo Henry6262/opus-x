@@ -11,3 +11,4 @@ export { PositionProgressCard } from "./PositionProgressCard";
 export { OnChainHoldingsPanel } from "./OnChainHoldingsPanel";
 export { PortfolioHoldingsPanel } from "./PortfolioHoldingsPanel";
 export { TransactionDrawer } from "./TransactionDrawer";
+export { HistoryPanel } from "./HistoryPanel";

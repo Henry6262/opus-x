@@ -148,6 +148,30 @@ function formatMarketCap(mcap: number): string {
     return `$${Math.round(mcap)}`;
 }
 
+// Animated market cap for progress bar (simplified, no flash - just smooth transitions)
+interface AnimatedProgressMarketCapProps {
+    value: number;
+    className?: string;
+}
+
+function AnimatedProgressMarketCap({ value, className = "" }: AnimatedProgressMarketCapProps) {
+    // Format market cap with animation
+    const formatValue = () => {
+        if (value >= 1_000_000_000) return { num: value / 1_000_000_000, suffix: "B" };
+        if (value >= 1_000_000) return { num: value / 1_000_000, suffix: "M" };
+        if (value >= 1_000) return { num: value / 1_000, suffix: "K" };
+        return { num: value, suffix: "" };
+    };
+
+    const { num, suffix } = formatValue();
+
+    return (
+        <span className={`inline-flex items-center ${className}`}>
+            $<CountUp to={num} duration={0.5} decimals={suffix ? 1 : 0} />{suffix}
+        </span>
+    );
+}
+
 interface ProgressBarProps {
     currentMultiplier: number;
     goalMultiplier?: number;
@@ -212,7 +236,7 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
                     />
                 </div>
 
-                {/* Floating MCap Value Badge at Progress Tip */}
+                {/* Floating MCap Value Badge at Progress Tip - Animated */}
                 {showMcapBadge && (
                     <motion.div
                         className="absolute -translate-x-1/2 pointer-events-none"
@@ -223,9 +247,10 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
                     >
                         <div className="relative">
                             <div className="px-1.5 py-0.5 rounded bg-black/95 border border-[#c4f70e]/60 whitespace-nowrap">
-                                <span className="text-[10px] font-mono font-bold tabular-nums text-[#c4f70e]">
-                                    {formatMarketCap(currentMarketCap)}
-                                </span>
+                                <AnimatedProgressMarketCap
+                                    value={currentMarketCap}
+                                    className="text-[10px] font-mono font-bold tabular-nums text-[#c4f70e]"
+                                />
                             </div>
                             {/* Arrow pointing down */}
                             <div
@@ -256,7 +281,7 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
 }
 
 // ============================================
-// SOL Value Display Component
+// SOL Value Display Component (Animated)
 // ============================================
 
 interface SolValueProps {
@@ -275,6 +300,151 @@ function SolValue({ solAmount, size = "lg" }: SolValueProps) {
         <span className={`inline-flex items-center gap-1 font-mono tabular-nums ${size === "lg" ? "text-xl font-bold" : "text-sm"}`}>
             {formatSol(solAmount)}
             <Image src={SOLANA_ICON} alt="SOL" width={size === "lg" ? 18 : 14} height={size === "lg" ? 18 : 14} />
+        </span>
+    );
+}
+
+// ============================================
+// Animated Value with Flash Effect
+// ============================================
+
+interface AnimatedSolValueProps {
+    value: number;
+    previousValue?: number;
+    showSign?: boolean;
+    className?: string;
+}
+
+function AnimatedSolValue({ value, previousValue, showSign = false, className = "" }: AnimatedSolValueProps) {
+    const [flash, setFlash] = useState<"up" | "down" | null>(null);
+    const prevValueRef = useRef(value);
+
+    useEffect(() => {
+        if (prevValueRef.current !== value) {
+            const direction = value > prevValueRef.current ? "up" : "down";
+            setFlash(direction);
+            prevValueRef.current = value;
+
+            const timer = setTimeout(() => setFlash(null), 600);
+            return () => clearTimeout(timer);
+        }
+    }, [value]);
+
+    const flashClass = flash === "up"
+        ? "animate-flash-green"
+        : flash === "down"
+            ? "animate-flash-red"
+            : "";
+
+    return (
+        <span className={`inline-flex items-center gap-1 transition-all duration-200 ${flashClass} ${className}`}>
+            <CountUp
+                to={value}
+                duration={0.6}
+                decimals={2}
+                prefix={showSign && value >= 0 ? "+" : ""}
+            />
+            <Image
+                src="/logos/solana.png"
+                alt="SOL"
+                width={14}
+                height={14}
+                className="opacity-70"
+            />
+        </span>
+    );
+}
+
+// ============================================
+// Animated Market Cap Display
+// ============================================
+
+interface AnimatedMarketCapProps {
+    value: number;
+    className?: string;
+}
+
+function AnimatedMarketCap({ value, className = "" }: AnimatedMarketCapProps) {
+    const [flash, setFlash] = useState<"up" | "down" | null>(null);
+    const prevValueRef = useRef(value);
+
+    useEffect(() => {
+        if (Math.abs(prevValueRef.current - value) > value * 0.001) { // Only flash if >0.1% change
+            const direction = value > prevValueRef.current ? "up" : "down";
+            setFlash(direction);
+            prevValueRef.current = value;
+
+            const timer = setTimeout(() => setFlash(null), 600);
+            return () => clearTimeout(timer);
+        }
+        prevValueRef.current = value;
+    }, [value]);
+
+    const flashClass = flash === "up"
+        ? "animate-flash-green"
+        : flash === "down"
+            ? "animate-flash-red"
+            : "";
+
+    // Format market cap with animation
+    const formatValue = () => {
+        if (value >= 1_000_000_000) return { num: value / 1_000_000_000, suffix: "B" };
+        if (value >= 1_000_000) return { num: value / 1_000_000, suffix: "M" };
+        if (value >= 1_000) return { num: value / 1_000, suffix: "K" };
+        return { num: value, suffix: "" };
+    };
+
+    const { num, suffix } = formatValue();
+
+    return (
+        <span className={`inline-flex items-center transition-all duration-200 ${flashClass} ${className}`}>
+            $<CountUp to={num} duration={0.5} decimals={suffix ? 1 : 0} />{suffix}
+        </span>
+    );
+}
+
+// ============================================
+// Animated Percent Display with Flash Effect
+// ============================================
+
+interface AnimatedPercentProps {
+    value: number;
+    className?: string;
+}
+
+function AnimatedPercent({ value, className = "" }: AnimatedPercentProps) {
+    const [flash, setFlash] = useState<"up" | "down" | null>(null);
+    const prevValueRef = useRef(value);
+
+    useEffect(() => {
+        if (Math.abs(prevValueRef.current - value) > 0.5) { // Only flash if >0.5% change
+            const direction = value > prevValueRef.current ? "up" : "down";
+            setFlash(direction);
+            prevValueRef.current = value;
+
+            const timer = setTimeout(() => setFlash(null), 600);
+            return () => clearTimeout(timer);
+        }
+        prevValueRef.current = value;
+    }, [value]);
+
+    const flashClass = flash === "up"
+        ? "animate-flash-green"
+        : flash === "down"
+            ? "animate-flash-red"
+            : "";
+
+    const isPositive = value >= 0;
+
+    return (
+        <span className={`inline-flex items-center transition-all duration-200 ${flashClass} ${className}`}>
+            <CountUp
+                to={value}
+                duration={0.8}
+                decimals={0}
+                prefix={isPositive ? "+" : ""}
+                suffix="%"
+            />
         </span>
     );
 }
@@ -346,7 +516,7 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ delay: index * 0.05, type: "spring", stiffness: 200, damping: 20 }}
-            className="relative p-3 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden hover:border-[#c4f70e]/30 transition-all group cursor-pointer"
+            className="relative px-5 py-3 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden hover:border-[#c4f70e]/30 transition-all group cursor-pointer"
             onClick={onClick}
             role="button"
             tabIndex={0}
@@ -387,73 +557,51 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                                     <Copy className="w-3.5 h-3.5 text-white/40 hover:text-white/70" />
                                 </button>
                             </div>
-                            {/* Token Amount */}
-                            <div className="flex items-center gap-1.5 text-xs mt-1">
-                                <span className="font-mono font-semibold tabular-nums text-white/60">
-                                    {holding.current_quantity >= 1_000_000
-                                        ? `${Math.round(holding.current_quantity / 1_000_000)}M`
-                                        : holding.current_quantity >= 1_000
-                                            ? `${Math.round(holding.current_quantity / 1_000)}K`
-                                            : Math.round(holding.current_quantity)
-                                    } tokens
-                                </span>
-                                {holding.image_url && (
-                                    <Image
-                                        src={holding.image_url}
-                                        alt={holding.symbol}
-                                        width={14}
-                                        height={14}
-                                        className="rounded-full"
-                                        unoptimized
+                            {/* SOL Value - Shows current position value or PnL */}
+                            <div className={`flex items-center gap-1.5 text-sm mt-1 font-mono tabular-nums ${pnlSol !== null ? (pnlSol >= 0 ? "text-green-400/90" : "text-red-400/90") : "text-white/70"}`}>
+                                {pnlSol !== null ? (
+                                    <AnimatedSolValue
+                                        value={pnlSol}
+                                        showSign={true}
+                                        className="text-sm"
                                     />
+                                ) : (
+                                    <>
+                                        <span className="font-semibold">{valueSol.toFixed(2)}</span>
+                                        <Image
+                                            src="/logos/solana.png"
+                                            alt="SOL"
+                                            width={16}
+                                            height={16}
+                                            className="opacity-80"
+                                        />
+                                    </>
+                                )}
+                                {hasLiveData && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse ml-0.5" />
                                 )}
                             </div>
                         </div>
 
-                        {/* PnL Section (right side) - Percentage + SOL below */}
+                        {/* PnL Section (right side) - Percentage only */}
                         <div className="flex flex-col items-end">
-                            {/* PnL Percentage */}
+                            {/* PnL Percentage - Animated with flash on change */}
                             {pnlPct !== null ? (
                                 <motion.div
-                                    className={`text-xl font-bold font-mono tabular-nums ${pnlPct >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}
+                                    className={`text-2xl font-bold font-mono tabular-nums ${pnlPct >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}
                                     style={{
                                         textShadow: pnlPct >= 0
-                                            ? "0 0 8px rgba(196,247,14,0.3)"
-                                            : "0 0 8px rgba(239,68,68,0.3)",
+                                            ? "0 0 10px rgba(196,247,14,0.4)"
+                                            : "0 0 10px rgba(239,68,68,0.4)",
                                     }}
                                 >
-                                    <CountUp
-                                        to={pnlPct}
-                                        duration={0.8}
-                                        decimals={0}
-                                        prefix={pnlPct >= 0 ? "+" : ""}
-                                        suffix="%"
-                                    />
+                                    <AnimatedPercent value={pnlPct} />
                                 </motion.div>
                             ) : (
-                                <div className="text-base font-bold font-mono tabular-nums text-white/40">
+                                <div className="text-xl font-bold font-mono tabular-nums text-white/40">
                                     —
                                 </div>
                             )}
-                            {/* SOL Value/Profit */}
-                            <div className={`flex items-center gap-1 text-xs font-mono tabular-nums ${pnlSol !== null ? (pnlSol >= 0 ? "text-green-400/80" : "text-red-400/80") : "text-white/60"}`}>
-                                <span>
-                                    {pnlSol !== null
-                                        ? `${pnlSol >= 0 ? "+" : ""}${pnlSol.toFixed(2)}`
-                                        : `${valueSol.toFixed(2)}`
-                                    }
-                                </span>
-                                <Image
-                                    src="/logos/solana.png"
-                                    alt="SOL"
-                                    width={14}
-                                    height={14}
-                                    className="opacity-70"
-                                />
-                                {hasLiveData && (
-                                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse ml-1" />
-                                )}
-                            </div>
                         </div>
                     </div>
 

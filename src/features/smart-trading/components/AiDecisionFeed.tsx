@@ -16,6 +16,7 @@ import {
     WifiOff,
     Zap,
 } from "lucide-react";
+import { RotatingScrambleText } from "@/components/animations";
 import { useActivityFeed, useConnectionStatus } from "../context";
 import type { ActivityItem } from "../context";
 
@@ -24,6 +25,28 @@ import type { ActivityItem } from "../context";
 // ============================================
 
 type DecisionType = "BUY" | "REJECT" | "SELL" | "ANALYZING" | "SIGNAL" | "PROFIT" | "LOSS";
+
+// Idle state messages for when AI is waiting
+const IDLE_MESSAGES = [
+    "Scanning token launches...",
+    "Monitoring smart wallets...",
+    "Analyzing market conditions...",
+    "Evaluating entry signals...",
+    "Filtering by criteria...",
+];
+
+// Helper to extract rejection badge from reasoning
+function getRejectBadge(reasoning: string | undefined): string | null {
+    if (!reasoning) return null;
+    const lower = reasoning.toLowerCase();
+    if (lower.includes("liquidity")) return "low-liq";
+    if (lower.includes("volume")) return "low-vol";
+    if (lower.includes("market data") || lower.includes("no data")) return "no-data";
+    if (lower.includes("risk")) return "high-risk";
+    if (lower.includes("age") || lower.includes("too new") || lower.includes("too old")) return "age";
+    if (lower.includes("holder")) return "holders";
+    return "criteria";
+}
 
 interface AiDecision {
     id: string;
@@ -254,6 +277,13 @@ function DecisionCard({ decision }: DecisionCardProps) {
                 <div className="pl-[72px] pr-2 pb-2 text-white/50">
                     <span className="text-[#c4f70e]/60">→</span> {decision.reasoning}
 
+                    {/* Rejection badge for REJECT decisions */}
+                    {decision.type === "REJECT" && (
+                        <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400/60 border border-red-500/20">
+                            {getRejectBadge(decision.reasoning)}
+                        </span>
+                    )}
+
                     {/* Additional details as inline tags */}
                     {decision.details && (
                         <div className="mt-1 flex flex-wrap gap-1.5">
@@ -462,20 +492,43 @@ export function AiDecisionFeed({ maxItems = 50, className = "" }: AiDecisionFeed
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="flex flex-col items-center justify-center py-12 text-white/30 font-mono"
+                            className="flex flex-col items-center justify-center py-12 text-white/40 font-mono"
                         >
                             {isConnected ? (
                                 <>
                                     <div className="flex items-center gap-2 text-xs">
                                         <span className="text-[#c4f70e]">$</span>
-                                        <span className="animate-pulse">waiting for signals...</span>
+                                        <RotatingScrambleText
+                                            messages={IDLE_MESSAGES}
+                                            interval={3500}
+                                            speed={35}
+                                            className="text-white/50"
+                                        />
                                     </div>
-                                    <span className="text-[10px] text-white/20 mt-2">AI decisions will stream here</span>
+                                    {/* Subtle animated dots */}
+                                    <div className="flex items-center gap-1 mt-3">
+                                        {[0, 1, 2, 3, 4].map((i) => (
+                                            <motion.span
+                                                key={i}
+                                                className="w-1 h-1 rounded-full bg-[#c4f70e]/40"
+                                                animate={{
+                                                    opacity: [0.2, 0.8, 0.2],
+                                                    scale: [0.8, 1.2, 0.8],
+                                                }}
+                                                transition={{
+                                                    duration: 1.5,
+                                                    repeat: Infinity,
+                                                    delay: i * 0.2,
+                                                    ease: "easeInOut",
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
                                 </>
                             ) : (
                                 <>
-                                    <WifiOff className="w-6 h-6 mb-2 opacity-40" />
-                                    <span className="text-xs">connecting...</span>
+                                    <WifiOff className="w-5 h-5 mb-2 opacity-30" />
+                                    <span className="text-[11px] text-white/30">connecting...</span>
                                 </>
                             )}
                         </motion.div>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { usePositions } from "../context";
 import type { Position } from "../types";
+import { TransactionDrawer } from "./TransactionDrawer";
 
 // ============================================
 // Trades Panel
@@ -26,10 +27,35 @@ interface RecentTradesProps {
     maxTrades?: number;
 }
 
+// Selected trade for drawer
+interface SelectedTrade {
+    mint: string;
+    symbol: string;
+    positionId: string;
+}
+
 export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
     const t = useTranslations("dashboard");
     const { history } = usePositions();
     const [isExpanded, setIsExpanded] = useState(true);
+    const [selectedTrade, setSelectedTrade] = useState<SelectedTrade | null>(null);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    // Handle trade click - open drawer with transaction history
+    const handleTradeClick = (trade: Position) => {
+        setSelectedTrade({
+            mint: trade.tokenMint,
+            symbol: trade.tokenSymbol || "Unknown",
+            positionId: trade.id,
+        });
+        setIsDrawerOpen(true);
+    };
+
+    const handleCloseDrawer = () => {
+        setIsDrawerOpen(false);
+        // Clear selection after animation
+        setTimeout(() => setSelectedTrade(null), 300);
+    };
 
     // Use history (closed positions) directly, sorted by most recent first
     const closedTrades = [...history]
@@ -104,7 +130,12 @@ export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
                             <AnimatePresence mode="popLayout">
                                 {closedTrades.length > 0 ? (
                                     closedTrades.map((trade, index) => (
-                                        <CompactTradeRow key={trade.id} trade={trade} index={index} />
+                                        <CompactTradeRow
+                                            key={trade.id}
+                                            trade={trade}
+                                            index={index}
+                                            onClick={() => handleTradeClick(trade)}
+                                        />
                                     ))
                                 ) : (
                                     <motion.div
@@ -124,6 +155,15 @@ export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Transaction History Drawer */}
+            <TransactionDrawer
+                isOpen={isDrawerOpen}
+                onClose={handleCloseDrawer}
+                tokenSymbol={selectedTrade?.symbol || ""}
+                tokenMint={selectedTrade?.mint || ""}
+                positionId={selectedTrade?.positionId}
+            />
         </div>
     );
 }
@@ -135,9 +175,10 @@ export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
 interface CompactTradeRowProps {
     trade: Position;
     index: number;
+    onClick?: () => void;
 }
 
-function CompactTradeRow({ trade, index }: CompactTradeRowProps) {
+function CompactTradeRow({ trade, index, onClick }: CompactTradeRowProps) {
     const pnl = trade.realizedPnlSol ?? 0;
     const isProfit = pnl >= 0;
     const pnlPercent = trade.entryAmountSol > 0
@@ -157,7 +198,8 @@ function CompactTradeRow({ trade, index }: CompactTradeRowProps) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 10 }}
             transition={{ delay: index * 0.03 }}
-            className={`flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors ${
+            onClick={onClick}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer ${
                 isProfit ? "hover:bg-green-500/5" : "hover:bg-red-500/5"
             }`}
         >

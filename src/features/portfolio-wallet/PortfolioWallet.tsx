@@ -56,6 +56,31 @@ function formatTimeAgo(dateInput: string | Date): string {
   return `${days}d ago`;
 }
 
+// Type for on-chain holdings from API (same as PortfolioHoldingsPanel)
+interface OnChainHolding {
+  id: string;
+  mint: string;
+  symbol: string;
+  name: string;
+  entry_price: number;
+  entry_time: string;
+  entry_sol_value: number;
+  initial_quantity: number;
+  current_quantity: number;
+  current_price: number;
+  unrealized_pnl_sol: number;
+  unrealized_pnl_pct: number;
+  peak_price: number;
+  peak_pnl_pct: number;
+  realized_pnl_sol: number;
+  status: "open" | "partially_closed" | "closed" | "pending";
+  market_cap: number | null;
+  liquidity: number | null;
+  volume_24h: number | null;
+  buy_signature: string | null;
+  image_url?: string | null;
+}
+
 export function PortfolioWallet({ className }: PortfolioWalletProps) {
   // Use unified WebSocket-first context (live updates!)
   const { dashboardStats } = useDashboardStats();
@@ -64,6 +89,12 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   const chartHistory: ChartHistoryEntry[] = []; // TODO: Add chartHistory to real-time context
   const [fetchedTransactions, setFetchedTransactions] = useState<Transaction[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  // Fetch holdings directly like the main dashboard does
+  const [fetchedHoldings, setFetchedHoldings] = useState<OnChainHolding[]>([]);
+  const [isLoadingHoldingsApi, setIsLoadingHoldingsApi] = useState(false);
+  const [holdingsApiError, setHoldingsApiError] = useState<string | null>(null);
 
   // Get wallet address from config (wallet_address is the trading wallet public key)
   const walletAddress = config?.wallet_address || null;
@@ -167,10 +198,32 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     totalTrades: dashboardStats?.performance.totalTrades || 0,
   };
 
-  // Map API positions to UI positions - RECONCILED with Birdeye on-chain holdings
-  // Only show positions where we still have on-chain balance (filters out tokens sold externally)
-  // This ensures we never display "misinformation" about what's actually held
+  // Map holdings to UI positions - now using direct API fetch like main dashboard
+  // Priority: fetchedHoldings (API) > positions (context) with Birdeye validation
   const uiPositions: UiPosition[] = useMemo(() => {
+    // If we have API holdings, use those (same source as main dashboard's PortfolioHoldingsPanel)
+    if (fetchedHoldings.length > 0) {
+      return fetchedHoldings.map(h => {
+        const birdeyeHolding = getHolding(h.mint);
+        return {
+          id: h.id,
+          mint: h.mint,
+          symbol: h.symbol || birdeyeHolding?.symbol || "TOKEN",
+          name: h.name || birdeyeHolding?.name || "Unknown Token",
+          entryPrice: h.entry_price,
+          currentPrice: h.current_price,
+          quantity: h.current_quantity,
+          value: h.current_quantity * h.current_price,
+          pnl: h.unrealized_pnl_sol || 0,
+          pnlPercent: h.unrealized_pnl_pct || 0,
+          entryTime: new Date(h.entry_time),
+          isValidated: birdeyeHolding !== undefined,
+          birdeyeValueUsd: birdeyeHolding?.valueUsd ?? null,
+        };
+      });
+    }
+
+    // Fallback to context positions with Birdeye validation
     return positions
       .filter(p => {
         // If we haven't loaded holdings yet, show all positions (better UX than empty)
@@ -205,7 +258,7 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
           birdeyeValueUsd: birdeyeHolding?.valueUsd ?? null,
         };
       });
-  }, [positions, birdeyeHoldings, isLoadingHoldings, hasHolding, getHolding]);
+  }, [fetchedHoldings, positions, birdeyeHoldings, isLoadingHoldings, hasHolding, getHolding]);
 
   type EnrichedTransaction = {
     id: string;
@@ -263,11 +316,13 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     };
   }, []);
 
+  // Fetch transactions from API (same as main dashboard's TransactionsPanel)
   useEffect(() => {
     let cancelled = false;
 
     const fetchTransactions = async () => {
       setIsLoadingHistory(true);
+      setHistoryError(null);
       try {
         const url = buildDevprntApiUrl("/api/trading/transactions?limit=25");
         const response = await fetch(url.toString());
@@ -279,6 +334,9 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
         }
       } catch (err) {
         console.error("Failed to fetch wallet transaction history", err);
+        if (!cancelled) {
+          setHistoryError(err instanceof Error ? err.message : "Failed to load transactions");
+        }
       } finally {
         if (!cancelled) setIsLoadingHistory(false);
       }
@@ -289,6 +347,47 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
       cancelled = true;
     };
   }, [mapEnrichedTransaction]);
+
+  // Fetch holdings from API (same as main dashboard's PortfolioHoldingsPanel)
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchHoldings = async () => {
+      setIsLoadingHoldingsApi(true);
+      setHoldingsApiError(null);
+      try {
+        const url = buildDevprntApiUrl("/api/trading/holdings");
+        const response = await fetch(url.toString());
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const result = await response.json();
+        if (result?.success === false) {
+          throw new Error(result.error || "Failed to load holdings");
+        }
+        const rawData = (result?.data as OnChainHolding[]) || [];
+        // Filter open AND partially_closed positions (same as PortfolioHoldingsPanel)
+        const data = rawData.filter(
+          (h) => (h.status === "open" || h.status === "partially_closed") && h.current_quantity > 0
+        );
+        // Sort by current value descending
+        data.sort((a, b) => (b.current_quantity * b.current_price) - (a.current_quantity * a.current_price));
+        if (!cancelled) {
+          setFetchedHoldings(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch wallet holdings", err);
+        if (!cancelled) {
+          setHoldingsApiError(err instanceof Error ? err.message : "Failed to load holdings");
+        }
+      } finally {
+        if (!cancelled) setIsLoadingHoldingsApi(false);
+      }
+    };
+
+    fetchHoldings();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const transactions: Transaction[] =
     fetchedTransactions.length > 0 ? fetchedTransactions : mapHistoryToTransactions;
@@ -569,7 +668,17 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
             {/* Positions View */}
             {activeView === "positions" && (
               <div className="portfolio-wallet-positions">
-                {uiPositions.length === 0 ? (
+                {isLoadingHoldingsApi && uiPositions.length === 0 ? (
+                  <div className="portfolio-wallet-empty">
+                    <Layers className="w-8 h-8 text-white/20 animate-pulse" />
+                    <span>Loading positions...</span>
+                  </div>
+                ) : holdingsApiError && uiPositions.length === 0 ? (
+                  <div className="portfolio-wallet-empty">
+                    <AlertCircle className="w-8 h-8 text-red-400/60" />
+                    <span className="text-red-400/80">{holdingsApiError}</span>
+                  </div>
+                ) : uiPositions.length === 0 ? (
                   <div className="portfolio-wallet-empty">
                     <Layers className="w-8 h-8 text-white/20" />
                     <span>No active positions</span>
@@ -627,8 +736,13 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
               <div className="portfolio-wallet-history">
                 {isLoadingHistory && transactions.length === 0 ? (
                   <div className="portfolio-wallet-empty">
-                    <Clock className="w-8 h-8 text-white/20" />
+                    <Clock className="w-8 h-8 text-white/20 animate-pulse" />
                     <span>Loading history...</span>
+                  </div>
+                ) : historyError && transactions.length === 0 ? (
+                  <div className="portfolio-wallet-empty">
+                    <AlertCircle className="w-8 h-8 text-red-400/60" />
+                    <span className="text-red-400/80">{historyError}</span>
                   </div>
                 ) : transactions.length === 0 ? (
                   <div className="portfolio-wallet-empty">
