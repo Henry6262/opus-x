@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
@@ -14,7 +14,11 @@ import {
     Clock,
     Target,
     List,
+    Loader2,
 } from "lucide-react";
+
+// Infinite scroll page size
+const PAGE_SIZE = 15;
 import { usePositions } from "../context";
 import type { Position } from "../types";
 import { TransactionDrawer } from "./TransactionDrawer";
@@ -66,6 +70,20 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
     const [viewMode, setViewMode] = useState<ViewMode>("trades");
     const [isExpanded, setIsExpanded] = useState(true);
 
+    // Infinite scroll state
+    const [visibleTradesCount, setVisibleTradesCount] = useState(PAGE_SIZE);
+    const [visibleTxnsCount, setVisibleTxnsCount] = useState(PAGE_SIZE);
+
+    // Reset visible count when switching tabs
+    const handleViewModeChange = (mode: ViewMode) => {
+        setViewMode(mode);
+        if (mode === "trades") {
+            setVisibleTradesCount(PAGE_SIZE);
+        } else {
+            setVisibleTxnsCount(PAGE_SIZE);
+        }
+    };
+
     // Drawer state
     const [selectedTrade, setSelectedTrade] = useState<SelectedTrade | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -114,18 +132,43 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
         }
     }, [viewMode, fetchTransactions]);
 
-    // Trades data
-    const closedTrades = [...history]
-        .sort((a, b) => {
-            const dateA = new Date(a.closedAt || a.updatedAt).getTime();
-            const dateB = new Date(b.closedAt || b.updatedAt).getTime();
-            return dateB - dateA;
-        })
-        .slice(0, maxItems);
+    // Trades data - sorted and memoized
+    const allClosedTrades = useMemo(() => {
+        return [...history]
+            .sort((a, b) => {
+                const dateA = new Date(a.closedAt || a.updatedAt).getTime();
+                const dateB = new Date(b.closedAt || b.updatedAt).getTime();
+                return dateB - dateA;
+            })
+            .slice(0, maxItems);
+    }, [history, maxItems]);
 
-    const wins = closedTrades.filter(t => (t.realizedPnlSol ?? 0) >= 0).length;
-    const losses = closedTrades.length - wins;
-    const totalPnl = closedTrades.reduce((sum, t) => sum + (t.realizedPnlSol ?? 0), 0);
+    // Visible trades (paginated)
+    const visibleTrades = useMemo(() => {
+        return allClosedTrades.slice(0, visibleTradesCount);
+    }, [allClosedTrades, visibleTradesCount]);
+
+    // Visible transactions (paginated)
+    const visibleTransactions = useMemo(() => {
+        return transactions.slice(0, visibleTxnsCount);
+    }, [transactions, visibleTxnsCount]);
+
+    const hasMoreTrades = visibleTradesCount < allClosedTrades.length;
+    const hasMoreTxns = visibleTxnsCount < transactions.length;
+
+    // Load more handlers
+    const loadMoreTrades = useCallback(() => {
+        setVisibleTradesCount(prev => Math.min(prev + PAGE_SIZE, allClosedTrades.length));
+    }, [allClosedTrades.length]);
+
+    const loadMoreTxns = useCallback(() => {
+        setVisibleTxnsCount(prev => Math.min(prev + PAGE_SIZE, transactions.length));
+    }, [transactions.length]);
+
+    // Stats based on all trades (not just visible)
+    const wins = allClosedTrades.filter(t => (t.realizedPnlSol ?? 0) >= 0).length;
+    const losses = allClosedTrades.length - wins;
+    const totalPnl = allClosedTrades.reduce((sum, t) => sum + (t.realizedPnlSol ?? 0), 0);
 
     // Handlers
     const handleTradeClick = (trade: Position) => {
@@ -142,83 +185,48 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
         setTimeout(() => setSelectedTrade(null), 300);
     };
 
-    const itemCount = viewMode === "trades" ? closedTrades.length : transactions.length;
+    const itemCount = viewMode === "trades" ? allClosedTrades.length : transactions.length;
 
     return (
         <div className="h-full flex flex-col overflow-hidden">
             {/* Header with Toggle */}
             <div className="flex items-center justify-between px-1 py-3 mb-3 flex-shrink-0">
-                <div className="flex items-center gap-3">
-                    {/* Icon */}
-                    {viewMode === "trades" ? (
-                        <Trophy className="w-6 h-6 text-[#c4f70e]" />
+                {/* Left: Icon + Title */}
+                <div
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                    <TrendingUp className="w-6 h-6 text-[#c4f70e]" />
+                    <span className="text-lg font-semibold text-white">History</span>
+                    {isExpanded ? (
+                        <ChevronUp className="w-5 h-5 text-white/40" />
                     ) : (
-                        <List className="w-6 h-6 text-[#c4f70e]" />
-                    )}
-
-                    {/* Toggle Pills */}
-                    <div className="flex items-center bg-white/5 rounded-lg p-0.5">
-                        <button
-                            onClick={() => setViewMode("trades")}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                                viewMode === "trades"
-                                    ? "bg-[#c4f70e] text-black"
-                                    : "text-white/60 hover:text-white"
-                            }`}
-                        >
-                            Trades
-                        </button>
-                        <button
-                            onClick={() => setViewMode("transactions")}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                                viewMode === "transactions"
-                                    ? "bg-[#c4f70e] text-black"
-                                    : "text-white/60 hover:text-white"
-                            }`}
-                        >
-                            Transactions
-                        </button>
-                    </div>
-
-                    {/* Count badge */}
-                    <span className="px-2 py-0.5 text-[11px] font-bold tabular-nums rounded-full bg-[#c4f70e]/20 text-[#c4f70e]">
-                        {itemCount}
-                    </span>
-
-                    {/* Win/Loss for trades view */}
-                    {viewMode === "trades" && closedTrades.length > 0 && (
-                        <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-bold tabular-nums text-green-400">
-                                {wins}W
-                            </span>
-                            <span className="text-[10px] font-bold tabular-nums text-red-400">
-                                {losses}L
-                            </span>
-                        </div>
+                        <ChevronDown className="w-5 h-5 text-white/40" />
                     )}
                 </div>
 
-                <div className="flex items-center gap-3">
-                    {/* Total P&L for trades */}
-                    {viewMode === "trades" && closedTrades.length > 0 && (
-                        <span className={`text-sm font-bold font-mono tabular-nums ${
-                            totalPnl >= 0 ? "text-green-400" : "text-red-400"
-                        }`}>
-                            {totalPnl >= 0 ? "+" : ""}{totalPnl.toFixed(2)} SOL
-                        </span>
-                    )}
-
-                    {/* Expand/Collapse */}
-                    <div
-                        onClick={() => setIsExpanded(!isExpanded)}
-                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                {/* Right: Toggle Pills (pill-shaped) */}
+                <div className="flex items-center bg-white/5 rounded-full p-0.5">
+                    <button
+                        onClick={() => handleViewModeChange("trades")}
+                        className={`px-3 py-1 text-xs font-semibold rounded-full transition-all ${
+                            viewMode === "trades"
+                                ? "bg-[#c4f70e] text-black"
+                                : "text-white/60 hover:text-white"
+                        }`}
                     >
-                        {isExpanded ? (
-                            <ChevronUp className="w-5 h-5 text-white/40" />
-                        ) : (
-                            <ChevronDown className="w-5 h-5 text-white/40" />
-                        )}
-                    </div>
+                        Trades
+                    </button>
+                    <button
+                        onClick={() => handleViewModeChange("transactions")}
+                        className={`px-3 py-1 text-xs font-semibold rounded-full transition-all ${
+                            viewMode === "transactions"
+                                ? "bg-[#c4f70e] text-black"
+                                : "text-white/60 hover:text-white"
+                        }`}
+                    >
+                        Txns
+                    </button>
                 </div>
             </div>
 
@@ -233,16 +241,20 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
                         transition={{ duration: 0.2 }}
                         className="flex-1 overflow-hidden"
                     >
-                        <div className="h-full overflow-y-auto space-y-2">
+                        <div className="h-full overflow-y-auto space-y-2 pr-1">
                             {viewMode === "trades" ? (
                                 <TradesView
-                                    trades={closedTrades}
+                                    trades={visibleTrades}
                                     onTradeClick={handleTradeClick}
+                                    hasMore={hasMoreTrades}
+                                    onLoadMore={loadMoreTrades}
                                 />
                             ) : (
                                 <TransactionsView
-                                    transactions={transactions}
+                                    transactions={visibleTransactions}
                                     isLoading={isLoading}
+                                    hasMore={hasMoreTxns}
+                                    onLoadMore={loadMoreTxns}
                                 />
                             )}
                         </div>
@@ -263,15 +275,39 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
 }
 
 // ============================================
-// Trades View (Aggregated Positions)
+// Trades View (Aggregated Positions) with Infinite Scroll
 // ============================================
 
 interface TradesViewProps {
     trades: Position[];
     onTradeClick: (trade: Position) => void;
+    hasMore: boolean;
+    onLoadMore: () => void;
 }
 
-function TradesView({ trades, onTradeClick }: TradesViewProps) {
+function TradesView({ trades, onTradeClick, hasMore, onLoadMore }: TradesViewProps) {
+    const loadMoreRef = useRef<HTMLDivElement>(null);
+
+    // Infinite scroll with IntersectionObserver
+    useEffect(() => {
+        if (!hasMore) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    onLoadMore();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRef.current) {
+            observer.observe(loadMoreRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [hasMore, onLoadMore]);
+
     if (trades.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-8 text-white/40">
@@ -285,16 +321,24 @@ function TradesView({ trades, onTradeClick }: TradesViewProps) {
     }
 
     return (
-        <AnimatePresence mode="popLayout">
-            {trades.map((trade, index) => (
-                <TradeRow
-                    key={trade.id}
-                    trade={trade}
-                    index={index}
-                    onClick={() => onTradeClick(trade)}
-                />
-            ))}
-        </AnimatePresence>
+        <>
+            <AnimatePresence mode="popLayout">
+                {trades.map((trade, index) => (
+                    <TradeRow
+                        key={trade.id}
+                        trade={trade}
+                        index={index}
+                        onClick={() => onTradeClick(trade)}
+                    />
+                ))}
+            </AnimatePresence>
+            {/* Infinite scroll trigger */}
+            {hasMore && (
+                <div ref={loadMoreRef} className="flex justify-center py-3">
+                    <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
+                </div>
+            )}
+        </>
     );
 }
 
@@ -327,72 +371,81 @@ function TradeRow({ trade, index, onClick }: TradeRowProps) {
             exit={{ opacity: 0, x: 10 }}
             transition={{ delay: index * 0.03 }}
             onClick={onClick}
-            className={`flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border transition-colors cursor-pointer ${
-                isProfit
-                    ? "border-green-500/20 hover:border-green-500/40 hover:bg-green-500/5"
-                    : "border-red-500/20 hover:border-red-500/40 hover:bg-red-500/5"
-            }`}
+            className="p-2.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
         >
-            {/* Token Image */}
-            <TokenImage tokenMint={trade.tokenMint} tokenSymbol={trade.tokenSymbol} size={32} />
+            <div className="flex items-center gap-2">
+                {/* Token Image */}
+                <TokenImage tokenMint={trade.tokenMint} tokenSymbol={trade.tokenSymbol} size={32} />
 
-            {/* Token Info */}
-            <div className="min-w-0 flex-1">
-                <span className="font-mono font-semibold text-white text-sm block truncate">
-                    {trade.tokenSymbol || shortenAddress(trade.tokenMint)}
-                </span>
-                <div className="flex items-center gap-1.5 text-[10px] text-white/40">
-                    <Clock className="w-3 h-3" />
-                    <span>{timeHeld}</span>
-                    <span className="text-white/20">•</span>
-                    {exitReason === "tp" ? (
-                        <span className="flex items-center gap-0.5 text-green-400/70">
-                            <Target className="w-3 h-3" />
-                            TP
+                {/* Token Info */}
+                <div className="flex-1 min-w-0">
+                    <span className="font-mono font-bold text-white text-sm">
+                        {trade.tokenSymbol || shortenAddress(trade.tokenMint)}
+                    </span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-xs text-white/60">
+                            {exitReason === "tp" ? (
+                                <span className="text-green-400 font-medium">Won</span>
+                            ) : (
+                                <span className="text-red-400 font-medium">Lost</span>
+                            )}
+                            {" "}<span className={`font-mono tabular-nums ${isProfit ? "text-green-400" : "text-red-400"}`}>
+                                {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)}
+                            </span>{" "}SOL
+                            <span className="text-white/40 ml-1">({pnlPercent >= 0 ? "+" : ""}{pnlPercent.toFixed(0)}%)</span>
                         </span>
-                    ) : (
-                        <span className="flex items-center gap-0.5 text-red-400/70">
-                            <TrendingDown className="w-3 h-3" />
-                            SL
-                        </span>
-                    )}
+                    </div>
                 </div>
-            </div>
 
-            {/* P&L */}
-            <div className="flex-shrink-0 text-right">
-                <div className={`flex items-center justify-end gap-1 font-mono font-bold tabular-nums text-sm ${
-                    isProfit ? "text-green-400" : "text-red-400"
-                }`}>
-                    {pnl >= 0 ? "+" : ""}{pnl.toFixed(3)}
-                    <Image src="/logos/solana.png" alt="SOL" width={12} height={12} className="opacity-80" />
+                {/* Right side - time and hold duration */}
+                <div className="flex flex-col items-end gap-1">
+                    <span className="text-[10px] font-mono tabular-nums text-white/40">
+                        {timeAgo}
+                    </span>
+                    <span className="text-[10px] text-white/30">
+                        held {timeHeld}
+                    </span>
                 </div>
-                <div className={`text-[10px] font-mono tabular-nums ${
-                    isProfit ? "text-green-400/60" : "text-red-400/60"
-                }`}>
-                    {pnlPercent >= 0 ? "+" : ""}{pnlPercent.toFixed(0)}%
-                </div>
-            </div>
-
-            {/* Time ago */}
-            <div className="flex-shrink-0 text-[10px] text-white/30 font-mono tabular-nums w-10 text-right">
-                {timeAgo}
             </div>
         </motion.div>
     );
 }
 
 // ============================================
-// Transactions View (Raw Blockchain Txs)
+// Transactions View (Raw Blockchain Txs) with Infinite Scroll
 // ============================================
 
 interface TransactionsViewProps {
     transactions: EnrichedTransaction[];
     isLoading: boolean;
+    hasMore: boolean;
+    onLoadMore: () => void;
 }
 
-function TransactionsView({ transactions, isLoading }: TransactionsViewProps) {
-    if (isLoading) {
+function TransactionsView({ transactions, isLoading, hasMore, onLoadMore }: TransactionsViewProps) {
+    const loadMoreRef = useRef<HTMLDivElement>(null);
+
+    // Infinite scroll with IntersectionObserver
+    useEffect(() => {
+        if (!hasMore || isLoading) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    onLoadMore();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRef.current) {
+            observer.observe(loadMoreRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [hasMore, isLoading, onLoadMore]);
+
+    if (isLoading && transactions.length === 0) {
         return (
             <div className="flex items-center justify-center py-8">
                 <div className="w-5 h-5 border-2 border-[#c4f70e] border-t-transparent rounded-full animate-spin" />
@@ -413,11 +466,19 @@ function TransactionsView({ transactions, isLoading }: TransactionsViewProps) {
     }
 
     return (
-        <AnimatePresence mode="popLayout">
-            {transactions.map((tx) => (
-                <TransactionRow key={tx.id} tx={tx} />
-            ))}
-        </AnimatePresence>
+        <>
+            <AnimatePresence mode="popLayout">
+                {transactions.map((tx) => (
+                    <TransactionRow key={tx.id} tx={tx} />
+                ))}
+            </AnimatePresence>
+            {/* Infinite scroll trigger */}
+            {hasMore && (
+                <div ref={loadMoreRef} className="flex justify-center py-3">
+                    <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
+                </div>
+            )}
+        </>
     );
 }
 

@@ -121,14 +121,14 @@ function TokenAvatar({ imageUrl, symbol, mint, size = 48 }: TokenAvatarProps) {
     return (
         <div
             className="relative rounded-xl overflow-hidden flex-shrink-0 shadow-lg"
-            style={{ width: size, height: size }}
+            style={{ width: size, height: size, minWidth: size, minHeight: size }}
         >
             <Image
                 src={finalImageUrl}
                 alt={symbol}
-                width={size}
-                height={size}
-                className="object-cover"
+                fill
+                sizes={`${size}px`}
+                className="object-cover w-full h-full"
                 onError={() => setImgError(true)}
                 unoptimized
             />
@@ -208,9 +208,9 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
 
     return (
         <div className="mt-1 pt-1 flex items-center gap-2">
-            {/* Progress Track */}
+            {/* Progress Track - taller to fit text inside */}
             <div className="flex-1 relative">
-                <div className="relative h-3 rounded-full bg-white/10 overflow-hidden">
+                <div className="relative h-5 rounded-full bg-white/10 overflow-hidden">
                     {/* Progress Fill - Always lime green (progress toward TP target) */}
                     <motion.div
                         className="absolute inset-y-0 left-0 rounded-full"
@@ -222,59 +222,26 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
                         transition={{ type: "spring", stiffness: 120, damping: 18 }}
                     />
 
-                    {/* Current Position Indicator (pulsing dot) - Always lime */}
-                    <motion.div
-                        className="absolute w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                        style={{
-                            top: "50%",
-                            left: `${progress * 100}%`,
-                            background: "#c4f70e",
-                            boxShadow: "0 0 10px #c4f70e",
-                        }}
-                        animate={{ scale: [0.95, 1.08, 0.95] }}
-                        transition={{ duration: 1.6, repeat: Infinity }}
-                    />
-                </div>
-
-                {/* Floating MCap Value Badge at Progress Tip - Animated */}
-                {showMcapBadge && (
-                    <motion.div
-                        className="absolute -translate-x-1/2 pointer-events-none"
-                        style={{ left: `${progress * 100}%`, top: "-16px" }}
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                    >
-                        <div className="relative">
-                            <div className="px-2 py-0.5 rounded bg-black/95 border border-[#c4f70e]/60 whitespace-nowrap">
-                                <AnimatedProgressMarketCap
-                                    value={currentMarketCap}
-                                    className="text-xs font-mono font-bold tabular-nums text-[#c4f70e]"
-                                />
-                            </div>
-                            {/* Arrow pointing down */}
-                            <div
-                                className="absolute left-1/2 -translate-x-1/2 -bottom-[4px] w-0 h-0"
-                                style={{
-                                    borderLeft: "3px solid transparent",
-                                    borderRight: "3px solid transparent",
-                                    borderTop: "4px solid #c4f70e",
-                                }}
+                    {/* Market cap value INSIDE the progress bar */}
+                    {showMcapBadge && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <AnimatedProgressMarketCap
+                                value={currentMarketCap}
+                                className="text-[10px] font-mono font-bold tabular-nums text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
                             />
                         </div>
-                    </motion.div>
-                )}
+                    )}
+                </div>
             </div>
 
             {/* Target: MCap Goal */}
-            <div className="flex items-center gap-1.5">
-                <span className={`px-2 py-0.5 rounded-lg text-sm font-bold font-mono tabular-nums ${isCloseToGoal ? "bg-[#c4f70e]/20 text-[#c4f70e]" : "bg-white/10 text-white/70"}`}>
+            <div className="flex items-center gap-1">
+                <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold font-mono tabular-nums ${isCloseToGoal ? "bg-[#c4f70e]/20 text-[#c4f70e]" : "bg-white/10 text-white/70"}`}>
                     {targetMarketCap !== undefined && targetMarketCap > 0
                         ? formatMarketCap(targetMarketCap)
                         : `${goal.toFixed(1)}x`
                     }
                 </span>
-                <span className="text-[11px] font-medium text-white/50">mcap</span>
             </div>
         </div>
     );
@@ -983,7 +950,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
             </div>
 
             {/* Cards - With visual separators */}
-            <div className="flex-1 overflow-y-auto space-y-3">
+            <div className="flex-1 overflow-y-auto space-y-1.5">
                 {isLoading && holdings.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12">
                         <Loader2 className="w-8 h-8 text-[#c4f70e] animate-spin mb-3" />

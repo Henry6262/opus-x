@@ -264,13 +264,6 @@ function DecisionCard({ decision }: DecisionCardProps) {
                     ${decision.tokenSymbol}
                 </span>
 
-                {/* Rejection badge - visible on main line */}
-                {rejectBadge && (
-                    <span className={`flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded border ${getBadgeStyle(rejectBadge)}`}>
-                        {rejectBadge}
-                    </span>
-                )}
-
                 {/* PnL if available */}
                 {decision.pnl !== undefined && (
                     <span className={`flex-shrink-0 ${decision.pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
@@ -285,16 +278,26 @@ function DecisionCard({ decision }: DecisionCardProps) {
                     </span>
                 )}
 
+                {/* Spacer to push right-side items */}
+                <span className="flex-1" />
+
                 {/* Solscan link */}
                 {decision.tokenMint && (
                     <a
                         href={`https://solscan.io/token/${decision.tokenMint}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                     >
                         <ExternalLink className="w-3 h-3 text-white/30 hover:text-[#c4f70e]" />
                     </a>
+                )}
+
+                {/* Rejection badge - rightmost, pill-shaped */}
+                {rejectBadge && (
+                    <span className={`flex-shrink-0 text-[9px] px-2 py-0.5 rounded-full border ${getBadgeStyle(rejectBadge)}`}>
+                        {rejectBadge}
+                    </span>
                 )}
             </div>
 
@@ -491,8 +494,8 @@ export function AiDecisionFeed({ maxItems = 50, className = "" }: AiDecisionFeed
             {/* Terminal-style Header */}
             <div className="flex items-center justify-between px-3 py-2.5 bg-white/[0.02] border-b border-white/5 flex-shrink-0">
                 <div className="flex items-center gap-2">
-                    <Bot className="w-4 h-4 text-[#c4f70e]" />
-                    <span className="text-sm font-mono font-medium text-white/80">ai.log</span>
+                    <Bot className="w-6 h-6 text-[#c4f70e]" />
+                    <span className="text-lg font-semibold text-white">ai.log</span>
                 </div>
                 <LiveIndicator />
             </div>

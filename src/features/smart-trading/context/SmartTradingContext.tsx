@@ -13,6 +13,7 @@ import {
 import { smartTradingService, fetchMigrationsFromDevprint } from "../service";
 import { useSharedWebSocket, type ConnectionStatus } from "../hooks/useWebSocket";
 import { dispatchTerminalEvent } from "../../terminal";
+import { logAiAnalysis, logMarketSnapshot } from "@/lib/analysisLogger";
 import type {
   TradingConfig,
   DashboardStatsResponse,
@@ -522,6 +523,20 @@ export function SmartTradingProvider({
               return rm;
             }),
           }));
+
+          // Log to Supabase asynchronously
+          logAiAnalysis({
+            mint: data.mint,
+            symbol: data.symbol,
+            triggerType: "MIGRATION", // or derive from event
+            decision: data.will_trade ? "ENTER" : "PASS",
+            confidence: data.conviction,
+            reasoning: data.reasoning,
+            marketData: {
+              // Note: WebSocket event might not have full market data, might need to fetch or use updated state
+              price: 0, // Placeholder if not in event
+            }
+          }).catch(err => console.error("Failed to log AI analysis", err));
         }
       )
     );
@@ -612,6 +627,22 @@ export function SmartTradingProvider({
         // Definitely refetch to show new position
         console.log("[SmartTrading] Position opened:", payload);
         fetchDashboard();
+
+        // Log trade entry snapshot
+        if (payload.token_mint && payload.entry_price) {
+          logMarketSnapshot({
+            mint: payload.token_mint,
+            symbol: payload.symbol,
+            snapshotType: "TRADE_ENTRY",
+            marketData: {
+              price: payload.entry_price,
+              // Add other available metrics
+            },
+            references: {
+              positionId: payload.id
+            }
+          }).catch(err => console.error("Failed to log trade entry", err));
+        }
       })
     );
 
@@ -760,6 +791,22 @@ export function SmartTradingProvider({
 
         // Refetch to update positions and history
         fetchDashboard();
+
+        // Log trade exit snapshot
+        if (payload.mint) {
+          // We might need to fetch final price or use payload data if available
+          logMarketSnapshot({
+            mint: payload.mint,
+            symbol: payload.ticker,
+            snapshotType: "TRADE_EXIT",
+            marketData: {
+              price: 0, // Placeholder, ideally get from payload
+            },
+            references: {
+              // positionId: payload.id // If available
+            }
+          }).catch(err => console.error("Failed to log trade exit", err));
+        }
       })
     );
 
@@ -825,11 +872,11 @@ export function SmartTradingProvider({
           // Update dashboard stats with snapshot totals
           dashboardStats: prev.dashboardStats
             ? {
-                ...prev.dashboardStats,
-                totalUnrealizedPnL: data.total_unrealized_pnl_sol,
-                totalRealizedPnL: data.total_realized_pnl_sol,
-                openPositions: data.open_position_count,
-              }
+              ...prev.dashboardStats,
+              totalUnrealizedPnL: data.total_unrealized_pnl_sol,
+              totalRealizedPnL: data.total_realized_pnl_sol,
+              openPositions: data.open_position_count,
+            }
             : prev.dashboardStats,
         }));
       })

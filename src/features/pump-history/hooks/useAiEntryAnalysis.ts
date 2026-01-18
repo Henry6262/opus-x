@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useTerminal } from "@/features/terminal";
 import type { RetracementAnalysisResult } from "./useRetracementAnalysis";
+import { logAiAnalysis } from "@/lib/analysisLogger";
 
 // ============================================
 // TYPES
@@ -145,6 +146,27 @@ export function useAiEntryAnalysis({
         text: `  └─ Risk: ${aiAnalysis.risk}`,
         color: COLORS.RISK,
       });
+
+      // Log to Supabase
+      logAiAnalysis({
+        mint,
+        symbol: result.journey.symbol,
+        name: result.journey.name,
+        triggerType: 'RETRACEMENT',
+        decision: 'WATCH', // Typically retracement analysis means we are watching/waiting for entry
+        confidence: 0.8, // Placeholder or derive from text/risk
+        reasoning: aiAnalysis.reasoning,
+        marketData: {
+          price: result.journey.current_price,
+          marketCap: result.journey.market_cap,
+          liquidity: result.journey.liquidity,
+          volume24h: result.journey.volume_24h
+        },
+        journeyMetrics: {
+          pump_multiple: result.journey.pump_multiple,
+          drawdown_percent: result.journey.drawdown_percent
+        }
+      }).catch(err => console.error("Failed to log Retracement analysis", err));
 
       setError(null);
     } catch (err) {
