@@ -199,7 +199,7 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
 
     // Fallback to context positions
     return positions
-      .filter(p => p.status === "open" || p.status === "partially_closed")
+      .filter(p => p.status === "OPEN" || p.status === "PARTIALLY_CLOSED")
       .map(p => {
         const quantity = p.remainingTokens;
         const currentPrice = p.currentPrice || p.entryPriceSol;
