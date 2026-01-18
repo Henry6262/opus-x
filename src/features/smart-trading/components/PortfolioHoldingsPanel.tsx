@@ -246,10 +246,10 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
                         transition={{ delay: 0.3 }}
                     >
                         <div className="relative">
-                            <div className="px-1.5 py-0.5 rounded bg-black/95 border border-[#c4f70e]/60 whitespace-nowrap">
+                            <div className="px-2 py-0.5 rounded bg-black/95 border border-[#c4f70e]/60 whitespace-nowrap">
                                 <AnimatedProgressMarketCap
                                     value={currentMarketCap}
-                                    className="text-[10px] font-mono font-bold tabular-nums text-[#c4f70e]"
+                                    className="text-xs font-mono font-bold tabular-nums text-[#c4f70e]"
                                 />
                             </div>
                             {/* Arrow pointing down */}
@@ -557,28 +557,29 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                                     <Copy className="w-3.5 h-3.5 text-white/40 hover:text-white/70" />
                                 </button>
                             </div>
-                            {/* SOL Value - Shows current position value or PnL */}
-                            <div className={`flex items-center gap-1.5 text-sm mt-1 font-mono tabular-nums ${pnlSol !== null ? (pnlSol >= 0 ? "text-green-400/90" : "text-red-400/90") : "text-white/70"}`}>
-                                {pnlSol !== null ? (
-                                    <AnimatedSolValue
-                                        value={pnlSol}
-                                        showSign={true}
-                                        className="text-sm"
+                            {/* Entry SOL + PnL with visual hierarchy */}
+                            <div className="flex items-center gap-2 mt-1">
+                                {/* Entry Amount (SOL invested) - larger, primary */}
+                                <div className="flex items-center gap-1 text-white/80">
+                                    <span className="font-mono font-semibold tabular-nums text-sm">
+                                        {holding.entry_sol_value?.toFixed(2) || valueSol.toFixed(2)}
+                                    </span>
+                                    <Image
+                                        src="/logos/solana.png"
+                                        alt="SOL"
+                                        width={14}
+                                        height={14}
+                                        className="opacity-70"
                                     />
-                                ) : (
-                                    <>
-                                        <span className="font-semibold">{valueSol.toFixed(2)}</span>
-                                        <Image
-                                            src="/logos/solana.png"
-                                            alt="SOL"
-                                            width={16}
-                                            height={16}
-                                            className="opacity-80"
-                                        />
-                                    </>
-                                )}
-                                {hasLiveData && (
-                                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse ml-0.5" />
+                                </div>
+                                {/* PnL - smaller, colored based on profit/loss, no SOL logo */}
+                                {pnlSol !== null && pnlSol !== 0 && (
+                                    <span className={`font-mono tabular-nums text-xs ${pnlSol >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                        {pnlSol >= 0 ? "+" : ""}{pnlSol.toFixed(2)}
+                                        {hasLiveData && (
+                                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse ml-1 align-middle" />
+                                        )}
+                                    </span>
                                 )}
                             </div>
                         </div>

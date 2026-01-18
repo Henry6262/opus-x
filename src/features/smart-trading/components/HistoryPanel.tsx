@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
@@ -70,31 +70,49 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
     const [selectedTrade, setSelectedTrade] = useState<SelectedTrade | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-    // Transactions state
+    // Transactions state with caching
     const [transactions, setTransactions] = useState<EnrichedTransaction[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const lastFetchTimeRef = useRef<number>(0);
+    const isFetchingRef = useRef(false);
 
-    // Fetch transactions when switching to transactions view
-    useEffect(() => {
-        if (viewMode === "transactions") {
-            fetchTransactions();
+    // Cache TTL: 30 seconds before allowing refetch
+    const CACHE_TTL_MS = 30_000;
+
+    const fetchTransactions = useCallback(async (force = false) => {
+        const now = Date.now();
+        const cacheAge = now - lastFetchTimeRef.current;
+
+        // Skip if already fetching, or cache is fresh (unless forced)
+        if (isFetchingRef.current) return;
+        if (!force && transactions.length > 0 && cacheAge < CACHE_TTL_MS) {
+            return;
         }
-    }, [viewMode]);
 
-    const fetchTransactions = async () => {
+        isFetchingRef.current = true;
         setIsLoading(true);
+
         try {
             const url = buildDevprntApiUrl(`/api/trading/transactions?limit=${maxItems}`);
             const response = await fetch(url.toString());
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const result = await response.json();
             setTransactions(result.data || []);
+            lastFetchTimeRef.current = Date.now();
         } catch (err) {
             console.error("[HistoryPanel] Failed to fetch transactions:", err);
         } finally {
             setIsLoading(false);
+            isFetchingRef.current = false;
         }
-    };
+    }, [maxItems, transactions.length]);
+
+    // Fetch transactions when switching to transactions view (with cache check)
+    useEffect(() => {
+        if (viewMode === "transactions") {
+            fetchTransactions();
+        }
+    }, [viewMode, fetchTransactions]);
 
     // Trades data
     const closedTrades = [...history]

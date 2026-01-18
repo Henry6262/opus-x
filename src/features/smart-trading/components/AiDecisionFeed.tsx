@@ -210,6 +210,7 @@ interface DecisionCardProps {
 
 function DecisionCard({ decision }: DecisionCardProps) {
     const config = getDecisionConfig(decision.type);
+    const rejectBadge = decision.type === "REJECT" ? getRejectBadge(decision.reasoning) : null;
 
     // Format timestamp as HH:MM:SS
     const timestamp = useMemo(() => {
@@ -220,6 +221,24 @@ function DecisionCard({ decision }: DecisionCardProps) {
             second: '2-digit'
         });
     }, [decision.timestamp]);
+
+    // Get badge styling based on rejection reason
+    const getBadgeStyle = (badge: string | null) => {
+        switch (badge) {
+            case "low-liq":
+            case "low-vol":
+                return "bg-orange-500/20 text-orange-400 border-orange-500/30";
+            case "no-data":
+                return "bg-purple-500/20 text-purple-400 border-purple-500/30";
+            case "high-risk":
+                return "bg-red-500/20 text-red-400 border-red-500/30";
+            case "age":
+            case "holders":
+                return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+            default:
+                return "bg-white/10 text-white/50 border-white/20";
+        }
+    };
 
     return (
         <motion.div
@@ -235,15 +254,22 @@ function DecisionCard({ decision }: DecisionCardProps) {
                 {/* Timestamp */}
                 <span className="text-white/30 flex-shrink-0">[{timestamp}]</span>
 
-                {/* Log level / Decision type */}
+                {/* Log level / Decision type - use SKIP for rejections */}
                 <span className={`flex-shrink-0 font-bold ${config.textClass}`}>
-                    [{config.label}]
+                    [{decision.type === "REJECT" ? "SKIP" : config.label}]
                 </span>
 
                 {/* Token symbol */}
                 <span className="text-white font-semibold flex-shrink-0">
                     ${decision.tokenSymbol}
                 </span>
+
+                {/* Rejection badge - visible on main line */}
+                {rejectBadge && (
+                    <span className={`flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded border ${getBadgeStyle(rejectBadge)}`}>
+                        {rejectBadge}
+                    </span>
+                )}
 
                 {/* PnL if available */}
                 {decision.pnl !== undefined && (
@@ -252,8 +278,8 @@ function DecisionCard({ decision }: DecisionCardProps) {
                     </span>
                 )}
 
-                {/* Confidence if available */}
-                {decision.confidence !== undefined && (
+                {/* Confidence if available (not for rejections - badge is more useful) */}
+                {decision.confidence !== undefined && decision.type !== "REJECT" && (
                     <span className="text-white/40 flex-shrink-0">
                         conf:{Math.round(decision.confidence * 100)}%
                     </span>
@@ -276,13 +302,6 @@ function DecisionCard({ decision }: DecisionCardProps) {
             {decision.reasoning && (
                 <div className="pl-[72px] pr-2 pb-2 text-white/50">
                     <span className="text-[#c4f70e]/60">→</span> {decision.reasoning}
-
-                    {/* Rejection badge for REJECT decisions */}
-                    {decision.type === "REJECT" && (
-                        <span className="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400/60 border border-red-500/20">
-                            {getRejectBadge(decision.reasoning)}
-                        </span>
-                    )}
 
                     {/* Additional details as inline tags */}
                     {decision.details && (
