@@ -17,8 +17,10 @@ import {
     Loader2,
 } from "lucide-react";
 
-// Infinite scroll page size
-const PAGE_SIZE = 15;
+// Infinite scroll settings
+const TRADES_PAGE_SIZE = 15;           // For local trades pagination
+const INITIAL_TXN_FETCH = 15;          // First fetch for transactions
+const TXN_BATCH_SIZE = 35;             // Subsequent fetches for transactions
 import { usePositions } from "../context";
 import type { Position } from "../types";
 import { TransactionDrawer } from "./TransactionDrawer";
@@ -70,67 +72,82 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
     const [viewMode, setViewMode] = useState<ViewMode>("trades");
     const [isExpanded, setIsExpanded] = useState(true);
 
-    // Infinite scroll state
-    const [visibleTradesCount, setVisibleTradesCount] = useState(PAGE_SIZE);
-    const [visibleTxnsCount, setVisibleTxnsCount] = useState(PAGE_SIZE);
-
-    // Reset visible count when switching tabs
-    const handleViewModeChange = (mode: ViewMode) => {
-        setViewMode(mode);
-        if (mode === "trades") {
-            setVisibleTradesCount(PAGE_SIZE);
-        } else {
-            setVisibleTxnsCount(PAGE_SIZE);
-        }
-    };
+    // Infinite scroll state for trades (local pagination)
+    const [visibleTradesCount, setVisibleTradesCount] = useState(TRADES_PAGE_SIZE);
 
     // Drawer state
     const [selectedTrade, setSelectedTrade] = useState<SelectedTrade | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-    // Transactions state with caching
+    // Transactions state with server-side pagination
     const [transactions, setTransactions] = useState<EnrichedTransaction[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const lastFetchTimeRef = useRef<number>(0);
+    const [txnsHasMore, setTxnsHasMore] = useState(true);
+    const [txnsTotal, setTxnsTotal] = useState(0);
+    const [isLoadingTxns, setIsLoadingTxns] = useState(false);
+    const [isLoadingMoreTxns, setIsLoadingMoreTxns] = useState(false);
     const isFetchingRef = useRef(false);
 
-    // Cache TTL: 30 seconds before allowing refetch
-    const CACHE_TTL_MS = 30_000;
-
-    const fetchTransactions = useCallback(async (force = false) => {
-        const now = Date.now();
-        const cacheAge = now - lastFetchTimeRef.current;
-
-        // Skip if already fetching, or cache is fresh (unless forced)
+    // Fetch transactions with pagination
+    const fetchTransactions = useCallback(async (offset: number = 0, isInitial: boolean = true) => {
         if (isFetchingRef.current) return;
-        if (!force && transactions.length > 0 && cacheAge < CACHE_TTL_MS) {
-            return;
-        }
 
         isFetchingRef.current = true;
-        setIsLoading(true);
+        if (isInitial) {
+            setIsLoadingTxns(true);
+        } else {
+            setIsLoadingMoreTxns(true);
+        }
 
         try {
-            const url = buildDevprntApiUrl(`/api/trading/transactions?limit=${maxItems}`);
+            const limit = isInitial ? INITIAL_TXN_FETCH : TXN_BATCH_SIZE;
+            const url = buildDevprntApiUrl(`/api/trading/transactions?limit=${limit}&offset=${offset}`);
             const response = await fetch(url.toString());
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const result = await response.json();
-            setTransactions(result.data || []);
-            lastFetchTimeRef.current = Date.now();
+
+            const data = result.data;
+            if (data && typeof data === 'object') {
+                const { items, has_more, total } = data;
+                if (isInitial) {
+                    setTransactions(items || []);
+                } else {
+                    setTransactions(prev => [...prev, ...(items || [])]);
+                }
+                setTxnsHasMore(has_more ?? false);
+                setTxnsTotal(total ?? 0);
+            }
         } catch (err) {
             console.error("[HistoryPanel] Failed to fetch transactions:", err);
         } finally {
-            setIsLoading(false);
+            setIsLoadingTxns(false);
+            setIsLoadingMoreTxns(false);
             isFetchingRef.current = false;
         }
-    }, [maxItems, transactions.length]);
+    }, []);
 
-    // Fetch transactions when switching to transactions view (with cache check)
-    useEffect(() => {
-        if (viewMode === "transactions") {
-            fetchTransactions();
+    // Load more transactions
+    const loadMoreTransactions = useCallback(() => {
+        if (!txnsHasMore || isFetchingRef.current) return;
+        fetchTransactions(transactions.length, false);
+    }, [txnsHasMore, transactions.length, fetchTransactions]);
+
+    // Reset and fetch when switching to transactions view
+    const handleViewModeChange = (mode: ViewMode) => {
+        setViewMode(mode);
+        if (mode === "trades") {
+            setVisibleTradesCount(TRADES_PAGE_SIZE);
+        } else if (mode === "transactions" && transactions.length === 0) {
+            // Initial fetch when switching to transactions
+            fetchTransactions(0, true);
         }
-    }, [viewMode, fetchTransactions]);
+    };
+
+    // Initial fetch when component mounts and transactions view is active
+    useEffect(() => {
+        if (viewMode === "transactions" && transactions.length === 0) {
+            fetchTransactions(0, true);
+        }
+    }, [viewMode, transactions.length, fetchTransactions]);
 
     // Trades data - sorted and memoized
     const allClosedTrades = useMemo(() => {
@@ -143,27 +160,17 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
             .slice(0, maxItems);
     }, [history, maxItems]);
 
-    // Visible trades (paginated)
+    // Visible trades (local pagination)
     const visibleTrades = useMemo(() => {
         return allClosedTrades.slice(0, visibleTradesCount);
     }, [allClosedTrades, visibleTradesCount]);
 
-    // Visible transactions (paginated)
-    const visibleTransactions = useMemo(() => {
-        return transactions.slice(0, visibleTxnsCount);
-    }, [transactions, visibleTxnsCount]);
-
     const hasMoreTrades = visibleTradesCount < allClosedTrades.length;
-    const hasMoreTxns = visibleTxnsCount < transactions.length;
 
-    // Load more handlers
+    // Load more trades (local)
     const loadMoreTrades = useCallback(() => {
-        setVisibleTradesCount(prev => Math.min(prev + PAGE_SIZE, allClosedTrades.length));
+        setVisibleTradesCount(prev => Math.min(prev + TRADES_PAGE_SIZE, allClosedTrades.length));
     }, [allClosedTrades.length]);
-
-    const loadMoreTxns = useCallback(() => {
-        setVisibleTxnsCount(prev => Math.min(prev + PAGE_SIZE, transactions.length));
-    }, [transactions.length]);
 
     // Stats based on all trades (not just visible)
     const wins = allClosedTrades.filter(t => (t.realizedPnlSol ?? 0) >= 0).length;
@@ -185,7 +192,7 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
         setTimeout(() => setSelectedTrade(null), 300);
     };
 
-    const itemCount = viewMode === "trades" ? allClosedTrades.length : transactions.length;
+    const itemCount = viewMode === "trades" ? allClosedTrades.length : (txnsTotal || transactions.length);
 
     return (
         <div className="h-full flex flex-col overflow-hidden">
@@ -251,10 +258,11 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
                                 />
                             ) : (
                                 <TransactionsView
-                                    transactions={visibleTransactions}
-                                    isLoading={isLoading}
-                                    hasMore={hasMoreTxns}
-                                    onLoadMore={loadMoreTxns}
+                                    transactions={transactions}
+                                    isLoading={isLoadingTxns}
+                                    isLoadingMore={isLoadingMoreTxns}
+                                    hasMore={txnsHasMore}
+                                    onLoadMore={loadMoreTransactions}
                                 />
                             )}
                         </div>
@@ -412,22 +420,23 @@ function TradeRow({ trade, index, onClick }: TradeRowProps) {
 }
 
 // ============================================
-// Transactions View (Raw Blockchain Txs) with Infinite Scroll
+// Transactions View (Raw Blockchain Txs) with Server-Side Pagination
 // ============================================
 
 interface TransactionsViewProps {
     transactions: EnrichedTransaction[];
     isLoading: boolean;
+    isLoadingMore: boolean;
     hasMore: boolean;
     onLoadMore: () => void;
 }
 
-function TransactionsView({ transactions, isLoading, hasMore, onLoadMore }: TransactionsViewProps) {
+function TransactionsView({ transactions, isLoading, isLoadingMore, hasMore, onLoadMore }: TransactionsViewProps) {
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
     // Infinite scroll with IntersectionObserver
     useEffect(() => {
-        if (!hasMore || isLoading) return;
+        if (!hasMore || isLoading || isLoadingMore) return;
 
         const observer = new IntersectionObserver(
             (entries) => {
@@ -443,7 +452,7 @@ function TransactionsView({ transactions, isLoading, hasMore, onLoadMore }: Tran
         }
 
         return () => observer.disconnect();
-    }, [hasMore, isLoading, onLoadMore]);
+    }, [hasMore, isLoading, isLoadingMore, onLoadMore]);
 
     if (isLoading && transactions.length === 0) {
         return (
@@ -472,8 +481,8 @@ function TransactionsView({ transactions, isLoading, hasMore, onLoadMore }: Tran
                     <TransactionRow key={tx.id} tx={tx} />
                 ))}
             </AnimatePresence>
-            {/* Infinite scroll trigger */}
-            {hasMore && (
+            {/* Infinite scroll trigger / loading more indicator */}
+            {(hasMore || isLoadingMore) && (
                 <div ref={loadMoreRef} className="flex justify-center py-3">
                     <Loader2 className="w-4 h-4 text-white/30 animate-spin" />
                 </div>
