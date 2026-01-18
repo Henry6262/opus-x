@@ -373,7 +373,12 @@ export function TransactionDrawer({
                 throw new Error(result.error || "Failed to load transactions");
             }
 
-            const rawTransactions = result?.data || [];
+            // Ensure we have an array - API might return object or different structure
+            const rawTransactions = Array.isArray(result?.data)
+                ? result.data
+                : Array.isArray(result)
+                    ? result
+                    : [];
             const mappedTransactions: Transaction[] = rawTransactions.map((tx: any) => {
                 let type: Transaction["type"] = "unknown";
                 if (tx.tx_type === "buy") {
