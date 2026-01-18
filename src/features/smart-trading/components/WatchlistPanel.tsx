@@ -6,6 +6,7 @@ import { Eye, Loader2, Wifi, WifiOff } from "lucide-react";
 import { smartTradingService } from "../service";
 import { useSharedWebSocket } from "../hooks/useWebSocket";
 import { WatchlistCard } from "./WatchlistCard";
+import { SectionHeader } from "./SectionHeader";
 import type {
   WatchlistToken,
   WatchlistStats,
@@ -142,21 +143,19 @@ export function WatchlistPanel() {
   return (
     <div className="flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-1 py-2 mb-2">
-        <div className="flex items-center gap-2">
-          <Eye className="w-5 h-5 text-yellow-400" />
-          <span className="text-base font-semibold text-white">Watchlist</span>
-          {tokens.length > 0 && (
-            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-yellow-500/20 text-yellow-400">
-              {tokens.length}
-            </span>
-          )}
-        </div>
-        <div className={`flex items-center gap-1 text-[10px] ${isConnected ? "text-green-400" : "text-red-400"}`}>
-          {isConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-          <span>Live</span>
-        </div>
-      </div>
+      <SectionHeader
+        icon={<Eye className="w-5 h-5 text-yellow-400" />}
+        title="Watchlist"
+        tooltip="Tokens being monitored for potential trades. The AI evaluates these until they meet buy criteria or are removed."
+        count={tokens.length}
+        countColor="yellow"
+        rightContent={
+          <div className={`flex items-center gap-1 text-[10px] ${isConnected ? "text-green-400" : "text-red-400"}`}>
+            {isConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+            <span>Live</span>
+          </div>
+        }
+      />
 
       {/* Loading */}
       {isLoading && (

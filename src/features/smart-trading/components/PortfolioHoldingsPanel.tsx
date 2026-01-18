@@ -9,6 +9,7 @@ import { buildDevprntApiUrl } from "@/lib/devprnt";
 import { useSharedWebSocket } from "../hooks/useWebSocket";
 import { TransactionDrawer } from "./TransactionDrawer";
 import { AiReasoningDrawer } from "./AiReasoningDrawer";
+import { SectionHeader } from "./SectionHeader";
 
 // ============================================
 // Types
@@ -41,6 +42,77 @@ interface OnChainHolding {
     buy_criteria: BuyCriteriaResult | null;
     // Computed/optional fields for compatibility
     image_url?: string | null;
+}
+
+// ============================================
+// Idle State Animation Component
+// ============================================
+
+import RotatingText from "@/components/RotatingText";
+
+const ANALYSIS_PHRASES = [
+    "Analyzing market conditions",
+    "Scanning for alpha opportunities",
+    "Monitoring whale movements",
+    "Evaluating token metrics",
+    "Tracking liquidity flows",
+    "Processing on-chain signals",
+    "Identifying momentum patterns",
+    "Calculating risk parameters",
+];
+
+function IdleStateAnimation() {
+    return (
+        <div className="relative h-48 overflow-hidden rounded-xl">
+            {/* GIF as full-width background */}
+            <div className="absolute inset-0">
+                <Image
+                    src="/videos/gif.gif"
+                    alt="Analyzing"
+                    fill
+                    className="object-cover opacity-60"
+                    unoptimized
+                />
+                {/* Dark overlay for text readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/70 to-black/50" />
+            </div>
+
+            {/* Content overlay - centered */}
+            <div className="relative z-10 h-full flex flex-col items-center justify-center px-4">
+                {/* Pulsing rings animation */}
+                <div className="relative mb-5">
+                    <div className="absolute -inset-4 animate-ping rounded-full bg-[#c4f70e]/20" style={{ animationDuration: '2s' }} />
+                    <div className="absolute -inset-6 animate-ping rounded-full bg-[#c4f70e]/10" style={{ animationDuration: '3s', animationDelay: '0.5s' }} />
+                    <div className="relative w-14 h-14 rounded-full bg-gradient-to-br from-[#c4f70e]/40 to-[#c4f70e]/10 flex items-center justify-center backdrop-blur-sm border border-[#c4f70e]/30 shadow-[0_0_30px_rgba(196,247,14,0.3)]">
+                        <div className="w-5 h-5 rounded-full bg-[#c4f70e] animate-pulse shadow-[0_0_25px_rgba(196,247,14,0.8)]" />
+                    </div>
+                </div>
+
+                {/* Rotating analysis text with 3D effect */}
+                <div className="text-center h-8 flex items-center justify-center overflow-hidden">
+                    <RotatingText
+                        texts={ANALYSIS_PHRASES}
+                        rotationInterval={2500}
+                        staggerDuration={0.02}
+                        staggerFrom="center"
+                        mainClassName="text-sm font-medium text-white/90 justify-center"
+                        elementLevelClassName="drop-shadow-[0_0_8px_rgba(196,247,14,0.4)]"
+                        transition={{ type: "spring", damping: 20, stiffness: 200 }}
+                    />
+                </div>
+
+                {/* Subtitle with animated dots */}
+                <div className="flex items-center justify-center gap-1 mt-3">
+                    <span className="text-xs text-white/50 font-medium">Waiting for positions</span>
+                    <span className="inline-flex gap-0.5">
+                        <span className="w-1 h-1 rounded-full bg-[#c4f70e] animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1s' }} />
+                        <span className="w-1 h-1 rounded-full bg-[#c4f70e] animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1s' }} />
+                        <span className="w-1 h-1 rounded-full bg-[#c4f70e] animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1s' }} />
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 // ============================================
@@ -763,22 +835,20 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
             }}
         >
             {/* Header - Outside cards */}
-            <div className="flex items-center justify-between px-1 py-3 mb-3 flex-shrink-0">
-                <div className="flex items-center gap-2">
-                    <Wallet className="w-6 h-6 text-[#c4f70e]" />
-                    <span className="text-lg font-semibold text-white">Portfolio</span>
-                    <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-[#c4f70e]/20 text-[#c4f70e]">
-                        {holdings.length}
-                    </span>
-                </div>
-                <div className="flex items-center">
-                    {totalValueSol > 0 && (
+            <SectionHeader
+                icon={<Wallet className="w-6 h-6 text-[#c4f70e]" />}
+                title="Portfolio"
+                tooltip="Your active token positions. Click any holding to view transaction history and AI reasoning."
+                count={holdings.length}
+                countColor="lime"
+                rightContent={
+                    totalValueSol > 0 ? (
                         <span className="text-white text-[15px] font-semibold">
                             <SolValue solAmount={totalValueSol} size="sm" />
                         </span>
-                    )}
-                </div>
-            </div>
+                    ) : undefined
+                }
+            />
 
             {/* Cards - With visual separators */}
             <div className="flex-1 overflow-y-auto space-y-1.5">
@@ -802,13 +872,7 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
                 )}
 
                 {!error && holdings.length === 0 && !isLoading && (
-                    <div className="flex flex-col items-center justify-center py-16 text-white/40">
-                        <Wallet className="w-12 h-12 mb-4 opacity-50" />
-                        <span className="text-sm font-medium">No holdings found</span>
-                        <span className="text-xs text-white/30 mt-1">
-                            Tokens will appear when in your wallet
-                        </span>
-                    </div>
+                    <IdleStateAnimation />
                 )}
 
                 <AnimatePresence mode="popLayout">
