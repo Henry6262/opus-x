@@ -352,6 +352,8 @@ main {
     margin-top: -16px;
     padding-top: 0;
     position: relative;
+    /* Remove z-index on mobile so fixed terminal FAB can escape stacking context */
+    z-index: auto;
   }
 
   .vibr-coder-container {
@@ -4992,7 +4994,7 @@ button:focus-visible {
   height: 100vh;
   width: 360px;
   max-width: 90vw;
-  z-index: 50;
+  z-index: var(--z-sheet); /* 450 - above backdrop (400) */
   transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
