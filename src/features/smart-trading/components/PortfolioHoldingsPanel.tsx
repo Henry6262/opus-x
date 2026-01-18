@@ -324,7 +324,7 @@ interface HoldingCardProps {
     onAiClick?: () => void;
 }
 
-function HoldingCard({ holding, index, onClick }: HoldingCardProps) {
+function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
     // All data comes from backend via holdings_snapshot
     const currentPriceUsd = holding.current_price ?? 0;
     const entryPriceUsd = holding.entry_price ?? 0;
@@ -421,6 +421,19 @@ function HoldingCard({ holding, index, onClick }: HoldingCardProps) {
                                 >
                                     <Copy className="w-3.5 h-3.5 text-white/40 hover:text-white/70" />
                                 </button>
+                                {/* AI Reasoning button */}
+                                {holding.buy_criteria && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onAiClick?.();
+                                        }}
+                                        className="p-1 rounded hover:bg-[#c4f70e]/20 transition-colors"
+                                        title="View AI Reasoning"
+                                    >
+                                        <Brain className="w-3.5 h-3.5 text-[#c4f70e]/60 hover:text-[#c4f70e]" />
+                                    </button>
+                                )}
                             </div>
                             {/* Entry SOL + PnL + Stats row */}
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -531,6 +544,9 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
     const [error, setError] = useState<string | null>(null);
     const [selectedHolding, setSelectedHolding] = useState<SelectedHolding | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    // AI Reasoning drawer state
+    const [aiReasoningHolding, setAiReasoningHolding] = useState<OnChainHolding | null>(null);
+    const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
     const isFetchingRef = useRef(false);
     const { on: onTradingEvent } = useSharedWebSocket({ path: "/ws/trading" });
 
@@ -544,9 +560,20 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
         setIsDrawerOpen(true);
     }, []);
 
-    // Close drawer
+    // Handle AI reasoning button click
+    const handleAiClick = useCallback((holding: OnChainHolding) => {
+        setAiReasoningHolding(holding);
+        setIsAiDrawerOpen(true);
+    }, []);
+
+    // Close transaction drawer
     const handleCloseDrawer = useCallback(() => {
         setIsDrawerOpen(false);
+    }, []);
+
+    // Close AI reasoning drawer
+    const handleCloseAiDrawer = useCallback(() => {
+        setIsAiDrawerOpen(false);
     }, []);
 
     // Fetch initial holdings (one-time from Helius via backend, or direct if available)
@@ -791,6 +818,7 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
                             holding={holding}
                             index={index}
                             onClick={() => handleHoldingClick(holding)}
+                            onAiClick={() => handleAiClick(holding)}
                         />
                     ))}
                 </AnimatePresence>
