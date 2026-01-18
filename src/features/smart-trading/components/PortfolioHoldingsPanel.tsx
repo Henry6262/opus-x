@@ -599,6 +599,7 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
 interface PortfolioHoldingsPanelProps {
     walletAddress?: string;
     minValueUsd?: number;
+    maxVisibleItems?: number; // Max items visible before scrolling (desktop dynamic height)
 }
 
 // Selected holding state for drawer
@@ -608,7 +609,11 @@ interface SelectedHolding {
     imageUrl: string | null;
 }
 
-export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: PortfolioHoldingsPanelProps) {
+// Height per holding card (including gap)
+const CARD_HEIGHT_PX = 100; // ~88px card + 6px gap
+const HEADER_HEIGHT_PX = 60; // Header section
+
+export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01, maxVisibleItems = 3 }: PortfolioHoldingsPanelProps) {
     const [holdings, setHoldings] = useState<OnChainHolding[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -929,8 +934,40 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01 }: Po
         }, 0);
     }, [holdings, livePrices]);
 
+    // Dynamic height calculation for desktop
+    // Height = header + (min(items, maxVisible) * cardHeight)
+    // When 0 items, show a smaller empty state
+    const visibleCount = Math.min(holdings.length, maxVisibleItems);
+    const emptyStateHeight = 140; // Compact empty state
+    const loadingHeight = 140; // Compact loading state
+
+    // Calculate cards area height
+    const cardsAreaHeight = holdings.length === 0
+        ? (isLoading ? loadingHeight : emptyStateHeight)
+        : visibleCount * CARD_HEIGHT_PX;
+
+    const dynamicHeight = HEADER_HEIGHT_PX + cardsAreaHeight;
+
+    // Check if we're on desktop (will be false during SSR, then correct on hydration)
+    const [isDesktop, setIsDesktop] = useState(false);
+
+    useEffect(() => {
+        const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024);
+        checkDesktop();
+        window.addEventListener('resize', checkDesktop);
+        return () => window.removeEventListener('resize', checkDesktop);
+    }, []);
+
     return (
-        <div className="h-full max-h-[400px] lg:max-h-none flex flex-col overflow-hidden">
+        <div
+            className="flex flex-col overflow-hidden transition-[height] duration-300 ease-out"
+            style={{
+                // On desktop: dynamic height based on items
+                // On mobile: use max-height constraint
+                height: isDesktop ? `${dynamicHeight}px` : 'auto',
+                maxHeight: isDesktop ? 'none' : '400px',
+            }}
+        >
             {/* Header - Outside cards */}
             <div className="flex items-center justify-between px-1 py-3 mb-3 flex-shrink-0">
                 <div className="flex items-center gap-2">

@@ -151,20 +151,18 @@ export function useAiEntryAnalysis({
       logAiAnalysis({
         mint,
         symbol: result.journey.symbol,
-        name: result.journey.name,
         triggerType: 'RETRACEMENT',
         decision: 'WATCH', // Typically retracement analysis means we are watching/waiting for entry
-        confidence: 0.8, // Placeholder or derive from text/risk
+        confidence: result.analysis.score / 100, // Use the analysis score as confidence
         reasoning: aiAnalysis.reasoning,
         marketData: {
-          price: result.journey.current_price,
-          marketCap: result.journey.market_cap,
-          liquidity: result.journey.liquidity,
-          volume24h: result.journey.volume_24h
+          price: result.journey.currentPrice,
+          marketCap: result.journey.currentMcap,
+          liquidity: result.journey.currentLiquidity ?? undefined,
         },
         journeyMetrics: {
-          pump_multiple: result.journey.pump_multiple,
-          drawdown_percent: result.journey.drawdown_percent
+          pump_multiple: result.journey.signals.pumpMultiple,
+          drawdown_percent: result.journey.signals.drawdownPercent
         }
       }).catch(err => console.error("Failed to log Retracement analysis", err));
 
