@@ -832,6 +832,15 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
                 tokenMint={selectedHolding?.mint || ""}
                 tokenImage={selectedHolding?.imageUrl}
             />
+
+            {/* AI Reasoning Drawer */}
+            <AiReasoningDrawer
+                isOpen={isAiDrawerOpen}
+                onClose={handleCloseAiDrawer}
+                tokenSymbol={aiReasoningHolding?.symbol || ""}
+                tokenName={aiReasoningHolding?.name || ""}
+                buyCriteria={aiReasoningHolding?.buy_criteria || null}
+            />
         </div>
     );
 }
