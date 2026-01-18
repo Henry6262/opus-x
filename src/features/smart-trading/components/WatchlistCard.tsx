@@ -3,36 +3,33 @@
 import { useState } from "react";
 import Image from "next/image";
 import { motion } from "motion/react";
-import { Clock, Copy, TrendingUp, Check, Eye } from "lucide-react";
+import { Copy } from "lucide-react";
 import type { WatchlistToken } from "../types";
 
 // ============================================
 // Token Avatar
 // ============================================
 
-function TokenAvatar({ symbol, mint, size = 36 }: { symbol: string; mint: string; size?: number }) {
+function TokenAvatar({ symbol, mint }: { symbol: string; mint: string }) {
   const [imgError, setImgError] = useState(false);
   const initials = symbol.slice(0, 2).toUpperCase();
   const dexScreenerUrl = `https://dd.dexscreener.com/ds-data/tokens/solana/${mint}.png`;
 
   if (imgError) {
     return (
-      <div
-        className="flex items-center justify-center rounded-lg font-bold text-white bg-white/10 flex-shrink-0"
-        style={{ width: size, height: size, fontSize: size * 0.35 }}
-      >
+      <div className="flex items-center justify-center w-8 h-8 rounded-lg font-bold text-xs text-white bg-white/10">
         {initials}
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg overflow-hidden flex-shrink-0" style={{ width: size, height: size }}>
+    <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
       <Image
         src={dexScreenerUrl}
         alt={symbol}
-        width={size}
-        height={size}
+        width={32}
+        height={32}
         className="object-cover"
         onError={() => setImgError(true)}
         unoptimized
@@ -49,13 +46,6 @@ function formatCurrency(value: number): string {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
   return `$${value.toFixed(0)}`;
-}
-
-function formatDuration(addedAt: string): string {
-  const diffSecs = Math.floor((Date.now() - new Date(addedAt).getTime()) / 1000);
-  const mins = Math.floor(diffSecs / 60);
-  if (mins >= 60) return `${Math.floor(mins / 60)}h ${mins % 60}m`;
-  return `${mins}m ${(diffSecs % 60).toString().padStart(2, "0")}s`;
 }
 
 type Status = "READY" | "IMPROVING" | "STALE" | "WATCHING";
@@ -90,12 +80,12 @@ export function WatchlistCard({ token }: WatchlistCardProps) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="flex-shrink-0 w-[180px] p-3 rounded-xl bg-black/40 border border-white/10"
+      className="flex-shrink-0 w-[260px] p-3 rounded-xl bg-black/40 border border-white/10 flex items-center gap-3"
     >
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-2">
+      {/* Left: Avatar + Info */}
+      <div className="flex items-center gap-2 min-w-0">
         <TokenAvatar symbol={token.symbol} mint={token.mint} />
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0">
           <div className="flex items-center gap-1">
             <span className="font-bold text-white text-sm truncate">{token.symbol}</span>
             <button
@@ -105,38 +95,26 @@ export function WatchlistCard({ token }: WatchlistCardProps) {
               <Copy className="w-3 h-3 text-white/40" />
             </button>
           </div>
-          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${STATUS_STYLES[status]}`}>
-            {status === "READY" && <Check className="w-2.5 h-2.5" />}
-            {status === "IMPROVING" && <TrendingUp className="w-2.5 h-2.5" />}
-            {status === "WATCHING" && <Eye className="w-2.5 h-2.5" />}
+          <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${STATUS_STYLES[status]}`}>
             {status}
           </span>
         </div>
       </div>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-3 gap-1 mb-2 text-[10px]">
-        <div>
-          <div className="text-white/40">Liq</div>
-          <div className="text-white/70 font-mono">{formatCurrency(token.metrics.liquidity_usd)}</div>
+      {/* Right: Metrics stacked */}
+      <div className="ml-auto text-right text-[10px] space-y-0.5">
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-white/40">Liq</span>
+          <span className="text-white/70 font-mono w-14">{formatCurrency(token.metrics.liquidity_usd)}</span>
         </div>
-        <div>
-          <div className="text-white/40">Vol</div>
-          <div className="text-white/70 font-mono">{formatCurrency(token.metrics.volume_24h_usd)}</div>
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-white/40">Vol</span>
+          <span className="text-white/70 font-mono w-14">{formatCurrency(token.metrics.volume_24h_usd)}</span>
         </div>
-        <div>
-          <div className="text-white/40">Holders</div>
-          <div className="text-white/70 font-mono">{token.metrics.holder_count}</div>
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-white/40">Holders</span>
+          <span className="text-white/70 font-mono w-14">{token.metrics.holder_count.toLocaleString()}</span>
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between text-[10px] text-white/40">
-        <span className="flex items-center gap-1">
-          <Clock className="w-3 h-3" />
-          {formatDuration(token.added_at)}
-        </span>
-        <span>{token.check_count} checks</span>
       </div>
     </motion.div>
   );
