@@ -373,12 +373,22 @@ export function TransactionDrawer({
                 throw new Error(result.error || "Failed to load transactions");
             }
 
-            // Ensure we have an array - API might return object or different structure
-            const rawTransactions = Array.isArray(result?.data)
-                ? result.data
-                : Array.isArray(result)
-                    ? result
-                    : [];
+            // Handle paginated response structure: { items: [], has_more, total }
+            // or direct array response
+            let rawTransactions: any[] = [];
+            if (result?.data?.items && Array.isArray(result.data.items)) {
+                rawTransactions = result.data.items;
+            } else if (Array.isArray(result?.data)) {
+                rawTransactions = result.data;
+            } else if (Array.isArray(result)) {
+                rawTransactions = result;
+            }
+
+            // Filter by mint since backend doesn't support mint filter
+            if (tokenMint) {
+                rawTransactions = rawTransactions.filter((tx: any) => tx.mint === tokenMint);
+            }
+
             const mappedTransactions: Transaction[] = rawTransactions.map((tx: any) => {
                 let type: Transaction["type"] = "unknown";
                 if (tx.tx_type === "buy") {
