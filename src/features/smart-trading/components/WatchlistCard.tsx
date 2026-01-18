@@ -17,19 +17,19 @@ function TokenAvatar({ symbol, mint }: { symbol: string; mint: string }) {
 
   if (imgError) {
     return (
-      <div className="flex items-center justify-center w-8 h-8 rounded-lg font-bold text-xs text-white bg-white/10">
+      <div className="flex items-center justify-center w-10 h-10 rounded-lg font-bold text-sm text-white bg-white/10">
         {initials}
       </div>
     );
   }
 
   return (
-    <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
+    <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
       <Image
         src={dexScreenerUrl}
         alt={symbol}
-        width={32}
-        height={32}
+        width={40}
+        height={40}
         className="object-cover"
         onError={() => setImgError(true)}
         unoptimized
