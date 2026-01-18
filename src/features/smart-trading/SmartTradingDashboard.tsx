@@ -1,22 +1,16 @@
 "use client";
 
-import { useSmartTradingConfig } from "./context";
 import { PortfolioHoldingsPanel } from "./components/PortfolioHoldingsPanel";
 import { AiDecisionFeed } from "./components/AiDecisionFeed";
 import { HistoryPanel } from "./components/HistoryPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AnalyticsPanel } from "@/components/analytics/AnalyticsPanel";
 
 // ============================================
 // Main Dashboard
 // ============================================
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AnalyticsPanel } from "@/components/analytics/AnalyticsPanel";
-
 export function SmartTradingDashboard() {
-  const { config } = useSmartTradingConfig();
-  const defaultWalletAddress = "FXP5NMdrC4qHQbtBy8dduLbryVmevCkjd25mmLBKVA7x";
-  const holdingsWallet = config?.wallet_address || defaultWalletAddress;
-
   return (
     <div className="space-y-4 -mt-8 px-4 lg:px-8">
       <Tabs defaultValue="trading" className="w-full">
@@ -42,7 +36,7 @@ export function SmartTradingDashboard() {
             {/* Left Column: Portfolio Holdings + AI Log (desktop) */}
             <div className="lg:col-span-3 flex flex-col gap-4">
               {/* Portfolio - dynamic height based on items, max 3 visible */}
-              <PortfolioHoldingsPanel walletAddress={holdingsWallet} minValueUsd={0.5} maxVisibleItems={3} />
+              <PortfolioHoldingsPanel maxVisibleItems={3} />
               {/* AI Log - sits right under portfolio on desktop */}
               <div className="hidden lg:block h-[320px]">
                 <AiDecisionFeed maxItems={15} />

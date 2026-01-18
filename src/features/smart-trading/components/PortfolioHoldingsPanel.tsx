@@ -3,13 +3,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { Wallet, Copy, Loader2 } from "lucide-react";
+import { Wallet, Copy, Loader2, Clock, TrendingUp, ArrowUpRight } from "lucide-react";
 import { CountUp } from "@/components/animations/CountUp";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
-import { useSearchParams } from "next/navigation";
-import { useBirdeyeWebSocket, type BirdeyeTokenStats, type BirdeyeTransaction } from "../hooks/useBirdeyeWebSocket";
 import { useSharedWebSocket } from "../hooks/useWebSocket";
-import { usePositions } from "../context/SmartTradingContext";
 import { TransactionDrawer } from "./TransactionDrawer";
 
 // ============================================
@@ -41,34 +38,27 @@ interface OnChainHolding {
     image_url?: string | null;
 }
 
-interface LivePriceData {
-    price: number;
-    priceChange24h?: number;
-    volume24h?: number;
-    liquidity?: number;
-    marketCap?: number;
-    entryPrice?: number;
-    pnlPct?: number;
-    pnlSol?: number;
-    multiplier?: number;
-    targetProgress?: number | null;
-    nextTarget?: number | null;
-    lastUpdated: number;
-}
-
 // ============================================
 // Constants
 // ============================================
 
-const SOL_PRICE_USD = 185; // Fallback SOL price
 const SOLANA_ICON = "/logos/solana.png";
 
-// Take Profit Targets (matching the backend)
-const TP_TARGETS = [
-    { multiplier: 1.3, sellPct: 50, label: "TP1" },
-    { multiplier: 1.8, sellPct: 50, label: "TP2" },
-    { multiplier: 3.0, sellPct: 100, label: "TP3" },
-];
+// Format relative time (e.g., "2h ago", "3d ago")
+function formatRelativeTime(isoString: string): string {
+    const date = new Date(isoString);
+    const now = Date.now();
+    const diffMs = now - date.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffDay > 0) return `${diffDay}d`;
+    if (diffHour > 0) return `${diffHour}h`;
+    if (diffMin > 0) return `${diffMin}m`;
+    return "now";
+}
 
 // ============================================
 // Token Avatar Component
@@ -272,105 +262,6 @@ function SolValue({ solAmount, size = "lg" }: SolValueProps) {
 }
 
 // ============================================
-// Animated Value with Flash Effect
-// ============================================
-
-interface AnimatedSolValueProps {
-    value: number;
-    previousValue?: number;
-    showSign?: boolean;
-    className?: string;
-}
-
-function AnimatedSolValue({ value, previousValue, showSign = false, className = "" }: AnimatedSolValueProps) {
-    const [flash, setFlash] = useState<"up" | "down" | null>(null);
-    const prevValueRef = useRef(value);
-
-    useEffect(() => {
-        if (prevValueRef.current !== value) {
-            const direction = value > prevValueRef.current ? "up" : "down";
-            setFlash(direction);
-            prevValueRef.current = value;
-
-            const timer = setTimeout(() => setFlash(null), 600);
-            return () => clearTimeout(timer);
-        }
-    }, [value]);
-
-    const flashClass = flash === "up"
-        ? "animate-flash-green"
-        : flash === "down"
-            ? "animate-flash-red"
-            : "";
-
-    return (
-        <span className={`inline-flex items-center gap-1 transition-all duration-200 ${flashClass} ${className}`}>
-            <CountUp
-                to={value}
-                duration={0.6}
-                decimals={2}
-                prefix={showSign && value >= 0 ? "+" : ""}
-            />
-            <Image
-                src="/logos/solana.png"
-                alt="SOL"
-                width={14}
-                height={14}
-                className="opacity-70"
-            />
-        </span>
-    );
-}
-
-// ============================================
-// Animated Market Cap Display
-// ============================================
-
-interface AnimatedMarketCapProps {
-    value: number;
-    className?: string;
-}
-
-function AnimatedMarketCap({ value, className = "" }: AnimatedMarketCapProps) {
-    const [flash, setFlash] = useState<"up" | "down" | null>(null);
-    const prevValueRef = useRef(value);
-
-    useEffect(() => {
-        if (Math.abs(prevValueRef.current - value) > value * 0.001) { // Only flash if >0.1% change
-            const direction = value > prevValueRef.current ? "up" : "down";
-            setFlash(direction);
-            prevValueRef.current = value;
-
-            const timer = setTimeout(() => setFlash(null), 600);
-            return () => clearTimeout(timer);
-        }
-        prevValueRef.current = value;
-    }, [value]);
-
-    const flashClass = flash === "up"
-        ? "animate-flash-green"
-        : flash === "down"
-            ? "animate-flash-red"
-            : "";
-
-    // Format market cap with animation
-    const formatValue = () => {
-        if (value >= 1_000_000_000) return { num: value / 1_000_000_000, suffix: "B" };
-        if (value >= 1_000_000) return { num: value / 1_000_000, suffix: "M" };
-        if (value >= 1_000) return { num: value / 1_000, suffix: "K" };
-        return { num: value, suffix: "" };
-    };
-
-    const { num, suffix } = formatValue();
-
-    return (
-        <span className={`inline-flex items-center transition-all duration-200 ${flashClass} ${className}`}>
-            $<CountUp to={num} duration={0.5} decimals={suffix ? 1 : 0} />{suffix}
-        </span>
-    );
-}
-
-// ============================================
 // Animated Percent Display with Flash Effect
 // ============================================
 
@@ -423,42 +314,31 @@ function AnimatedPercent({ value, className = "" }: AnimatedPercentProps) {
 
 interface HoldingCardProps {
     holding: OnChainHolding;
-    livePrice: LivePriceData | null;
-    solPrice: number;
     index: number;
-    positionEntryPrice?: number; // Entry price from position data (USD)
     onClick?: () => void;
 }
 
-function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, onClick }: HoldingCardProps) {
-    // Use live price if available, otherwise fallback to holding data
-    const currentPriceUsd = livePrice?.price ?? holding.current_price ?? 0;
-    // Use entry_price directly from the API response
-    const entryPriceUsd = holding.entry_price ?? positionEntryPrice ?? livePrice?.entryPrice ?? 0;
+function HoldingCard({ holding, index, onClick }: HoldingCardProps) {
+    // All data comes from backend via holdings_snapshot
+    const currentPriceUsd = holding.current_price ?? 0;
+    const entryPriceUsd = holding.entry_price ?? 0;
     const hasEntryPrice = entryPriceUsd > 0;
-    const valueUsd = holding.current_quantity * currentPriceUsd;
-    const entryValueUsd = hasEntryPrice ? holding.current_quantity * entryPriceUsd : 0;
-    const valueSol = valueUsd / solPrice;
-    const entryValueSol = entryValueUsd / solPrice;
 
-    // PnL calculations - use API values first, then calculate if needed
-    const pnlSol = livePrice?.pnlSol ?? holding.unrealized_pnl_sol ?? (hasEntryPrice && entryValueSol > 0 ? valueSol - entryValueSol : null);
-    const pnlPct = livePrice?.pnlPct ?? holding.unrealized_pnl_pct ?? (hasEntryPrice && entryPriceUsd > 0 ? ((currentPriceUsd - entryPriceUsd) / entryPriceUsd) * 100 : null);
+    // PnL from backend
+    const pnlSol = holding.unrealized_pnl_sol;
+    const pnlPct = holding.unrealized_pnl_pct;
 
-    const currentMultiplier = livePrice?.multiplier ?? (hasEntryPrice && entryPriceUsd > 0 ? currentPriceUsd / entryPriceUsd : null);
-    const goalMultiplier = livePrice?.nextTarget ?? 2;
+    // Calculate multiplier for progress bar
+    const currentMultiplier = hasEntryPrice && entryPriceUsd > 0 ? currentPriceUsd / entryPriceUsd : null;
+    const goalMultiplier = 2; // Default 2x target
 
     // Market cap data for progress bar
-    // Priority: Birdeye live > holding.market_cap > estimated from price (assumes 1B supply for meme tokens)
-    const estimatedMcap = currentPriceUsd > 0 ? currentPriceUsd * 1_000_000_000 : undefined;
-    const currentMarketCap = livePrice?.marketCap ?? holding.market_cap ?? estimatedMcap;
-    // Calculate entry market cap: currentMCap / multiplier (if we have both)
+    const currentMarketCap = holding.market_cap ?? undefined;
     const entryMarketCap = currentMarketCap && currentMultiplier && currentMultiplier > 0
         ? currentMarketCap / currentMultiplier
         : undefined;
 
     // For display: If no entry price, use market cap milestones as targets
-    // Common meme coin milestones: 100K, 1M, 10M, 100M, 1B
     const mcapMilestones = [100_000, 1_000_000, 10_000_000, 100_000_000, 1_000_000_000];
     const getNextMilestone = (mcap: number) => mcapMilestones.find(m => m > mcap) ?? mcapMilestones[mcapMilestones.length - 1];
 
@@ -473,8 +353,13 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
         ? goalMultiplier
         : (currentMarketCap ? getNextMilestone(currentMarketCap) / currentMarketCap : 2);
 
-    // Check if we have live data (updated within last 10 seconds)
-    const hasLiveData = Boolean(livePrice && (Date.now() - livePrice.lastUpdated) < 10000);
+    // Additional data from backend
+    const hasPartialSells = holding.initial_quantity > holding.current_quantity;
+    const quantityRemaining = hasPartialSells
+        ? Math.round((holding.current_quantity / holding.initial_quantity) * 100)
+        : 100;
+    const hasRealizedPnl = (holding.realized_pnl_sol ?? 0) !== 0;
+    const hasPeakData = holding.peak_pnl_pct > 0 && holding.peak_pnl_pct > (pnlPct ?? 0);
 
     return (
         <motion.div
@@ -513,6 +398,13 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                         <div>
                             <div className="flex items-center gap-2">
                                 <span className="font-bold text-white text-base">{holding.symbol}</span>
+                                {/* Entry time badge */}
+                                {holding.entry_time && (
+                                    <span className="flex items-center gap-0.5 text-[10px] text-white/40">
+                                        <Clock className="w-2.5 h-2.5" />
+                                        {formatRelativeTime(holding.entry_time)}
+                                    </span>
+                                )}
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -524,12 +416,12 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                                     <Copy className="w-3.5 h-3.5 text-white/40 hover:text-white/70" />
                                 </button>
                             </div>
-                            {/* Entry SOL + PnL with visual hierarchy */}
-                            <div className="flex items-center gap-2 mt-1">
-                                {/* Entry Amount (SOL invested) - larger, primary */}
+                            {/* Entry SOL + PnL + Stats row */}
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                {/* Entry Amount (SOL invested) */}
                                 <div className="flex items-center gap-1 text-white/80">
                                     <span className="font-mono font-semibold tabular-nums text-sm">
-                                        {holding.entry_sol_value?.toFixed(2) || valueSol.toFixed(2)}
+                                        {holding.entry_sol_value?.toFixed(2) ?? "0.00"}
                                     </span>
                                     <Image
                                         src="/logos/solana.png"
@@ -539,19 +431,29 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                                         className="opacity-70"
                                     />
                                 </div>
-                                {/* PnL - smaller, colored based on profit/loss, no SOL logo */}
+                                {/* Unrealized PnL */}
                                 {pnlSol !== null && pnlSol !== 0 && (
                                     <span className={`font-mono tabular-nums text-xs ${pnlSol >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                        {pnlSol >= 0 ? "+" : ""}{pnlSol.toFixed(2)}
-                                        {hasLiveData && (
-                                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse ml-1 align-middle" />
-                                        )}
+                                        {pnlSol >= 0 ? "+" : ""}{pnlSol.toFixed(3)}
+                                    </span>
+                                )}
+                                {/* Realized PnL badge (from partial sells) */}
+                                {hasRealizedPnl && (
+                                    <span className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded ${holding.realized_pnl_sol! >= 0 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                                        <ArrowUpRight className="w-2.5 h-2.5" />
+                                        {holding.realized_pnl_sol! >= 0 ? "+" : ""}{holding.realized_pnl_sol!.toFixed(3)} realized
+                                    </span>
+                                )}
+                                {/* Quantity remaining badge (if partial sells) */}
+                                {hasPartialSells && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/50">
+                                        {quantityRemaining}% left
                                     </span>
                                 )}
                             </div>
                         </div>
 
-                        {/* PnL Section (right side) - Percentage only */}
+                        {/* PnL Section (right side) */}
                         <div className="flex flex-col items-end">
                             {/* PnL Percentage - Animated with flash on change */}
                             {pnlPct !== null ? (
@@ -570,6 +472,13 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                                     —
                                 </div>
                             )}
+                            {/* Peak PnL indicator (shows missed opportunity) */}
+                            {hasPeakData && (
+                                <div className="flex items-center gap-0.5 text-[10px] text-amber-400/70">
+                                    <TrendingUp className="w-2.5 h-2.5" />
+                                    <span className="font-mono">peak +{Math.round(holding.peak_pnl_pct)}%</span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -577,7 +486,6 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
                     {showProgressBar && (
                         <ProgressBar
                             currentMultiplier={displayMultiplier}
-                            progressOverride={livePrice?.targetProgress}
                             goalMultiplier={displayGoal}
                             currentMarketCap={currentMarketCap}
                             entryMarketCap={entryMarketCap}
@@ -597,8 +505,6 @@ function HoldingCard({ holding, livePrice, solPrice, index, positionEntryPrice, 
 // ============================================
 
 interface PortfolioHoldingsPanelProps {
-    walletAddress?: string;
-    minValueUsd?: number;
     maxVisibleItems?: number; // Max items visible before scrolling (desktop dynamic height)
 }
 
@@ -613,51 +519,14 @@ interface SelectedHolding {
 const CARD_HEIGHT_PX = 100; // ~88px card + 6px gap
 const HEADER_HEIGHT_PX = 60; // Header section
 
-export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01, maxVisibleItems = 3 }: PortfolioHoldingsPanelProps) {
+export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHoldingsPanelProps) {
     const [holdings, setHoldings] = useState<OnChainHolding[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [livePrices, setLivePrices] = useState<Map<string, LivePriceData>>(new Map());
-    const [solPrice, setSolPrice] = useState(SOL_PRICE_USD);
     const [selectedHolding, setSelectedHolding] = useState<SelectedHolding | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const searchParams = useSearchParams();
-    const walletFromQuery = searchParams?.get("wallet") || undefined;
-    const effectiveWallet = useMemo(() => walletAddress ?? walletFromQuery, [walletAddress, walletFromQuery]);
-    const subscribedRef = useRef(false);
     const isFetchingRef = useRef(false);
-    const { status: tradingWsStatus, on: onTradingEvent } = useSharedWebSocket({ path: "/ws/trading" });
-
-    // Get positions from context to access entry prices
-    const { positions } = usePositions();
-
-    // Log positions data
-    useEffect(() => {
-        console.log("[PortfolioHoldings] 📍 Positions from context:", positions.length);
-        if (positions.length > 0) {
-            console.log("[PortfolioHoldings] 📍 Position details:", positions.map(p => ({
-                symbol: p.tokenSymbol,
-                mint: p.tokenMint?.slice(0, 8) + "...",
-                entryPriceSol: p.entryPriceSol,
-                currentPrice: p.currentPrice,
-                unrealizedPnl: p.unrealizedPnl,
-                status: p.status,
-            })));
-        }
-    }, [positions]);
-
-    // Create a map of mint -> entry price from positions
-    const positionEntryPrices = useMemo(() => {
-        const map = new Map<string, number>();
-        for (const pos of positions) {
-            if (pos.tokenMint && pos.entryPriceSol > 0) {
-                // entryPriceSol is actually in USD (see service.ts:268 comment)
-                map.set(pos.tokenMint, pos.entryPriceSol);
-            }
-        }
-        console.log("[PortfolioHoldings] 🔑 Position entry prices map:", Object.fromEntries(map));
-        return map;
-    }, [positions]);
+    const { on: onTradingEvent } = useSharedWebSocket({ path: "/ws/trading" });
 
     // Handle holding card click - open transaction drawer
     const handleHoldingClick = useCallback((holding: OnChainHolding) => {
@@ -673,126 +542,6 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01, maxV
     const handleCloseDrawer = useCallback(() => {
         setIsDrawerOpen(false);
     }, []);
-
-    // Handle token stats from WebSocket
-    const handleTokenStats = useCallback((stats: BirdeyeTokenStats) => {
-        // Check if this is SOL price update
-        if (stats.address === "So11111111111111111111111111111111111111112") {
-            if (stats.price > 0) {
-                setSolPrice(stats.price);
-            }
-            return;
-        }
-
-        setLivePrices((prev) => {
-            const newMap = new Map(prev);
-            const prevEntry = newMap.get(stats.address);
-            newMap.set(stats.address, {
-                price: stats.price,
-                priceChange24h: stats.priceChange24h,
-                volume24h: stats.volume24h,
-                liquidity: stats.liquidity,
-                marketCap: stats.marketCap,
-                entryPrice: prevEntry?.entryPrice,
-                pnlPct: prevEntry?.pnlPct,
-                pnlSol: prevEntry?.pnlSol,
-                multiplier: prevEntry?.multiplier,
-                targetProgress: prevEntry?.targetProgress,
-                nextTarget: prevEntry?.nextTarget,
-                lastUpdated: Date.now(),
-            });
-            return newMap;
-        });
-    }, []);
-
-    // Handle transaction updates (real-time price from trades)
-    const handleTransaction = useCallback((tx: { address: string; price: number; side: "buy" | "sell" }) => {
-        // Update SOL price if it's a SOL transaction
-        if (tx.address === "So11111111111111111111111111111111111111112") {
-            if (tx.price > 0) {
-                setSolPrice(tx.price);
-            }
-            return;
-        }
-
-        // Update live prices with transaction data
-        setLivePrices((prev) => {
-            const newMap = new Map(prev);
-            const prevEntry = newMap.get(tx.address);
-            newMap.set(tx.address, {
-                price: tx.price,
-                priceChange24h: prevEntry?.priceChange24h,
-                volume24h: prevEntry?.volume24h,
-                liquidity: prevEntry?.liquidity,
-                marketCap: prevEntry?.marketCap,
-                entryPrice: prevEntry?.entryPrice,
-                pnlPct: prevEntry?.pnlPct,
-                pnlSol: prevEntry?.pnlSol,
-                multiplier: prevEntry?.multiplier,
-                targetProgress: prevEntry?.targetProgress,
-                nextTarget: prevEntry?.nextTarget,
-                lastUpdated: Date.now(),
-            });
-            return newMap;
-        });
-    }, []);
-
-    // Initialize Birdeye WebSocket (now connects to secure proxy)
-    const { isConnected, subscribeTokenStats, subscribeTransactions } = useBirdeyeWebSocket({
-        onTokenStats: handleTokenStats,
-        onTransaction: handleTransaction,
-    });
-
-    // Listen to trading WebSocket price updates as a secondary live source
-    useEffect(() => {
-        const unsubscribe = onTradingEvent<{
-            mint?: string;
-            price?: number;
-            entry_price?: number;
-            pnl_pct?: number;
-            pnl_sol?: number;
-            multiplier?: number;
-            target_progress?: number | null;
-            next_target?: number | null;
-        }>("price_update", (data, event) => {
-            const payload = (data ?? (event as unknown as { mint?: string; price?: number })) as {
-                mint?: string;
-                price?: number;
-                entry_price?: number;
-                pnl_pct?: number;
-                pnl_sol?: number;
-                multiplier?: number;
-                target_progress?: number | null;
-                next_target?: number | null;
-            };
-            if (!payload?.mint || payload.price === undefined) return;
-
-            setLivePrices((prev) => {
-                const next = new Map(prev);
-                next.set(payload.mint as string, {
-                    price: payload.price as number,
-                    entryPrice: payload.entry_price,
-                    pnlPct: payload.pnl_pct,
-                    pnlSol: payload.pnl_sol,
-                    multiplier: payload.multiplier,
-                    targetProgress: payload.target_progress,
-                    nextTarget: payload.next_target,
-                    lastUpdated: Date.now(),
-                });
-                return next;
-            });
-        });
-
-        return () => {
-            unsubscribe?.();
-        };
-    }, [onTradingEvent]);
-
-    useEffect(() => {
-        if (!isConnected) return;
-        console.log("[Portfolio] Birdeye WebSocket connected");
-        subscribeTokenStats(["So11111111111111111111111111111111111111112"]);
-    }, [isConnected, subscribeTokenStats]);
 
     // Fetch initial holdings (one-time from Helius via backend, or direct if available)
     const fetchHoldings = useCallback(async () => {
@@ -868,17 +617,6 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01, maxV
 
             setHoldings(data);
             setError(null);
-
-            // Subscribe to price updates for all holdings
-            if (data.length > 0 && !subscribedRef.current) {
-                const mints = data.map((h) => h.mint);
-                // Subscribe to token stats (5-10s updates)
-                subscribeTokenStats(mints);
-                // Subscribe to transactions (real-time trade updates)
-                subscribeTransactions(mints);
-                subscribedRef.current = true;
-                console.log(`[PortfolioHoldings] 💱 Subscribed to TXS for ${mints.length} tokens`);
-            }
         } catch (err) {
             console.error("[PortfolioHoldings] ❌ Failed to fetch holdings:", err);
             setError(err instanceof Error ? err.message : "Failed to load holdings");
@@ -886,7 +624,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01, maxV
             setIsLoading(false);
             isFetchingRef.current = false;
         }
-    }, [subscribeTokenStats, subscribeTransactions]);
+    }, []);
 
     // Fetch holdings on mount only - WebSocket provides real-time price updates
     // No polling needed since price_update events come via trading WebSocket
@@ -916,23 +654,46 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01, maxV
         };
     }, [onTradingEvent, fetchHoldings]);
 
-    // Calculate total value
+    // Listen for holdings_snapshot events from backend WebSocket
+    useEffect(() => {
+        const unsubHoldingsSnapshot = onTradingEvent<{
+            holdings: OnChainHolding[];
+            total_unrealized_pnl_sol: number;
+            total_realized_pnl_sol: number;
+            open_position_count: number;
+            timestamp: number;
+        }>("holdings_snapshot", (data) => {
+            if (!data?.holdings) return;
+
+            console.log("[PortfolioHoldings] 📡 Received holdings_snapshot:", data.holdings.length, "positions");
+
+            // Filter and sort holdings (same logic as fetchHoldings)
+            const filteredHoldings = data.holdings
+                .filter((h) => (h.status === "open" || h.status === "partially_closed") && h.current_quantity > 0)
+                .sort((a, b) => (b.current_quantity * b.current_price) - (a.current_quantity * a.current_price));
+
+            console.log("[PortfolioHoldings] ✅ After filter:", filteredHoldings.length, "holdings");
+
+            setHoldings(filteredHoldings);
+            setIsLoading(false);
+            setError(null);
+        });
+
+        return () => {
+            unsubHoldingsSnapshot?.();
+        };
+    }, [onTradingEvent]);
+
+    // Calculate total value in SOL (using entry_sol_value from backend)
     const totalValueSol = useMemo(() => {
         return holdings.reduce((sum, h) => {
-            const livePrice = livePrices.get(h.mint);
-            const priceUsd = livePrice?.price ?? h.current_price ?? 0;
-            return sum + (h.current_quantity * priceUsd / solPrice);
+            // Use entry_sol_value + unrealized PnL for current value
+            const entrySol = h.entry_sol_value ?? 0;
+            const pnlSol = h.unrealized_pnl_sol ?? 0;
+            return sum + entrySol + pnlSol;
         }, 0);
-    }, [holdings, livePrices, solPrice]);
+    }, [holdings]);
 
-    // Calculate total value in USD
-    const totalValueUsd = useMemo(() => {
-        return holdings.reduce((sum, h) => {
-            const livePrice = livePrices.get(h.mint);
-            const priceUsd = livePrice?.price ?? h.current_price ?? 0;
-            return sum + (h.current_quantity * priceUsd);
-        }, 0);
-    }, [holdings, livePrices]);
 
     // Dynamic height calculation for desktop
     // Height = header + (min(items, maxVisible) * cardHeight)
@@ -1022,10 +783,7 @@ export function PortfolioHoldingsPanel({ walletAddress, minValueUsd = 0.01, maxV
                         <HoldingCard
                             key={holding.mint}
                             holding={holding}
-                            livePrice={livePrices.get(holding.mint) || null}
-                            solPrice={solPrice}
                             index={index}
-                            positionEntryPrice={positionEntryPrices.get(holding.mint)}
                             onClick={() => handleHoldingClick(holding)}
                         />
                     ))}

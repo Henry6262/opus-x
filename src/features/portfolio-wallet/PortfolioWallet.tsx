@@ -10,7 +10,6 @@ import { CountUp } from "@/components/animations";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 import type { PortfolioWalletProps, TimeFilter, PortfolioStats, WalletView, Position as UiPosition, Transaction, ChartHistoryEntry } from "./types";
 import { useDashboardStats, usePositions, useSmartTradingConfig } from "@/features/smart-trading";
-import { useBirdeyeWalletHoldings } from "@/features/smart-trading/hooks/useBirdeyeWalletHoldings";
 
 // Generate mock chart data (placeholder until we have historical data API)
 function generateChartData(timeFilter: TimeFilter, isProfitable: boolean) {
@@ -96,24 +95,6 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   const [isLoadingHoldingsApi, setIsLoadingHoldingsApi] = useState(false);
   const [holdingsApiError, setHoldingsApiError] = useState<string | null>(null);
 
-  // Get wallet address from config (wallet_address is the trading wallet public key)
-  const walletAddress = config?.wallet_address || null;
-
-  // On-chain holdings via Birdeye (TRUE source of truth for blockchain validation)
-  const {
-    holdingsMap: birdeyeHoldings,
-    isLoading: isLoadingHoldings,
-    error: holdingsError,
-    lastUpdated: holdingsLastUpdated,
-    refresh: refreshHoldings,
-    hasHolding,
-    getHolding,
-  } = useBirdeyeWalletHoldings({
-    walletAddress,
-    refreshIntervalMs: 30000, // 30 seconds
-    autoRefresh: true,
-  });
-
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeView, setActiveView] = useState<WalletView>("overview");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("24H");
@@ -181,9 +162,6 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     }
   }, []);
 
-  // Birdeye holdings are now fetched via useBirdeyeWalletHoldings hook
-  // This provides blockchain-validated holdings with prices and values
-
   // Compute UI Data
   const portfolioStats: PortfolioStats = {
     totalValue,
@@ -198,54 +176,39 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     totalTrades: dashboardStats?.performance.totalTrades || 0,
   };
 
-  // Map holdings to UI positions - now using direct API fetch like main dashboard
-  // Priority: fetchedHoldings (API) > positions (context) with Birdeye validation
+  // Map holdings to UI positions - using backend API data
   const uiPositions: UiPosition[] = useMemo(() => {
-    // If we have API holdings, use those (same source as main dashboard's PortfolioHoldingsPanel)
+    // Use API holdings (same source as main dashboard's PortfolioHoldingsPanel)
     if (fetchedHoldings.length > 0) {
-      return fetchedHoldings.map(h => {
-        const birdeyeHolding = getHolding(h.mint);
-        return {
-          id: h.id,
-          mint: h.mint,
-          symbol: h.symbol || birdeyeHolding?.symbol || "TOKEN",
-          name: h.name || birdeyeHolding?.name || "Unknown Token",
-          entryPrice: h.entry_price,
-          currentPrice: h.current_price,
-          quantity: h.current_quantity,
-          value: h.current_quantity * h.current_price,
-          pnl: h.unrealized_pnl_sol || 0,
-          pnlPercent: h.unrealized_pnl_pct || 0,
-          entryTime: new Date(h.entry_time),
-          isValidated: birdeyeHolding !== undefined,
-          birdeyeValueUsd: birdeyeHolding?.valueUsd ?? null,
-        };
-      });
+      return fetchedHoldings.map(h => ({
+        id: h.id,
+        mint: h.mint,
+        symbol: h.symbol || "TOKEN",
+        name: h.name || "Unknown Token",
+        entryPrice: h.entry_price,
+        currentPrice: h.current_price,
+        quantity: h.current_quantity,
+        value: h.current_quantity * h.current_price,
+        pnl: h.unrealized_pnl_sol || 0,
+        pnlPercent: h.unrealized_pnl_pct || 0,
+        entryTime: new Date(h.entry_time),
+        isValidated: true,
+        birdeyeValueUsd: null,
+      }));
     }
 
-    // Fallback to context positions with Birdeye validation
+    // Fallback to context positions
     return positions
-      .filter(p => {
-        // If we haven't loaded holdings yet, show all positions (better UX than empty)
-        if (birdeyeHoldings.size === 0 && isLoadingHoldings) {
-          return true;
-        }
-        // Once holdings loaded, only show positions with actual on-chain balance
-        // Birdeye validation ensures we're showing blockchain truth
-        return hasHolding(p.tokenMint);
-      })
+      .filter(p => p.status === "open" || p.status === "partially_closed")
       .map(p => {
-        // Use on-chain balance from Birdeye for quantity (more accurate than DB)
-        const birdeyeHolding = getHolding(p.tokenMint);
-        const quantity = birdeyeHolding?.uiAmount ?? p.remainingTokens;
-        // Use Birdeye price if available (live market data), fallback to context price
+        const quantity = p.remainingTokens;
         const currentPrice = p.currentPrice || p.entryPriceSol;
 
         return {
           id: p.id,
           mint: p.tokenMint,
-          symbol: p.tokenSymbol || birdeyeHolding?.symbol || "TOKEN",
-          name: p.tokenSymbol || birdeyeHolding?.name || "Unknown Token",
+          symbol: p.tokenSymbol || "TOKEN",
+          name: p.tokenSymbol || "Unknown Token",
           entryPrice: p.entryPriceSol,
           currentPrice,
           quantity,
@@ -253,12 +216,11 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
           pnl: p.unrealizedPnl || 0,
           pnlPercent: p.entryPriceSol > 0 ? (currentPrice - p.entryPriceSol) / p.entryPriceSol * 100 : 0,
           entryTime: new Date(p.createdAt),
-          // Add validation status for UI indication
-          isValidated: birdeyeHolding !== undefined,
-          birdeyeValueUsd: birdeyeHolding?.valueUsd ?? null,
+          isValidated: true,
+          birdeyeValueUsd: null,
         };
       });
-  }, [fetchedHoldings, positions, birdeyeHoldings, isLoadingHoldings, hasHolding, getHolding]);
+  }, [fetchedHoldings, positions]);
 
   type EnrichedTransaction = {
     id: string;

@@ -1,8 +1,6 @@
 export { SmartTradingSection } from "./SmartTradingSection";
 export { SmartTradingDashboard } from "./SmartTradingDashboard";
 export { useWebSocket, useSharedWebSocket } from "./hooks/useWebSocket";
-export { useBirdeyeWalletHoldings } from "./hooks/useBirdeyeWalletHoldings";
-export { useBirdeyePolling } from "./hooks/useBirdeyePolling";
 export { smartTradingService } from "./service";
 export type * from "./types";
 
