@@ -201,50 +201,52 @@ function Label({ children }: { children: React.ReactNode }) {
 }
 
 // ============================================
-// CHART TYPE TOGGLE
+// COMPACT DROPDOWN SELECT
 // ============================================
 
-type ChartType = string;
+import { ChevronDown } from "lucide-react";
 
-function ChartToggle({
+// Minimal inline select - just text with icon
+function InlineSelect({
   options,
   value,
-  onChange
+  onChange,
 }: {
   options: { value: string; label: string }[];
   value: string;
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-1 bg-white/[0.03] rounded-full p-0.5">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          onClick={() => onChange(opt.value)}
-          className={`px-2.5 py-1 text-[9px] uppercase tracking-wider rounded-full transition-all ${
-            value === opt.value
-              ? "bg-white/10 text-white"
-              : "text-white/30 hover:text-white/50"
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
+    <div className="relative inline-flex items-center">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="appearance-none bg-transparent text-[9px] text-white/50 cursor-pointer hover:text-white/70 transition-colors focus:outline-none pr-3 font-medium uppercase tracking-wide"
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value} className="bg-black text-white">
+            {opt.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="absolute right-0 w-2.5 h-2.5 text-white/30 pointer-events-none" />
     </div>
   );
 }
 
 function ChartHeader({ label, children }: { label: string; children?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/[0.06]">
-      <h3 className="text-[11px] text-white/50 uppercase tracking-widest font-medium">{label}</h3>
-      {children}
+    <div className="flex items-center justify-between mb-2">
+      <h3 className="text-[10px] text-white/40 uppercase tracking-widest">{label}</h3>
+      <div className="flex items-center gap-2">
+        {children}
+      </div>
     </div>
   );
 }
 
 // ============================================
-// TIMEFRAME TOGGLE
+// TIMEFRAME OPTIONS
 // ============================================
 
 const TIMEFRAMES: { value: Timeframe; label: string }[] = [
@@ -253,34 +255,8 @@ const TIMEFRAMES: { value: Timeframe; label: string }[] = [
   { value: "1D", label: "1D" },
   { value: "7D", label: "7D" },
   { value: "30D", label: "30D" },
-  { value: "ALL", label: "ALL" },
+  { value: "ALL", label: "All" },
 ];
-
-function TimeframeToggle({
-  value,
-  onChange,
-}: {
-  value: Timeframe;
-  onChange: (v: Timeframe) => void;
-}) {
-  return (
-    <div className="flex items-center gap-0.5 bg-white/[0.03] rounded-full p-0.5">
-      {TIMEFRAMES.map((tf) => (
-        <button
-          key={tf.value}
-          onClick={() => onChange(tf.value)}
-          className={`px-2 py-0.5 text-[8px] uppercase tracking-wider rounded-full transition-all ${
-            value === tf.value
-              ? "bg-white/10 text-white"
-              : "text-white/25 hover:text-white/40"
-          }`}
-        >
-          {tf.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 // ============================================
 // GAUGE COMPONENT
@@ -374,7 +350,7 @@ export function AnalyticsPanel() {
   // Chart type states
   const [pnlChartType, setPnlChartType] = useState<"area" | "bar" | "line" | "composed">("area");
   const [decisionChartType, setDecisionChartType] = useState<"donut" | "bar" | "funnel">("donut");
-  const [analysisChartType, setAnalysisChartType] = useState<"scatter" | "histogram" | "treemap">("scatter");
+  const [analysisChartType, setAnalysisChartType] = useState<"decisions" | "scatter" | "treemap">("decisions");
   const [timeframe, setTimeframe] = useState<Timeframe>("7D");
 
   // P&L data from real positions - grouped by timeframe
@@ -862,110 +838,112 @@ export function AnalyticsPanel() {
         />
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-12 gap-4">
-        {/* P&L Chart */}
-        <div className="col-span-12 lg:col-span-7 bg-white/[0.02] border border-white/[0.08] rounded-xl p-4">
-          <ChartHeader label="P&L Performance">
-            <div className="flex items-center gap-2">
-              <TimeframeToggle value={timeframe} onChange={setTimeframe} />
-              <ChartToggle
-                options={[
-                  { value: "area", label: "Area" },
-                  { value: "bar", label: "Bar" },
-                  { value: "composed", label: "P&L+Vol" },
-                ]}
-                value={pnlChartType}
-                onChange={(v) => setPnlChartType(v as "area" | "bar" | "line" | "composed")}
-              />
-            </div>
-          </ChartHeader>
-          <div className="mt-2">
-            <ResponsiveContainer width="100%" height={160}>
-              {pnlChartType === "area" ? (
-                <AreaChart data={pnlData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="pnlGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={BRAND.primary} stopOpacity={0.2} />
-                      <stop offset="100%" stopColor={BRAND.primary} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} interval="preserveStartEnd" />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} tickFormatter={(v) => `${v > 0 ? "+" : ""}${v}`} width={35} />
-                  <Tooltip content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const d = payload[0].payload;
-                    return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white/50">Cumulative:</span> <span className="text-white font-mono ml-1">{d.pnl > 0 ? "+" : ""}{d.pnl} SOL</span></div>;
-                  }} />
-                  <Area type="monotone" dataKey="pnl" stroke={BRAND.primary} strokeWidth={1.5} fill="url(#pnlGradient)" />
-                </AreaChart>
-              ) : pnlChartType === "bar" ? (
-                <BarChart data={dailyPnlData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} interval="preserveStartEnd" />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} tickFormatter={(v) => `${v > 0 ? "+" : ""}${v}`} width={35} />
-                  <ReferenceLine y={0} stroke="rgba(255,255,255,0.1)" />
-                  <Tooltip content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const d = payload[0].payload;
-                    return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white/50">Daily:</span> <span className="font-mono ml-1" style={{ color: d.pnl >= 0 ? BRAND.primary : BRAND.red }}>{d.pnl > 0 ? "+" : ""}{d.pnl} SOL</span></div>;
-                  }} />
-                  <Bar dataKey="pnl" radius={[2, 2, 0, 0]}>
-                    {dailyPnlData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              ) : (
-                <ComposedChart data={composedData} margin={{ top: 5, right: 30, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="pnlGradient2" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={BRAND.primary} stopOpacity={0.2} />
-                      <stop offset="100%" stopColor={BRAND.primary} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} interval="preserveStartEnd" />
-                  <YAxis yAxisId="pnl" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} tickFormatter={(v) => `${v > 0 ? "+" : ""}${v}`} width={35} />
-                  <YAxis yAxisId="trades" orientation="right" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.15)", fontSize: 9 }} width={25} />
-                  <Tooltip content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const d = payload[0].payload;
-                    return (
-                      <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]">
-                        <div><span className="text-white/50">P&L:</span> <span className="text-white font-mono ml-1" style={{ color: BRAND.primary }}>{d.pnl > 0 ? "+" : ""}{d.pnl} SOL</span></div>
-                        <div><span className="text-white/50">Trades:</span> <span className="text-white font-mono ml-1" style={{ color: BRAND.amber }}>{d.trades}</span></div>
-                      </div>
-                    );
-                  }} />
-                  <Area yAxisId="pnl" type="monotone" dataKey="pnl" stroke={BRAND.primary} strokeWidth={1.5} fill="url(#pnlGradient2)" />
-                  <Bar yAxisId="trades" dataKey="trades" fill={BRAND.amber} opacity={0.4} radius={[2, 2, 0, 0]} />
-                </ComposedChart>
-              )}
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Decisions Chart */}
-        <div className="col-span-6 lg:col-span-2 bg-white/[0.02] border border-white/[0.08] rounded-xl p-4">
-          <ChartHeader label="Decisions">
-            <ChartToggle
+      {/* Charts Grid - Compact 2-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* P&L Chart - Main chart */}
+        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3">
+          <ChartHeader label="P&L">
+            <InlineSelect
+              options={TIMEFRAMES}
+              value={timeframe}
+              onChange={(v) => setTimeframe(v as Timeframe)}
+            />
+            <span className="text-white/20">|</span>
+            <InlineSelect
               options={[
-                { value: "donut", label: "Donut" },
-                { value: "funnel", label: "Funnel" },
+                { value: "area", label: "Area" },
+                { value: "bar", label: "Bar" },
+                { value: "composed", label: "+Vol" },
               ]}
-              value={decisionChartType}
-              onChange={(v) => setDecisionChartType(v as "donut" | "bar" | "funnel")}
+              value={pnlChartType}
+              onChange={(v) => setPnlChartType(v as "area" | "bar" | "line" | "composed")}
             />
           </ChartHeader>
-          <div className="h-[160px] flex flex-col">
-            <div className="flex-1 flex items-center justify-center">
-              {hasData ? (
-                decisionChartType === "donut" ? (
+          <ResponsiveContainer width="100%" height={140}>
+            {pnlChartType === "area" ? (
+              <AreaChart data={pnlData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="pnlGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={BRAND.primary} stopOpacity={0.2} />
+                    <stop offset="100%" stopColor={BRAND.primary} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} interval="preserveStartEnd" />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} tickFormatter={(v) => `${v > 0 ? "+" : ""}${v}`} width={30} />
+                <Tooltip content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0].payload;
+                  return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white/50">P&L:</span> <span className="text-white font-mono ml-1">{d.pnl > 0 ? "+" : ""}{d.pnl} SOL</span></div>;
+                }} />
+                <Area type="monotone" dataKey="pnl" stroke={BRAND.primary} strokeWidth={1.5} fill="url(#pnlGradient)" />
+              </AreaChart>
+            ) : pnlChartType === "bar" ? (
+              <BarChart data={dailyPnlData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} interval="preserveStartEnd" />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} tickFormatter={(v) => `${v > 0 ? "+" : ""}${v}`} width={30} />
+                <ReferenceLine y={0} stroke="rgba(255,255,255,0.1)" />
+                <Tooltip content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0].payload;
+                  return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white/50">Daily:</span> <span className="font-mono ml-1" style={{ color: d.pnl >= 0 ? BRAND.primary : BRAND.red }}>{d.pnl > 0 ? "+" : ""}{d.pnl} SOL</span></div>;
+                }} />
+                <Bar dataKey="pnl" radius={[2, 2, 0, 0]}>
+                  {dailyPnlData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            ) : (
+              <ComposedChart data={composedData} margin={{ top: 5, right: 25, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="pnlGradient2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={BRAND.primary} stopOpacity={0.2} />
+                    <stop offset="100%" stopColor={BRAND.primary} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} interval="preserveStartEnd" />
+                <YAxis yAxisId="pnl" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} tickFormatter={(v) => `${v > 0 ? "+" : ""}${v}`} width={30} />
+                <YAxis yAxisId="trades" orientation="right" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.15)", fontSize: 8 }} width={20} />
+                <Tooltip content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0].payload;
+                  return (
+                    <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]">
+                      <div><span className="text-white/50">P&L:</span> <span className="font-mono ml-1" style={{ color: BRAND.primary }}>{d.pnl > 0 ? "+" : ""}{d.pnl} SOL</span></div>
+                      <div><span className="text-white/50">Trades:</span> <span className="font-mono ml-1" style={{ color: BRAND.amber }}>{d.trades}</span></div>
+                    </div>
+                  );
+                }} />
+                <Area yAxisId="pnl" type="monotone" dataKey="pnl" stroke={BRAND.primary} strokeWidth={1.5} fill="url(#pnlGradient2)" />
+                <Bar yAxisId="trades" dataKey="trades" fill={BRAND.amber} opacity={0.4} radius={[2, 2, 0, 0]} />
+              </ComposedChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+
+        {/* Combined Decisions + Analysis Chart */}
+        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3">
+          <ChartHeader label="Analysis">
+            <InlineSelect
+              options={[
+                { value: "decisions", label: "Decisions" },
+                { value: "treemap", label: "Alloc" },
+                { value: "scatter", label: "Conf" },
+              ]}
+              value={analysisChartType}
+              onChange={(v) => setAnalysisChartType(v as "decisions" | "scatter" | "treemap")}
+            />
+          </ChartHeader>
+          <div className="h-[140px]">
+            {analysisChartType === "decisions" ? (
+              hasData ? (
+                <div className="h-full flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={decisionData} cx="50%" cy="50%" innerRadius="45%" outerRadius="75%" paddingAngle={2} dataKey="value">
+                      <Pie data={decisionData} cx="50%" cy="50%" innerRadius="40%" outerRadius="70%" paddingAngle={2} dataKey="value">
                         {decisionData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                       </Pie>
                       <Tooltip content={({ active, payload }) => {
@@ -975,123 +953,78 @@ export function AnalyticsPanel() {
                       }} />
                     </PieChart>
                   </ResponsiveContainer>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <FunnelChart>
-                      <Tooltip content={({ active, payload }) => {
-                        if (!active || !payload?.length) return null;
-                        const d = payload[0].payload;
-                        return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white">{d.name}</span> <span className="text-white/70 font-mono ml-1">{d.value}</span></div>;
-                      }} />
-                      <Funnel dataKey="value" data={funnelData} isAnimationActive>
-                        <LabelList position="center" fill="white" fontSize={10} fontWeight={600} formatter={(v: number) => v} />
-                      </Funnel>
-                    </FunnelChart>
-                  </ResponsiveContainer>
-                )
-              ) : <span className="text-xs text-white/20">No data</span>}
-            </div>
-            {hasData && (
-              <div className="flex justify-center gap-3 pt-2 border-t border-white/[0.04]">
-                {decisionChartType === "donut" ? (
-                  decisionData.map((d) => (
-                    <div key={d.name} className="flex items-center gap-1.5 text-[10px]">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
-                      <span className="text-white/40">{d.name}</span>
-                    </div>
-                  ))
-                ) : (
-                  funnelData.map((d) => (
-                    <div key={d.name} className="flex items-center gap-1.5 text-[10px]">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.fill }} />
-                      <span className="text-white/40">{d.name}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Analysis Chart */}
-        <div className="col-span-6 lg:col-span-3 bg-white/[0.02] border border-white/[0.08] rounded-xl p-4">
-          <ChartHeader label={analysisChartType === "treemap" ? "Portfolio" : "Confidence Analysis"}>
-            <ChartToggle
-              options={[
-                { value: "scatter", label: "Scatter" },
-                { value: "treemap", label: "Alloc" },
-              ]}
-              value={analysisChartType}
-              onChange={(v) => setAnalysisChartType(v as "scatter" | "histogram" | "treemap")}
-            />
-          </ChartHeader>
-          <div className="h-[160px] flex flex-col">
-            <div className="flex-1">
-              {analysisChartType === "scatter" ? (
-                scatterData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ScatterChart margin={{ top: 5, right: 5, bottom: 5, left: -10 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                      <XAxis type="number" dataKey="confidence" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} />
-                      <YAxis type="number" dataKey="outcome" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} />
-                      <Tooltip content={({ active, payload }) => {
-                        if (!active || !payload?.length) return null;
-                        const d = payload[0].payload;
-                        return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white">${d.symbol}</span></div>;
-                      }} />
-                      <Scatter data={scatterData.filter((d) => d.isWin)} fill={BRAND.primary} r={3} />
-                      <Scatter data={scatterData.filter((d) => !d.isWin)} fill={BRAND.red} r={3} />
-                    </ScatterChart>
-                  </ResponsiveContainer>
-                ) : <div className="h-full flex items-center justify-center text-xs text-white/20">No data</div>
-              ) : (
+                </div>
+              ) : <div className="h-full flex items-center justify-center text-xs text-white/20">No data</div>
+            ) : analysisChartType === "scatter" ? (
+              scatterData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <Treemap
-                    data={treemapData}
-                    dataKey="value"
-                    aspectRatio={4/3}
-                    stroke="rgba(0,0,0,0.3)"
-                    content={<CustomTreemapContent />}
-                  >
+                  <ScatterChart margin={{ top: 5, right: 5, bottom: 5, left: -10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                    <XAxis type="number" dataKey="confidence" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} />
+                    <YAxis type="number" dataKey="outcome" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} />
                     <Tooltip content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const d = payload[0].payload;
-                      return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white font-medium">{d.name}</span> <span className="text-white/70 font-mono ml-1">{d.value}%</span></div>;
+                      return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white">${d.symbol}</span></div>;
                     }} />
-                  </Treemap>
+                    <Scatter data={scatterData.filter((d) => d.isWin)} fill={BRAND.primary} r={3} />
+                    <Scatter data={scatterData.filter((d) => !d.isWin)} fill={BRAND.red} r={3} />
+                  </ScatterChart>
                 </ResponsiveContainer>
-              )}
-            </div>
-            <div className="flex justify-center gap-4 pt-2 border-t border-white/[0.04]">
-              {analysisChartType === "scatter" ? (
-                <>
-                  <div className="flex items-center gap-1.5 text-[10px]"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: BRAND.primary }} /><span className="text-white/40">Traded</span></div>
-                  <div className="flex items-center gap-1.5 text-[10px]"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: BRAND.red }} /><span className="text-white/40">Passed</span></div>
-                </>
-              ) : (
-                <>
-                  {treemapData.slice(0, 3).map((d) => (
-                    <div key={d.name} className="flex items-center gap-1.5 text-[10px]">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
-                      <span className="text-white/40">{d.name}</span>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
+              ) : <div className="h-full flex items-center justify-center text-xs text-white/20">No data</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <Treemap
+                  data={treemapData}
+                  dataKey="value"
+                  aspectRatio={4/3}
+                  stroke="rgba(0,0,0,0.3)"
+                  content={<CustomTreemapContent />}
+                >
+                  <Tooltip content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0].payload;
+                    return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white font-medium">{d.name}</span> <span className="text-white/70 font-mono ml-1">{d.value}%</span></div>;
+                  }} />
+                </Treemap>
+              </ResponsiveContainer>
+            )}
+          </div>
+          {/* Compact legend */}
+          <div className="flex justify-center gap-3 mt-2 pt-2 border-t border-white/[0.04]">
+            {analysisChartType === "decisions" ? (
+              decisionData.map((d) => (
+                <div key={d.name} className="flex items-center gap-1 text-[9px]">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: d.color }} />
+                  <span className="text-white/40">{d.name}</span>
+                </div>
+              ))
+            ) : analysisChartType === "scatter" ? (
+              <>
+                <div className="flex items-center gap-1 text-[9px]"><div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: BRAND.primary }} /><span className="text-white/40">Traded</span></div>
+                <div className="flex items-center gap-1 text-[9px]"><div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: BRAND.red }} /><span className="text-white/40">Passed</span></div>
+              </>
+            ) : (
+              treemapData.slice(0, 4).map((d) => (
+                <div key={d.name} className="flex items-center gap-1 text-[9px]">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: d.color }} />
+                  <span className="text-white/40">{d.name}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
 
-      {/* Gauges Row */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex justify-center">
+      {/* Compact Gauges Row - inline with labels */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3 flex items-center justify-center">
           <Gauge value={Math.round(stats.winRate) || 0} label="Win Rate" color={stats.winRate > 50 ? BRAND.primary : BRAND.amber} />
         </div>
-        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex justify-center">
+        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3 flex items-center justify-center">
           <Gauge value={hasData && stats.totalAnalyzed > 0 ? Math.round((stats.enterDecisions / stats.totalAnalyzed) * 100) : 0} label="Entry Rate" color={BRAND.primary} />
         </div>
-        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 flex justify-center">
+        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3 flex items-center justify-center">
           <Gauge value={Math.round(stats.avgConfidence) || 0} label="AI Confidence" color="#9945ff" />
         </div>
       </div>
