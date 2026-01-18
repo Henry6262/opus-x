@@ -505,6 +505,7 @@ export interface WatchlistAddedEvent {
   watch_reasons: string[];
   liquidity_usd: number;
   volume_24h_usd: number;
+  market_cap_usd: number;
   holder_count: number;
   timestamp: number;
 }

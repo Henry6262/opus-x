@@ -17,20 +17,20 @@ function TokenAvatar({ symbol, mint }: { symbol: string; mint: string }) {
 
   if (imgError) {
     return (
-      <div className="flex items-center justify-center w-10 h-10 rounded-lg font-bold text-sm text-white bg-white/10">
+      <div className="flex items-center justify-center w-12 h-12 rounded-lg font-bold text-base text-white bg-white/10">
         {initials}
       </div>
     );
   }
 
   return (
-    <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
+    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
       <Image
         src={dexScreenerUrl}
         alt={symbol}
-        width={40}
-        height={40}
-        className="object-cover"
+        width={48}
+        height={48}
+        className="object-cover w-full h-full"
         onError={() => setImgError(true)}
         unoptimized
       />
@@ -81,39 +81,39 @@ export function WatchlistCard({ token }: WatchlistCardProps) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="flex-shrink-0 w-[260px] p-3 rounded-xl bg-black/40 border border-white/10 flex items-center gap-3"
+      className="flex-shrink-0 w-[280px] p-3 rounded-xl bg-black/40 border border-white/10 flex items-center gap-3"
     >
       {/* Left: Avatar + Info */}
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center gap-3 min-w-0">
         <TokenAvatar symbol={token.symbol} mint={token.mint} />
         <div className="min-w-0">
-          <div className="flex items-center gap-1">
-            <span className="font-bold text-white text-sm truncate">{token.symbol}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-white text-base truncate">{token.symbol}</span>
             <button
               onClick={() => navigator.clipboard.writeText(token.mint)}
               className="p-0.5 rounded hover:bg-white/10"
             >
-              <Copy className="w-3 h-3 text-white/40" />
+              <Copy className="w-3.5 h-3.5 text-white/40" />
             </button>
           </div>
-          <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${STATUS_STYLES[status]}`}>
+          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${STATUS_STYLES[status]}`}>
             {status}
           </span>
         </div>
       </div>
 
-      {/* Right: Metrics stacked */}
-      <div className="ml-auto text-[10px] space-y-0.5">
-        <div className="flex items-center gap-1">
+      {/* Right: Metrics stacked - right aligned */}
+      <div className="ml-auto text-xs space-y-1 text-right">
+        <div className="flex items-center justify-end gap-1.5">
           <span className="text-white/40">MCap</span>
           <span className="text-white/70 font-mono">{formatCurrency(token.metrics.market_cap_usd)}</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-end gap-1.5">
           <span className="text-white/40">Vol</span>
           <span className="text-white/70 font-mono">{formatCurrency(token.metrics.volume_24h_usd)}</span>
         </div>
-        <div className="flex items-center gap-1">
-          <Users className="w-3 h-3 text-white/40" />
+        <div className="flex items-center justify-end gap-1.5">
+          <Users className="w-3.5 h-3.5 text-white/40" />
           <span className="text-white/70 font-mono">{(token.metrics.holder_count ?? 0).toLocaleString()}</span>
         </div>
       </div>

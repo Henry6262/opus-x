@@ -61,6 +61,7 @@ export function WatchlistPanel() {
   // WebSocket events
   useEffect(() => {
     const unsubAdded = onTradingEvent<WatchlistAddedEvent>("watchlist_added", (data) => {
+      console.log("[WatchlistPanel] watchlist_added:", data.symbol, data);
       const newToken: WatchlistToken = {
         mint: data.mint,
         symbol: data.symbol,
@@ -72,7 +73,7 @@ export function WatchlistPanel() {
         metrics: {
           liquidity_usd: data.liquidity_usd,
           volume_24h_usd: data.volume_24h_usd,
-          market_cap_usd: 0,
+          market_cap_usd: data.market_cap_usd ?? 0,
           holder_count: data.holder_count,
           price_usd: 0,
         },
@@ -87,6 +88,12 @@ export function WatchlistPanel() {
     });
 
     const unsubUpdated = onTradingEvent<WatchlistUpdatedEvent>("watchlist_updated", (data) => {
+      console.log("[WatchlistPanel] watchlist_updated:", data.symbol, {
+        mcap: data.market_cap_usd,
+        vol: data.volume_24h_usd,
+        holders: data.holder_count,
+        improving: data.improving,
+      });
       setTokens((prev) =>
         prev.map((t) =>
           t.mint === data.mint
@@ -94,8 +101,17 @@ export function WatchlistPanel() {
                 ...t,
                 check_count: data.check_count,
                 last_check_at: new Date(data.timestamp).toISOString(),
-                metrics: { ...t.metrics, market_cap_usd: data.market_cap_usd, volume_24h_usd: data.volume_24h_usd, holder_count: data.holder_count },
-                last_result: { ...t.last_result, improving: data.improving, failed_checks: data.failed_checks },
+                metrics: {
+                  ...t.metrics,
+                  market_cap_usd: data.market_cap_usd ?? t.metrics.market_cap_usd,
+                  volume_24h_usd: data.volume_24h_usd ?? t.metrics.volume_24h_usd,
+                  holder_count: data.holder_count ?? t.metrics.holder_count,
+                },
+                last_result: {
+                  ...t.last_result,
+                  improving: data.improving,
+                  failed_checks: data.failed_checks ?? t.last_result.failed_checks,
+                },
               }
             : t
         )
