@@ -390,19 +390,26 @@ export function TransactionDrawer({
             }
 
             const mappedTransactions: Transaction[] = rawTransactions.map((tx: any) => {
+                const isBuy = tx.tx_type === "buy";
                 let type: Transaction["type"] = "unknown";
-                if (tx.tx_type === "buy") {
+                if (isBuy) {
                     type = "entry";
                 } else if (tx.tx_type === "sell") {
                     type = "tp1";
                 }
 
+                // Properly distinguish buy vs sell fields
+                // For BUY: sol_amount = SOL spent, tokens_received = tokens bought
+                // For SELL: sol_received = SOL received, tokens_sold = tokens sold
+                const solAmount = isBuy ? (tx.sol_amount ?? 0) : (tx.sol_received ?? 0);
+                const tokenAmount = isBuy ? (tx.tokens_received ?? 0) : (tx.tokens_sold ?? 0);
+
                 return {
                     signature: tx.signature,
                     type,
                     timestamp: new Date(tx.timestamp).getTime(),
-                    solAmount: tx.sol_amount || tx.sol_received || 0,
-                    tokenAmount: tx.tokens_received || tx.tokens_sold || 0,
+                    solAmount,
+                    tokenAmount,
                     priceUsd: tx.price || 0,
                     status: "confirmed",
                 };
@@ -443,14 +450,15 @@ export function TransactionDrawer({
 
     // Calculate totals
     const entryTxs = transactions.filter(tx => tx.type === "entry");
-    const sellTxs = transactions.filter(tx => tx.type !== "entry");
+    const sellTxs = transactions.filter(tx => tx.type !== "entry" && tx.type !== "unknown");
     const totalInvested = entryTxs.reduce((sum, tx) => sum + tx.solAmount, 0);
     const totalReturned = sellTxs.reduce((sum, tx) => sum + tx.solAmount, 0);
-    const totalTokensBought = entryTxs.reduce((sum, tx) => sum + tx.tokenAmount, 0);
-    const totalTokensSold = sellTxs.reduce((sum, tx) => sum + tx.tokenAmount, 0);
-    const percentageSold = totalTokensBought > 0 ? totalTokensSold / totalTokensBought : 0;
-    const costBasisOfSold = totalInvested * percentageSold;
-    const netPnl = totalReturned - costBasisOfSold;
+
+    // Simple PnL: what we got back minus what we put in
+    // Note: This assumes full position closure. For partial sells, the backend
+    // should provide accurate token counts (currently there's a scaling bug
+    // where tokens_received is 1B times smaller than tokens_sold)
+    const netPnl = totalReturned - totalInvested;
 
     return (
         <>
@@ -510,28 +518,32 @@ export function TransactionDrawer({
 
                         {/* Summary Stats - More compact */}
                         {transactions.length > 0 && (
-                            <div className="grid grid-cols-3 gap-1.5">
-                                <div className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-center">
-                                    <div className="text-[9px] uppercase tracking-wider text-white/40 mb-1">Cost</div>
-                                    <div className="flex items-center justify-center gap-1">
-                                        <span className="text-sm font-bold text-white font-mono">{costBasisOfSold.toFixed(2)}</span>
-                                        <Image src={SOLANA_ICON} alt="SOL" width={12} height={12} className="opacity-70" />
-                                    </div>
-                                </div>
-                                <div className="p-2 rounded-lg bg-[#c4f70e]/[0.03] border border-[#c4f70e]/10 text-center">
-                                    <div className="text-[9px] uppercase tracking-wider text-white/40 mb-1">Returned</div>
-                                    <div className="flex items-center justify-center gap-1">
-                                        <span className="text-sm font-bold text-[#c4f70e] font-mono">{totalReturned.toFixed(2)}</span>
-                                        <Image src={SOLANA_ICON} alt="SOL" width={12} height={12} className="opacity-70" />
-                                    </div>
-                                </div>
-                                <div className={`p-2 rounded-lg text-center ${netPnl >= 0 ? "bg-[#c4f70e]/[0.05] border border-[#c4f70e]/20" : "bg-red-500/[0.05] border border-red-500/20"}`}>
-                                    <div className="text-[9px] uppercase tracking-wider text-white/40 mb-1">PnL</div>
-                                    <div className="flex items-center justify-center gap-1">
-                                        <span className={`text-sm font-bold font-mono ${netPnl >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}>
-                                            {netPnl >= 0 ? "+" : ""}{netPnl.toFixed(2)}
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-center">
+                                    <div className="text-[9px] uppercase tracking-wider text-white/40 mb-1.5">Cost</div>
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <span className="text-sm font-bold text-white font-mono tabular-nums">
+                                            {totalInvested.toFixed(3)}
                                         </span>
-                                        <Image src={SOLANA_ICON} alt="SOL" width={12} height={12} className="opacity-70" />
+                                        <Image src={SOLANA_ICON} alt="SOL" width={14} height={14} className="opacity-70" />
+                                    </div>
+                                </div>
+                                <div className="p-2.5 rounded-lg bg-[#c4f70e]/[0.03] border border-[#c4f70e]/10 text-center">
+                                    <div className="text-[9px] uppercase tracking-wider text-white/40 mb-1.5">Returned</div>
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <span className="text-sm font-bold text-[#c4f70e] font-mono tabular-nums">
+                                            {totalReturned.toFixed(3)}
+                                        </span>
+                                        <Image src={SOLANA_ICON} alt="SOL" width={14} height={14} className="opacity-70" />
+                                    </div>
+                                </div>
+                                <div className={`p-2.5 rounded-lg text-center ${netPnl >= 0 ? "bg-[#c4f70e]/[0.05] border border-[#c4f70e]/20" : "bg-red-500/[0.05] border border-red-500/20"}`}>
+                                    <div className="text-[9px] uppercase tracking-wider text-white/40 mb-1.5">PnL</div>
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <span className={`text-sm font-bold font-mono tabular-nums ${netPnl >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}>
+                                            {netPnl >= 0 ? "+" : ""}{netPnl.toFixed(3)}
+                                        </span>
+                                        <Image src={SOLANA_ICON} alt="SOL" width={14} height={14} className="opacity-70" />
                                     </div>
                                 </div>
                             </div>
