@@ -19,6 +19,7 @@ import type {
   RankedMigration,
   DashboardInitResponse,
 } from "./types";
+import { SignalSource } from "./types";
 
 // ============================================
 // DEVPRINT API TYPES
@@ -291,9 +292,90 @@ function mapDevprintConfig(config: DevprintTradingConfig): TradingConfig {
     maxDailyLossSol: 1.0, // Default
     maxDailyTrades: 10, // Default
     maxSlippageBps: 500, // Default
+
+    // Wallet signal settings (defaults)
+    walletSignalSizeMultiplier: 0.5, // 2x less for wallet signals
+    reAnalyzeOnWalletSignal: true,   // Re-analyze tokens when tracked wallet buys
+
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+}
+
+// ============================================
+// POSITION SIZING HELPERS
+// ============================================
+
+/**
+ * Calculate position size based on signal source
+ * Wallet signals use a smaller position size (default: 0.5x = 2x less)
+ */
+export function calculatePositionSize(
+  baseSize: number,
+  signalSource: SignalSource | undefined,
+  config: TradingConfig | null
+): number {
+  if (!signalSource || signalSource === SignalSource.MIGRATION) {
+    // Full size for migrations and DEX signals
+    return baseSize;
+  }
+
+  if (signalSource === SignalSource.TRACKED_WALLET) {
+    // Apply wallet signal multiplier (default 0.5 = half size)
+    const multiplier = config?.walletSignalSizeMultiplier ?? 0.5;
+    return baseSize * multiplier;
+  }
+
+  // Default: full size for other signal types
+  return baseSize;
+}
+
+/**
+ * Get display info for signal source
+ */
+export function getSignalSourceInfo(source: SignalSource | undefined): {
+  label: string;
+  sizeNote: string;
+  color: string;
+} {
+  switch (source) {
+    case SignalSource.TRACKED_WALLET:
+      return {
+        label: "Wallet Signal",
+        sizeNote: "0.5x position size",
+        color: "purple",
+      };
+    case SignalSource.MIGRATION:
+      return {
+        label: "Migration",
+        sizeNote: "Full position size",
+        color: "cyan",
+      };
+    case SignalSource.DEX_ACTIVITY:
+      return {
+        label: "DEX Activity",
+        sizeNote: "Full position size",
+        color: "blue",
+      };
+    case SignalSource.PRICE_MOMENTUM:
+      return {
+        label: "Price Momentum",
+        sizeNote: "Full position size",
+        color: "green",
+      };
+    case SignalSource.MANUAL:
+      return {
+        label: "Manual",
+        sizeNote: "Full position size",
+        color: "gray",
+      };
+    default:
+      return {
+        label: "Unknown",
+        sizeNote: "Full position size",
+        color: "gray",
+      };
+  }
 }
 
 /** Map devprint holding to Position */

@@ -29,6 +29,7 @@ import type {
   HoldingsSnapshotData,
   HoldingData,
 } from "../types";
+import { SignalSource } from "../types";
 
 // ============================================
 // Activity Feed Types
@@ -260,9 +261,6 @@ export function SmartTradingProvider({
   migrationLimit = 20,
   maxActivityItems = 50,
 }: SmartTradingProviderProps) {
-  // Provider rendering
-  console.log("[SmartTradingProvider] 🎬 Component rendering - enabled:", enabled);
-
   // WebSocket connection (shared singleton)
   const {
     status: connectionStatus,
@@ -272,13 +270,6 @@ export function SmartTradingProvider({
   } = useSharedWebSocket({
     autoConnect: enabled,
     path: "/ws/trading/reasoning",
-  });
-
-  console.log("[SmartTrading] WebSocket initialized:", {
-    connectionStatus,
-    clientId,
-    hasOn: typeof on === 'function',
-    hasConnect: typeof connect === 'function'
   });
 
   // State
@@ -560,36 +551,72 @@ export function SmartTradingProvider({
       )
     );
 
-    // Wallet signal received - surgical update (Legacy)
+    // Wallet signal received - surgical update + RE-REASONING TRIGGER
     unsubscribes.push(
       on<{ tokenMint: string; walletAddress: string; walletLabel?: string; action: string; amountSol?: number }>(
         "wallet_signal",
         (data, event) => {
           addActivity(event);
 
-          setState((prev) => ({
-            ...prev,
-            rankedMigrations: prev.rankedMigrations.map((rm) => {
-              if (rm.tokenMint === data.tokenMint) {
-                return {
-                  ...rm,
-                  walletSignalCount: rm.walletSignalCount + 1,
-                  walletSignals: [
-                    {
-                      walletAddress: data.walletAddress,
-                      walletLabel: data.walletLabel,
-                      action: data.action as "BUY" | "SELL",
-                      amountSol: data.amountSol,
-                      timestamp: new Date().toISOString(),
-                    },
-                    ...rm.walletSignals.slice(0, 9),
-                  ],
-                  lastWalletSignalAt: new Date().toISOString(),
-                };
-              }
-              return rm;
-            }),
-          }));
+          // Check if this token was previously analyzed with PASS - might need to re-analyze
+          setState((prev) => {
+            const existingMigration = prev.rankedMigrations.find(rm => rm.tokenMint === data.tokenMint);
+            const previousDecision = existingMigration?.lastAiDecision;
+            const shouldReAnalyze = prev.config?.reAnalyzeOnWalletSignal !== false; // Default true
+
+            // 🧠 RE-REASONING TRIGGER: If we previously PASSed on this token
+            // but now a tracked wallet is buying, reconsider the decision
+            if (previousDecision === "PASS" && shouldReAnalyze && data.action === "BUY") {
+              console.log(
+                `[SmartTrading] 🔄 Re-analyzing ${existingMigration?.tokenSymbol || data.tokenMint} - tracked wallet ${data.walletLabel || data.walletAddress.slice(0, 8)} bought after PASS decision`
+              );
+
+              // Dispatch to terminal
+              dispatchTerminalEvent("wallet_reanalysis_trigger", {
+                symbol: existingMigration?.tokenSymbol,
+                mint: data.tokenMint,
+                wallet: data.walletLabel || data.walletAddress.slice(0, 8),
+                previousDecision: "PASS",
+                reason: "Tracked wallet confirmation",
+                timestamp: Date.now(),
+              });
+
+              // Trigger new AI analysis (async, don't block state update)
+              smartTradingService.analyzeMigration(data.tokenMint).catch(err => {
+                console.error("[SmartTrading] Failed to re-analyze after wallet signal:", err);
+              });
+            }
+
+            return {
+              ...prev,
+              rankedMigrations: prev.rankedMigrations.map((rm) => {
+                if (rm.tokenMint === data.tokenMint) {
+                  return {
+                    ...rm,
+                    walletSignalCount: rm.walletSignalCount + 1,
+                    walletSignals: [
+                      {
+                        walletAddress: data.walletAddress,
+                        walletLabel: data.walletLabel,
+                        action: data.action as "BUY" | "SELL",
+                        amountSol: data.amountSol,
+                        timestamp: new Date().toISOString(),
+                      },
+                      ...rm.walletSignals.slice(0, 9),
+                    ],
+                    lastWalletSignalAt: new Date().toISOString(),
+                    // Mark that a tracked wallet has confirmed this token
+                    hasWalletConfirmation: data.action === "BUY" ? true : rm.hasWalletConfirmation,
+                    // Update signal source if this was originally from migration
+                    signalSource: rm.signalSource === SignalSource.MIGRATION && data.action === "BUY"
+                      ? SignalSource.TRACKED_WALLET
+                      : rm.signalSource,
+                  };
+                }
+                return rm;
+              }),
+            };
+          });
         }
       )
     );
@@ -1131,14 +1158,6 @@ export function SmartTradingProvider({
       clearActivityFeed,
     ]
   );
-
-  console.log("[SmartTrading] 🔷 Provider rendering with state:", {
-    hasPositions: state.positions.length,
-    hasDashboardStats: !!state.dashboardStats,
-    isLoading: state.isLoading,
-    error: state.error,
-    lastUpdated: state.lastUpdated
-  });
 
   return (
     <SmartTradingContext.Provider value={value}>

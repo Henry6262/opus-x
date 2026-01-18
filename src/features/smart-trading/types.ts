@@ -1,5 +1,17 @@
 // Smart Money Trading Types - Matches ponzinomics-api responses
 
+// ============================================
+// SIGNAL SOURCE - Tracks where signals originate
+// ============================================
+
+export enum SignalSource {
+  MIGRATION = "migration",           // New token migration detected
+  TRACKED_WALLET = "tracked_wallet", // One of our tracked wallets bought
+  DEX_ACTIVITY = "dex",              // General DEX activity
+  PRICE_MOMENTUM = "price_momentum", // Price spike/momentum signal
+  MANUAL = "manual",                 // Manually tracked by user
+}
+
 // Price history point for sparkline charts
 export interface PriceHistoryPoint {
   timestamp: string;
@@ -116,6 +128,11 @@ export interface TradingConfig {
   wallet_address?: string;    // Trading wallet public key
   trading_mode?: 'paper' | 'real'; // Current trading mode
   sol_balance?: number;       // SOL balance (real mode only)
+
+  // Wallet signal settings
+  walletSignalSizeMultiplier?: number; // Position size multiplier for wallet signals (default: 0.5 = 2x less)
+  reAnalyzeOnWalletSignal?: boolean;   // Whether to re-analyze when tracked wallet enters a token
+
   createdAt?: string;
   updatedAt?: string;
 }
@@ -213,6 +230,10 @@ export interface Migration {
   migrationTxSig: string | null;
   expiresAt: string | null;
   priorityScore: number;
+
+  // Signal source tracking
+  signalSource?: SignalSource;           // How this token was discovered
+  hasWalletConfirmation?: boolean;       // True if a tracked wallet also bought this
 
   // Market data
   lastPriceUsd: number | null;
