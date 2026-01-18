@@ -94,7 +94,7 @@ export function WatchlistPanel() {
                 ...t,
                 check_count: data.check_count,
                 last_check_at: new Date(data.timestamp).toISOString(),
-                metrics: { ...t.metrics, liquidity_usd: data.liquidity_usd, volume_24h_usd: data.volume_24h_usd, holder_count: data.holder_count },
+                metrics: { ...t.metrics, market_cap_usd: data.market_cap_usd, volume_24h_usd: data.volume_24h_usd, holder_count: data.holder_count },
                 last_result: { ...t.last_result, improving: data.improving, failed_checks: data.failed_checks },
               }
             : t

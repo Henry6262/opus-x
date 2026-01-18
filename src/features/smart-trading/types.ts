@@ -457,7 +457,7 @@ export interface WatchlistUpdatedEvent {
   symbol: string;
   check_count: number;
   improving: boolean;
-  liquidity_usd: number;
+  market_cap_usd: number;
   volume_24h_usd: number;
   holder_count: number;
   failed_checks: string[];
