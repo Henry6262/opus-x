@@ -240,10 +240,9 @@ function TransactionCard({ tx }: TransactionCardProps) {
     const solAmount = isBuy ? tx.sol_amount : tx.sol_received;
     const tokenAmount = isBuy ? tx.tokens_received : tx.tokens_sold;
 
-    // Calculate P&L if we have current price
-    const pnlPercent = tx.current_price && tx.price > 0
-        ? ((tx.current_price / tx.price - 1) * 100)
-        : null;
+    // Don't show P&L on individual transactions - it's misleading without entry price context
+    // Proper P&L is shown in the TransactionDrawer at position level
+    const pnlPercent = null;
 
     const openSolscan = () => {
         window.open(`https://solscan.io/tx/${tx.signature}`, '_blank');
@@ -337,17 +336,7 @@ function TransactionCard({ tx }: TransactionCardProps) {
                         {formatTimeAgo(tx.timestamp)}
                     </span>
 
-                    {/* P&L indicator */}
-                    {pnlPercent !== null && (
-                        <span className={`flex items-center gap-0.5 text-xs font-mono tabular-nums font-medium ${pnlPercent >= 0 ? "text-green-400" : "text-red-400"}`}>
-                            {pnlPercent >= 0 ? (
-                                <TrendingUp className="w-3.5 h-3.5" />
-                            ) : (
-                                <TrendingDown className="w-3.5 h-3.5" />
-                            )}
-                            {pnlPercent >= 0 ? "+" : ""}{pnlPercent.toFixed(0)}%
-                        </span>
-                    )}
+                    {/* P&L indicator removed - misleading without full position context */}
 
                     {/* Tx link */}
                     <a

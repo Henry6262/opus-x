@@ -355,6 +355,11 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     fetchedTransactions.length > 0 ? fetchedTransactions : mapHistoryToTransactions;
 
   const isProfitable = pnlPercent >= 0;
+
+  // Generate mock chart data only once per timeFilter change (not on every isProfitable change)
+  // This prevents the chart from constantly re-rendering during initial data loading
+  const mockChartDataRef = useRef<{ filter: TimeFilter; data: { time: string; value: number }[] } | null>(null);
+
   const chartData = useMemo(() => {
     if (chartHistory && chartHistory.length > 0) {
       let filteredHistory = chartHistory;
@@ -376,8 +381,17 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
         }));
       }
     }
-    return generateChartData(timeFilter, isProfitable);
-  }, [timeFilter, isProfitable, chartHistory]);
+
+    // Use cached mock data if timeFilter hasn't changed (prevents re-randomizing on every render)
+    if (mockChartDataRef.current && mockChartDataRef.current.filter === timeFilter) {
+      return mockChartDataRef.current.data;
+    }
+
+    // Generate new mock data only when timeFilter changes
+    const newMockData = generateChartData(timeFilter, isProfitable);
+    mockChartDataRef.current = { filter: timeFilter, data: newMockData };
+    return newMockData;
+  }, [timeFilter, chartHistory]); // Removed isProfitable from deps - color is handled separately
 
   const chartConfig: ChartConfig = {
     value: {
@@ -464,10 +478,10 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                 <Image
                   src="/assets/wallet.png"
                   alt="Wallet"
-                  width={16}
-                  height={16}
+                  width={20}
+                  height={20}
                 />
-                <span>VIBR WALLET</span>
+                <span className="text-base font-bold tracking-wide">SUPER ROUTER WALLET</span>
               </div>
               <button
                 onClick={() => setIsExpanded(false)}
@@ -510,7 +524,7 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                 <div className="portfolio-wallet-total">
                   <div className="portfolio-wallet-total-value">
                     <span className="tabular-nums">{formatSolValue(totalValue)}</span>
-                    <Image src="/sol.svg" alt="SOL" width={24} height={24} className="inline-block ml-2" />
+                    <Image src="/logos/solana.png" alt="SOL" width={24} height={24} className="inline-block ml-2" />
                   </div>
                   <div className={`portfolio-wallet-total-pnl ${isProfitable ? "positive" : "negative"}`}>
                     {isProfitable ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}

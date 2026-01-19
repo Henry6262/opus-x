@@ -341,7 +341,7 @@ export function TransactionDrawer({
         }
     }, [tokenMint]);
 
-    // Fetch transactions when drawer opens
+    // Fetch transactions when drawer opens - use history API for proper exit types
     const fetchTransactions = useCallback(async () => {
         if (!tokenMint && !positionId) {
             setError("No position data available");
@@ -355,65 +355,77 @@ export function TransactionDrawer({
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            const params = new URLSearchParams();
-            if (positionId) params.set("position_id", positionId);
-            if (tokenMint) params.set("mint", tokenMint);
-            params.set("limit", "50");
-
-            const url = buildDevprntApiUrl(`/api/trading/transactions?${params.toString()}`);
+            // Fetch from history endpoint which has close_reason and proper exit types
+            const url = buildDevprntApiUrl("/api/trading/history?limit=200");
             const response = await fetch(url.toString(), { signal: controller.signal });
             clearTimeout(timeoutId);
 
             if (!response.ok) {
-                throw new Error(`Failed to fetch transactions (${response.status})`);
+                throw new Error(`Failed to fetch history (${response.status})`);
             }
 
             const result = await response.json();
             if (result?.success === false) {
-                throw new Error(result.error || "Failed to load transactions");
+                throw new Error(result.error || "Failed to load history");
             }
 
-            // Handle paginated response structure: { items: [], has_more, total }
-            // or direct array response
-            let rawTransactions: any[] = [];
-            if (result?.data?.items && Array.isArray(result.data.items)) {
-                rawTransactions = result.data.items;
-            } else if (Array.isArray(result?.data)) {
-                rawTransactions = result.data;
-            } else if (Array.isArray(result)) {
-                rawTransactions = result;
+            const historyItems = result?.data || [];
+
+            // Find the position by mint or positionId
+            const position = historyItems.find((item: any) =>
+                (tokenMint && item.mint === tokenMint) ||
+                (positionId && item.id === positionId)
+            );
+
+            if (!position) {
+                setTransactions([]);
+                return;
             }
 
-            // Filter by mint since backend doesn't support mint filter
-            if (tokenMint) {
-                rawTransactions = rawTransactions.filter((tx: any) => tx.mint === tokenMint);
-            }
+            const mappedTransactions: Transaction[] = [];
 
-            const mappedTransactions: Transaction[] = rawTransactions.map((tx: any) => {
-                const isBuy = tx.tx_type === "buy";
-                let type: Transaction["type"] = "unknown";
-                if (isBuy) {
-                    type = "entry";
-                } else if (tx.tx_type === "sell") {
-                    type = "tp1";
-                }
-
-                // Properly distinguish buy vs sell fields
-                // For BUY: sol_amount = SOL spent, tokens_received = tokens bought
-                // For SELL: sol_received = SOL received, tokens_sold = tokens sold
-                const solAmount = isBuy ? (tx.sol_amount ?? 0) : (tx.sol_received ?? 0);
-                const tokenAmount = isBuy ? (tx.tokens_received ?? 0) : (tx.tokens_sold ?? 0);
-
-                return {
-                    signature: tx.signature,
-                    type,
-                    timestamp: new Date(tx.timestamp).getTime(),
-                    solAmount,
-                    tokenAmount,
-                    priceUsd: tx.price || 0,
+            // Add entry transaction (buy)
+            if (position.buy_signature) {
+                mappedTransactions.push({
+                    signature: position.buy_signature,
+                    type: "entry",
+                    timestamp: new Date(position.entry_time).getTime(),
+                    solAmount: position.entry_sol_value || 0,
+                    tokenAmount: position.initial_quantity || 0,
+                    priceUsd: position.entry_price || 0,
                     status: "confirmed",
-                };
-            });
+                });
+            }
+
+            // Add sell transactions with proper exit types based on close_reason
+            if (position.sell_transactions && Array.isArray(position.sell_transactions)) {
+                position.sell_transactions.forEach((sell: any) => {
+                    let exitType: Transaction["type"] = "manual_sell";
+
+                    // Map close_reason to exit type
+                    if (position.close_reason) {
+                        if (position.close_reason.includes("take_profit") || position.close_reason.includes("tp")) {
+                            // Extract TP level from close_reason (e.g., "take_profit_1.3x" -> "tp1")
+                            if (position.close_reason.includes("1.")) exitType = "tp1";
+                            else if (position.close_reason.includes("2.")) exitType = "tp2";
+                            else if (position.close_reason.includes("3.")) exitType = "tp3";
+                            else exitType = "tp1"; // default to tp1 for take_profit
+                        } else if (position.close_reason.includes("stop_loss") || position.close_reason.includes("sl")) {
+                            exitType = "stop_loss";
+                        }
+                    }
+
+                    mappedTransactions.push({
+                        signature: sell.signature,
+                        type: exitType,
+                        timestamp: new Date(sell.timestamp).getTime(),
+                        solAmount: sell.sol_received || 0,
+                        tokenAmount: sell.quantity || 0,
+                        priceUsd: sell.price || 0,
+                        status: "confirmed",
+                    });
+                });
+            }
 
             mappedTransactions.sort((a, b) => b.timestamp - a.timestamp);
             setTransactions(mappedTransactions);
