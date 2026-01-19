@@ -105,7 +105,7 @@ export function WatchlistCard({ token }: WatchlistCardProps) {
       {/* Right: Metrics stacked - right aligned */}
       <div className="ml-auto text-xs space-y-1 text-right">
         <div className="flex items-center justify-end gap-1.5">
-          <span className="text-white/40">MCap</span>
+          <span className="text-white/40">MC</span>
           <span className="text-white/70 font-mono">{formatCurrency(token.metrics.market_cap_usd)}</span>
         </div>
         <div className="flex items-center justify-end gap-1.5">

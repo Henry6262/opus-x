@@ -100,6 +100,10 @@ export function TraderProfileCard({
     walletAddress && walletAddress.length > 8
       ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
       : walletAddress;
+  const mobileShortWallet =
+    walletAddress && walletAddress.length > 4
+      ? `...${walletAddress.slice(-4)}`
+      : walletAddress;
 
   const isHotStreak = streak.current >= 3 && streak.type === "win";
 
@@ -154,8 +158,58 @@ export function TraderProfileCard({
   return (
     <div className="relative pt-20 md:pt-12 pb-16 overflow-hidden md:overflow-visible">
 
+      {/* Wallet & Twitter - Positioned above pill using absolute */}
+      <motion.div
+        className="absolute top-[52px] md:top-[20px] left-28 md:left-52 flex items-center gap-3 md:gap-4 h-5 z-[25]"
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.3 }}
+      >
+        {/* Wallet address */}
+        <div className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono text-white/60 min-w-[60px] md:min-w-[100px] cursor-pointer hover:text-white/80 transition-colors"
+          onClick={() => walletAddress !== "N/A" && navigator.clipboard.writeText(walletAddress)}
+        >
+          <Wallet className="w-3 h-3 md:w-4 md:h-4 text-white/50" />
+          {config === null ? (
+            <Skeleton className="h-3 w-16" />
+          ) : (
+            <>
+              <span className="hidden md:inline">{shortWallet}</span>
+              <span className="md:hidden">{mobileShortWallet}</span>
+              {walletAddress !== "N/A" && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(walletAddress);
+                  }}
+                  className="text-white/40 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Copy wallet address"
+                  type="button"
+                >
+                  <Copy className="w-3 h-3 md:w-4 md:h-4" />
+                </button>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Divider */}
+        <span className="text-white/20">•</span>
+
+        {/* X/Twitter Handle */}
+        <a
+          href="https://x.com/SuperRouterSol"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono text-white/60 hover:text-white transition-colors"
+        >
+          <XIcon className="w-3 h-3 md:w-4 md:h-4 text-white/50" />
+          <span>@SuperRouterSol</span>
+        </a>
+      </motion.div>
+
       {/* Main pill container */}
-      <div className="relative rounded-full bg-black/50 backdrop-blur-xl border-[3px] border-[#c4f70e]/30 h-16 md:h-28 ml-16 md:ml-20 mr-2 md:mr-4 max-w-[1100px] mx-auto overflow-visible flex items-center shadow-[0_0_20px_rgba(196,247,14,0.1)] animate-[profile-ambient-breathing_3s_ease-in-out_infinite] mt-4 md:mt-6 z-[20]">
+      <div className="relative rounded-full bg-black/50 backdrop-blur-xl border-[3px] border-[#c4f70e]/30 h-16 md:h-28 ml-16 md:ml-20 mr-2 md:mr-4 max-w-[1100px] mx-auto overflow-visible flex items-center shadow-[0_0_20px_rgba(196,247,14,0.1)] animate-[profile-ambient-breathing_3s_ease-in-out_infinite] z-[20]">
           {/* Subtle glow effects */}
           <div className="absolute -top-20 right-1/4 w-48 h-48 bg-[#c4f70e]/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -250,77 +304,6 @@ export function TraderProfileCard({
           </div>
         </div>
       </div>
-
-      {/* Wallet & Twitter - Below pill, proper flow layout */}
-      <motion.div
-        className="mt-3 ml-28 md:ml-52 flex items-center gap-3 md:gap-4 h-5"
-        initial={{ opacity: 0, y: 5 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.3 }}
-      >
-        {/* Wallet address */}
-        <div className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono text-white/60 min-w-[100px] cursor-pointer hover:text-white/80 transition-colors"
-          onClick={() => walletAddress !== "N/A" && navigator.clipboard.writeText(walletAddress)}
-        >
-          <Wallet className="w-3 h-3 md:w-4 md:h-4 text-white/50" />
-          {config === null ? (
-            <Skeleton className="h-3 w-16" />
-          ) : (
-            <>
-              <span>{shortWallet}</span>
-              {walletAddress !== "N/A" && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(walletAddress);
-                  }}
-                  className="text-white/40 hover:text-white transition-colors cursor-pointer"
-                  aria-label="Copy wallet address"
-                  type="button"
-                >
-                  <Copy className="w-3 h-3 md:w-4 md:h-4" />
-                </button>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Divider */}
-        <span className="text-white/20">•</span>
-
-        {/* X/Twitter Handle */}
-        <a
-          href="https://x.com/SuperRouterSol"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono text-white/60 hover:text-white transition-colors"
-        >
-          <XIcon className="w-3 h-3 md:w-4 md:h-4 text-white/50" />
-          <span>@SuperRouterSol</span>
-        </a>
-      </motion.div>
-
-      {/* Mobile Metrics Bar - Shows below pill on mobile only */}
-      <motion.div
-        className="md:hidden flex items-center justify-center gap-4 mt-2 ml-16 px-4"
-        initial={{ opacity: 0, y: 5 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6, duration: 0.3 }}
-      >
-        <div className="flex items-center gap-1 text-[10px]">
-          <span className="text-white/40">Today:</span>
-          <span className={dailyPnL >= 0 ? "text-green-400 font-mono tabular-nums" : "text-red-400 font-mono tabular-nums"}>
-            {dailyPnL >= 0 ? "+" : ""}{dailyPnL.toFixed(2)}
-          </span>
-        </div>
-        <div className="flex items-center gap-1 text-[10px]">
-          <span className="text-white/40">Streak:</span>
-          {isHotStreak && <span>🔥</span>}
-          <span className={`font-mono tabular-nums ${streak.type === "win" ? "text-green-400" : "text-red-400"}`}>
-            {streak.current}
-          </span>
-        </div>
-      </motion.div>
 
       {/* Avatar with animated glow rings - offset on mobile to avoid overlapping fixed wallet pill */}
       <motion.div

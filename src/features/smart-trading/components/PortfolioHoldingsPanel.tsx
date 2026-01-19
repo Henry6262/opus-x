@@ -172,11 +172,10 @@ function TokenAvatar({ imageUrl, symbol, mint, size = 48 }: TokenAvatarProps) {
     if (imgError || !finalImageUrl) {
         return (
             <div
-                className="relative flex items-center justify-center rounded-xl font-bold text-white shadow-lg flex-shrink-0"
+                className="relative flex items-center justify-center rounded-xl font-bold text-white shadow-lg flex-shrink-0 bg-zinc-800"
                 style={{
                     width: size,
                     height: size,
-                    background: `linear-gradient(135deg, ${color1}, ${color2})`,
                     fontSize: size * 0.35,
                 }}
             >
@@ -233,8 +232,8 @@ function AnimatedProgressMarketCap({ value, className = "" }: AnimatedProgressMa
     const { num, suffix } = formatValue();
 
     return (
-        <span className={`inline-flex items-center ${className}`}>
-            $<CountUp to={num} duration={0.5} decimals={suffix ? 1 : 0} />{suffix}
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-sm ${className}`}>
+            $<CountUp to={num} duration={0.5} decimals={0} />{suffix}
         </span>
     );
 }
@@ -274,10 +273,11 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
     const showMcapBadge = currentMarketCap !== undefined && currentMarketCap > 0;
 
     return (
-        <div className="mt-1 pt-1 flex items-center gap-2">
-            {/* Progress Track - taller to fit text inside */}
-            <div className="flex-1 relative">
-                <div className="relative h-5 rounded-full bg-white/10 overflow-hidden">
+        <div className="flex items-center gap-2 md:gap-3">
+            {/* Progress Track - thin bar with badge on top */}
+            <div className="flex-1 relative flex items-center">
+                {/* Progress bar - slightly taller on desktop */}
+                <div className="relative h-2 md:h-2.5 w-full rounded-full bg-white/10 overflow-hidden">
                     {/* Progress Fill - Always lime green (progress toward TP target) */}
                     <motion.div
                         className="absolute inset-y-0 left-0 rounded-full"
@@ -288,22 +288,22 @@ function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, 
                         animate={{ width: `${progress * 100}%` }}
                         transition={{ type: "spring", stiffness: 120, damping: 18 }}
                     />
-
-                    {/* Market cap value INSIDE the progress bar */}
-                    {showMcapBadge && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <AnimatedProgressMarketCap
-                                value={currentMarketCap}
-                                className="text-[10px] font-mono font-bold tabular-nums text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
-                            />
-                        </div>
-                    )}
                 </div>
+
+                {/* Market cap badge - centered on top of progress bar */}
+                {showMcapBadge && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <AnimatedProgressMarketCap
+                            value={currentMarketCap}
+                            className="text-[11px] md:text-xs font-mono font-bold tabular-nums text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Target: MCap Goal */}
             <div className="flex items-center gap-1">
-                <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold font-mono tabular-nums ${isCloseToGoal ? "bg-[#c4f70e]/20 text-[#c4f70e]" : "bg-white/10 text-white/70"}`}>
+                <span className={`px-2.5 py-0.5 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-bold font-mono tabular-nums ${isCloseToGoal ? "bg-[#c4f70e]/20 text-[#c4f70e]" : "bg-black/40 text-white/70"}`}>
                     {targetMarketCap !== undefined && targetMarketCap > 0
                         ? formatMarketCap(targetMarketCap)
                         : `${goal.toFixed(1)}x`
@@ -446,7 +446,7 @@ function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ delay: index * 0.05, type: "spring", stiffness: 200, damping: 20 }}
-            className="relative px-5 py-3 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden hover:border-[#c4f70e]/30 transition-all group cursor-pointer"
+            className="relative px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden hover:border-[#c4f70e]/30 transition-all group cursor-pointer"
             onClick={onClick}
             role="button"
             tabIndex={0}
@@ -458,130 +458,156 @@ function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
             </div>
 
             {/* Main Layout: Image Left | Content Right */}
-            <div className="flex gap-3 items-stretch">
-                {/* LEFT: Token Avatar - fills full height */}
+            <div className="flex gap-2 md:gap-3 items-stretch">
+                {/* LEFT: Token Avatar - smaller on mobile */}
                 <div className="flex-shrink-0 flex items-center">
-                    <TokenAvatar
-                        imageUrl={holding.image_url}
-                        symbol={holding.symbol}
-                        mint={holding.mint}
-                        size={64}
-                    />
+                    <div className="hidden md:block">
+                        <TokenAvatar
+                            imageUrl={holding.image_url}
+                            symbol={holding.symbol}
+                            mint={holding.mint}
+                            size={64}
+                        />
+                    </div>
+                    <div className="md:hidden">
+                        <TokenAvatar
+                            imageUrl={holding.image_url}
+                            symbol={holding.symbol}
+                            mint={holding.mint}
+                            size={44}
+                        />
+                    </div>
                 </div>
 
                 {/* RIGHT: All Content */}
                 <div className="flex-1 min-w-0">
                     {/* Row 1: Token Info + PnL */}
                     <div className="flex items-start justify-between mb-1">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="font-bold text-white text-base">{holding.symbol}</span>
-                                {/* Entry time badge */}
-                                {holding.entry_time && (
-                                    <span className="flex items-center gap-0.5 text-[10px] text-white/40">
-                                        <Clock className="w-2.5 h-2.5" />
-                                        {formatRelativeTime(holding.entry_time)}
-                                    </span>
-                                )}
+                        {/* Token name, time, copy button */}
+                        <div className="flex items-center gap-1.5 md:gap-2">
+                            <span className="font-bold text-white text-sm md:text-base">{holding.symbol}</span>
+                            {/* Entry time badge */}
+                            {holding.entry_time && (
+                                <span className="flex items-center gap-0.5 text-[10px] text-white/40">
+                                    <Clock className="w-2.5 h-2.5" />
+                                    {formatRelativeTime(holding.entry_time)}
+                                </span>
+                            )}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(holding.mint);
+                                }}
+                                className="p-0.5 md:p-1 rounded hover:bg-white/10 transition-colors"
+                                title="Copy Contract Address"
+                            >
+                                <Copy className="w-3 h-3 md:w-3.5 md:h-3.5 text-white/40 hover:text-white/70" />
+                            </button>
+                            {/* AI Reasoning button */}
+                            {holding.buy_criteria && (
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        navigator.clipboard.writeText(holding.mint);
+                                        onAiClick?.();
                                     }}
-                                    className="p-1 rounded hover:bg-white/10 transition-colors"
-                                    title="Copy Contract Address"
+                                    className="p-0.5 md:p-1 rounded hover:bg-[#c4f70e]/20 transition-colors"
+                                    title="View AI Reasoning"
                                 >
-                                    <Copy className="w-3.5 h-3.5 text-white/40 hover:text-white/70" />
+                                    <Brain className="w-3 h-3 md:w-3.5 md:h-3.5 text-[#c4f70e]/60 hover:text-[#c4f70e]" />
                                 </button>
-                                {/* AI Reasoning button */}
-                                {holding.buy_criteria && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onAiClick?.();
-                                        }}
-                                        className="p-1 rounded hover:bg-[#c4f70e]/20 transition-colors"
-                                        title="View AI Reasoning"
-                                    >
-                                        <Brain className="w-3.5 h-3.5 text-[#c4f70e]/60 hover:text-[#c4f70e]" />
-                                    </button>
-                                )}
-                            </div>
-                            {/* Entry SOL + PnL + Stats row */}
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                {/* Entry Amount (SOL invested) */}
-                                <div className="flex items-center gap-1 text-white/80">
-                                    <span className="font-mono font-semibold tabular-nums text-sm">
-                                        {holding.entry_sol_value?.toFixed(2) ?? "0.00"}
-                                    </span>
-                                    <Image
-                                        src="/logos/solana.png"
-                                        alt="SOL"
-                                        width={14}
-                                        height={14}
-                                        className="opacity-70"
-                                    />
-                                </div>
-                                {/* Unrealized PnL */}
-                                {pnlSol !== null && pnlSol !== 0 && (
-                                    <span className={`font-mono tabular-nums text-xs ${pnlSol >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                        {pnlSol >= 0 ? "+" : ""}{pnlSol.toFixed(3)}
-                                    </span>
-                                )}
-                                {/* Realized PnL badge (from partial sells) */}
-                                {hasRealizedPnl && (
-                                    <span className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded ${holding.realized_pnl_sol! >= 0 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
-                                        <ArrowUpRight className="w-2.5 h-2.5" />
-                                        {holding.realized_pnl_sol! >= 0 ? "+" : ""}{holding.realized_pnl_sol!.toFixed(3)} realized
-                                    </span>
-                                )}
-                                {/* Quantity remaining badge (if partial sells) */}
-                                {hasPartialSells && (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/50">
-                                        {quantityRemaining}% left
-                                    </span>
-                                )}
-                            </div>
+                            )}
                         </div>
 
-                        {/* PnL Section (right side) */}
-                        <div className="flex flex-col items-end">
+                        {/* PnL Percentage Section (right side) */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
                             {/* PnL Percentage - Animated with flash on change */}
-                            {pnlPct !== null ? (
-                                <motion.div
-                                    className={`text-2xl font-bold font-mono tabular-nums ${pnlPct >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}
-                                    style={{
-                                        textShadow: pnlPct >= 0
-                                            ? "0 0 10px rgba(196,247,14,0.4)"
-                                            : "0 0 10px rgba(239,68,68,0.4)",
-                                    }}
-                                >
-                                    <AnimatedPercent value={pnlPct} />
-                                </motion.div>
-                            ) : (
-                                <div className="text-xl font-bold font-mono tabular-nums text-white/40">
-                                    —
-                                </div>
-                            )}
-                            {/* Peak PnL indicator (shows missed opportunity) */}
-                            {hasPeakData && (
-                                <div className="flex items-center gap-0.5 text-[10px] text-amber-400/70">
-                                    <TrendingUp className="w-2.5 h-2.5" />
-                                    <span className="font-mono">peak +{Math.round(holding.peak_pnl_pct)}%</span>
-                                </div>
-                            )}
+                            <div className="flex flex-col items-end">
+                                {pnlPct !== null ? (
+                                    <motion.div
+                                        className={`text-lg md:text-2xl font-bold font-mono tabular-nums ${pnlPct >= 0 ? "text-[#c4f70e]" : "text-red-400"}`}
+                                        style={{
+                                            textShadow: pnlPct >= 0
+                                                ? "0 0 10px rgba(196,247,14,0.4)"
+                                                : "0 0 10px rgba(239,68,68,0.4)",
+                                        }}
+                                    >
+                                        <AnimatedPercent value={pnlPct} />
+                                    </motion.div>
+                                ) : (
+                                    <div className="text-base md:text-xl font-bold font-mono tabular-nums text-white/40">
+                                        —
+                                    </div>
+                                )}
+                                {/* Peak PnL indicator (shows missed opportunity) - hidden on mobile */}
+                                {hasPeakData && (
+                                    <div className="hidden md:flex items-center gap-0.5 text-[10px] text-amber-400/70">
+                                        <TrendingUp className="w-2.5 h-2.5" />
+                                        <span className="font-mono">peak +{Math.round(holding.peak_pnl_pct)}%</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Progress Bar - Show market cap progress (with or without entry price) */}
-                    {showProgressBar && (
-                        <ProgressBar
-                            currentMultiplier={displayMultiplier}
-                            goalMultiplier={displayGoal}
-                            currentMarketCap={currentMarketCap}
-                            entryMarketCap={entryMarketCap}
-                        />
-                    )}
+                    {/* Row 2: Entry SOL + Progress Bar (full width) */}
+                    <div className="flex items-center gap-4 md:gap-6 mt-1">
+                        {/* Entry Amount (SOL invested) + Unrealized PnL attached */}
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <div className="flex items-center gap-1 text-white">
+                                <span className="font-mono font-bold tabular-nums text-sm md:text-base">
+                                    {holding.entry_sol_value?.toFixed(2) ?? "0.00"}
+                                </span>
+                                <Image
+                                    src="/logos/solana.png"
+                                    alt="SOL"
+                                    width={14}
+                                    height={14}
+                                    className="opacity-80 md:w-[16px] md:h-[16px]"
+                                />
+                            </div>
+                            {/* Unrealized PnL - only show if >= 0.1 SOL */}
+                            {pnlSol !== null && Math.abs(pnlSol) >= 0.1 && (
+                                <span className={`font-mono tabular-nums text-xs md:text-sm flex-shrink-0 ${pnlSol >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                    ({pnlSol >= 0 ? "+" : ""}{pnlSol.toFixed(1)})
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Separator */}
+                        <div className="w-px h-4 bg-white/20 flex-shrink-0" />
+
+                        {/* Progress Bar - fills remaining space */}
+                        {showProgressBar && (
+                            <div className="flex-1 min-w-0">
+                                <ProgressBar
+                                    currentMultiplier={displayMultiplier}
+                                    goalMultiplier={displayGoal}
+                                    currentMarketCap={currentMarketCap}
+                                    entryMarketCap={entryMarketCap}
+                                />
+                            </div>
+                        )}
+
+                        {/* Realized PnL badge (from partial sells) - hidden on mobile */}
+                        {hasRealizedPnl && (
+                            <>
+                                <div className="hidden md:block w-px h-4 bg-white/20 flex-shrink-0" />
+                                <span className={`hidden md:flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${holding.realized_pnl_sol! >= 0 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                                    <ArrowUpRight className="w-2.5 h-2.5" />
+                                    {holding.realized_pnl_sol! >= 0 ? "+" : ""}{holding.realized_pnl_sol!.toFixed(3)} realized
+                                </span>
+                            </>
+                        )}
+                        {/* Quantity remaining badge (if partial sells) - hidden on mobile */}
+                        {hasPartialSells && (
+                            <>
+                                <div className="hidden md:block w-px h-4 bg-white/20 flex-shrink-0" />
+                                <span className="hidden md:inline text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/50 flex-shrink-0">
+                                    {quantityRemaining}% left
+                                </span>
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -828,7 +854,7 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
 
     return (
         <div
-            className="flex flex-col overflow-hidden transition-[height] duration-300 ease-out"
+            className="flex flex-col overflow-hidden transition-[height] duration-300 ease-out rounded-xl border border-white/10 p-3"
             style={{
                 // On desktop: dynamic height based on items
                 // On mobile: use max-height constraint
@@ -841,8 +867,6 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
                 icon={<Wallet className="w-6 h-6 text-[#c4f70e]" />}
                 title="Portfolio"
                 tooltip="Your active token positions. Click any holding to view transaction history and AI reasoning."
-                count={holdings.length}
-                countColor="lime"
                 rightContent={
                     totalValueSol > 0 ? (
                         <span className="text-white text-[15px] font-semibold">

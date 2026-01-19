@@ -141,20 +141,11 @@ export function WatchlistPanel() {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col rounded-xl border border-white/10 p-3">
       {/* Header */}
       <SectionHeader
-        icon={<Eye className="w-5 h-5 text-yellow-400" />}
+        icon={<Eye className="w-6 h-6 text-[#c4f70e]" />}
         title="Watchlist"
-        tooltip="Tokens being monitored for potential trades. The AI evaluates these until they meet buy criteria or are removed."
-        count={tokens.length}
-        countColor="yellow"
-        rightContent={
-          <div className={`flex items-center gap-1 text-[10px] ${isConnected ? "text-green-400" : "text-red-400"}`}>
-            {isConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-            <span>Live</span>
-          </div>
-        }
       />
 
       {/* Loading */}
@@ -177,7 +168,7 @@ export function WatchlistPanel() {
       {/* Cards */}
       {!isLoading && !error && tokens.length > 0 && (
         <div className="overflow-x-auto pb-2">
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <AnimatePresence mode="popLayout">
               {tokens.map((token) => (
                 <WatchlistCard key={token.mint} token={token} />

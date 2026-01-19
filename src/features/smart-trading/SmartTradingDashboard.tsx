@@ -13,19 +13,19 @@ import { AnalyticsPanel } from "@/components/analytics/AnalyticsPanel";
 
 export function SmartTradingDashboard() {
   return (
-    <div className="space-y-4 -mt-8 px-4 lg:px-8">
+    <div className="space-y-4 -mt-12 px-4 lg:px-8">
       <Tabs defaultValue="trading" className="w-full">
-        <div className="flex justify-center mb-6">
-          <TabsList className="bg-white/[0.03] border border-white/[0.05] rounded-full p-1 gap-1">
+        <div className="flex justify-center mb-4">
+          <TabsList className="w-full md:w-auto bg-white/[0.03] border border-white/[0.05] rounded-full p-1.5 gap-1">
             <TabsTrigger
               value="trading"
-              className="rounded-full px-5 py-1.5 text-[11px] font-medium uppercase tracking-wider text-white/50 transition-all data-[state=active]:text-white data-[state=active]:bg-[var(--brand-primary)]/20 data-[state=active]:shadow-[inset_0_0_12px_rgba(104,172,110,0.3)]"
+              className="flex-1 md:flex-none rounded-full px-8 py-2.5 md:py-2.5 text-sm md:text-base font-semibold uppercase tracking-wider text-white/50 transition-all data-[state=active]:text-white data-[state=active]:py-4 data-[state=active]:md:py-3.5 data-[state=active]:bg-[var(--brand-primary)]/20 data-[state=active]:shadow-[inset_0_0_12px_rgba(104,172,110,0.3)]"
             >
               Trading
             </TabsTrigger>
             <TabsTrigger
               value="analytics"
-              className="rounded-full px-5 py-1.5 text-[11px] font-medium uppercase tracking-wider text-white/50 transition-all data-[state=active]:text-white data-[state=active]:bg-[var(--brand-primary)]/20 data-[state=active]:shadow-[inset_0_0_12px_rgba(104,172,110,0.3)]"
+              className="flex-1 md:flex-none rounded-full px-8 py-2.5 md:py-2.5 text-sm md:text-base font-semibold uppercase tracking-wider text-white/50 transition-all data-[state=active]:text-white data-[state=active]:py-4 data-[state=active]:md:py-3.5 data-[state=active]:bg-[var(--brand-primary)]/20 data-[state=active]:shadow-[inset_0_0_12px_rgba(104,172,110,0.3)]"
             >
               Analytics
             </TabsTrigger>

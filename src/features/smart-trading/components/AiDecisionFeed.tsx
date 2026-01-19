@@ -478,14 +478,13 @@ export function AiDecisionFeed({ maxItems = 50, className = "" }: AiDecisionFeed
     }, [decisions.length]);
 
     return (
-        <div className={`h-full flex flex-col rounded-lg bg-black/80 border border-white/5 overflow-hidden ${className}`}>
+        <div className={`h-full flex flex-col rounded-xl bg-black/80 border border-white/10 overflow-hidden ${className}`}>
             {/* Terminal-style Header */}
-            <div className="flex items-center justify-between px-3 py-2.5 bg-white/[0.02] border-b border-white/5 flex-shrink-0">
+            <div className="flex items-center px-3 py-2.5 bg-white/[0.02] border-b border-white/5 flex-shrink-0">
                 <div className="flex items-center gap-2">
                     <Bot className="w-6 h-6 text-[#c4f70e]" />
                     <span className="text-lg font-semibold text-white">ai.log</span>
                 </div>
-                <LiveIndicator />
             </div>
 
             {/* Decision list - terminal style */}

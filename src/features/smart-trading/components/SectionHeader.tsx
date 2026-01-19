@@ -11,7 +11,7 @@ import {
 interface SectionHeaderProps {
   icon: ReactNode;
   title: string;
-  tooltip: string;
+  tooltip?: string;
   count?: number;
   countColor?: "lime" | "yellow" | "blue" | "white";
   rightContent?: ReactNode;
@@ -38,19 +38,21 @@ export function SectionHeader({
       <div className="flex items-center gap-2">
         {icon}
         <span className="text-base font-semibold text-white">{title}</span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button className="p-0.5 rounded hover:bg-white/10 transition-colors">
-              <Info className="w-3.5 h-3.5 text-white/40 hover:text-white/70" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent
-            side="top"
-            className="max-w-[250px] bg-zinc-900 border border-white/10 text-white/90"
-          >
-            {tooltip}
-          </TooltipContent>
-        </Tooltip>
+        {tooltip && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className="p-0.5 rounded hover:bg-white/10 transition-colors">
+                <Info className="w-3.5 h-3.5 text-white/40 hover:text-white/70" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              className="max-w-[250px] bg-zinc-900 border border-white/10 text-white/90"
+            >
+              {tooltip}
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       {/* Right side: count badge and/or custom content */}

@@ -195,7 +195,7 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
     const itemCount = viewMode === "trades" ? allClosedTrades.length : (txnsTotal || transactions.length);
 
     return (
-        <div className="h-full flex flex-col overflow-hidden max-h-[320px] md:max-h-none">
+        <div className="h-full flex flex-col overflow-hidden max-h-[320px] md:max-h-none rounded-xl border border-white/10 p-3">
             {/* Header with Toggle */}
             <div className="flex items-center justify-between px-1 py-3 mb-3 flex-shrink-0">
                 {/* Left: Icon + Title */}
