@@ -12,7 +12,7 @@ import { Copy, Check } from "lucide-react";
 // ============================================
 
 // Contract Address - Update this with actual CA
-const CONTRACT_ADDRESS = "VibrPump111111111111111111111111111111111";
+const CONTRACT_ADDRESS = "patience";
 const TWITTER_URL = "https://x.com/SuperRouterSol";
 const DEXSCREENER_URL = `https://dexscreener.com/solana/${CONTRACT_ADDRESS}`;
 
