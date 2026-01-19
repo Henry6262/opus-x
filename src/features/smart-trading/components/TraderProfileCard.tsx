@@ -167,30 +167,22 @@ export function TraderProfileCard({
       >
         {/* Wallet address */}
         <div className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono text-white/60 min-w-[60px] md:min-w-[100px] cursor-pointer hover:text-white/80 transition-colors"
-          onClick={() => walletAddress !== "N/A" && navigator.clipboard.writeText(walletAddress)}
+          onClick={() => navigator.clipboard.writeText(walletAddress)}
         >
           <Wallet className="w-3 h-3 md:w-4 md:h-4 text-white/50" />
-          {config === null ? (
-            <Skeleton className="h-3 w-16" />
-          ) : (
-            <>
-              <span className="hidden md:inline">{shortWallet}</span>
-              <span className="md:hidden">{mobileShortWallet}</span>
-              {walletAddress !== "N/A" && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(walletAddress);
-                  }}
-                  className="text-white/40 hover:text-white transition-colors cursor-pointer"
-                  aria-label="Copy wallet address"
-                  type="button"
-                >
-                  <Copy className="w-3 h-3 md:w-4 md:h-4" />
-                </button>
-              )}
-            </>
-          )}
+          <span className="hidden md:inline">{shortWallet}</span>
+          <span className="md:hidden">{mobileShortWallet}</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigator.clipboard.writeText(walletAddress);
+            }}
+            className="text-white/40 hover:text-white transition-colors cursor-pointer"
+            aria-label="Copy wallet address"
+            type="button"
+          >
+            <Copy className="w-3 h-3 md:w-4 md:h-4" />
+          </button>
         </div>
 
         {/* Divider */}
