@@ -432,11 +432,6 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
     // Show progress bar if we have market cap data
     const showProgressBar = currentMarketCap !== undefined && currentMarketCap > 0;
 
-    // Debug: Log when progress bar would be hidden
-    if (!showProgressBar) {
-        console.log(`[HoldingCard] ⚠️ No progress bar for ${holding.symbol}: market_cap=${holding.market_cap}`);
-    }
-
     // Display multiplier or milestone-based progress
     const displayMultiplier = currentMultiplier ?? (currentMarketCap && entryMarketCap
         ? currentMarketCap / entryMarketCap
@@ -617,14 +612,7 @@ interface SelectedHolding {
 const CARD_HEIGHT_PX = 100; // ~88px card + 6px gap
 const HEADER_HEIGHT_PX = 60; // Header section
 
-// Debug: Track render count
-let renderCount = 0;
-
 export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHoldingsPanelProps) {
-    renderCount++;
-    const renderIdRef = useRef(renderCount);
-    console.log(`[PortfolioHoldings] 🔄 RENDER #${renderCount}`);
-
     const [holdings, setHoldings] = useState<OnChainHolding[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -645,14 +633,6 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
     const { config } = useSmartTradingConfig();
     // First TP target (e.g., 100 = 100% gain = 2x multiplier)
     const takeProfitTargetPercent = config?.target1Percent ?? 100;
-
-    // Debug: Log whenever holdings state changes
-    useEffect(() => {
-        console.log("[PortfolioHoldings] 📦 Holdings state updated:", holdings.length, "items");
-        holdings.forEach(h => {
-            console.log(`  - ${h.symbol}: market_cap=${h.market_cap}, status=${h.status}`);
-        });
-    }, [holdings]);
 
     // Handle holding card click - open transaction drawer
     const handleHoldingClick = useCallback((holding: OnChainHolding) => {
@@ -683,43 +663,24 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
     // Fetch initial holdings (one-time from Helius via backend, or direct if available)
     const fetchHoldings = useCallback(async () => {
         // Prevent overlapping fetches
-        if (isFetchingRef.current) {
-            console.log("[PortfolioHoldings] Fetch already in progress, skipping...");
-            return;
-        }
+        if (isFetchingRef.current) return;
 
         isFetchingRef.current = true;
         try {
             setIsLoading(true);
             const url = buildDevprntApiUrl("/api/trading/holdings");
-            console.log("[PortfolioHoldings] 📡 Fetching from:", url.toString());
             const response = await fetch(url.toString());
 
             if (!response.ok) {
-                // If backend is down, try to use cached/mock data
                 throw new Error(`Backend unavailable (${response.status})`);
             }
 
             const result = await response.json();
-            console.log("[PortfolioHoldings] 📦 RAW API Response:", result);
             if (result?.success === false) {
                 throw new Error(result.error || "Failed to load holdings");
             }
 
-            // LOG: Status breakdown BEFORE filtering
             const rawData = (result?.data as OnChainHolding[]) || [];
-            console.log("[PortfolioHoldings] 🔍 BEFORE FILTER - Total positions from API:", rawData.length);
-            const statusBreakdown = rawData.reduce((acc, h) => {
-                acc[h.status] = (acc[h.status] || 0) + 1;
-                return acc;
-            }, {} as Record<string, number>);
-            console.log("[PortfolioHoldings] 📊 Status breakdown:", statusBreakdown);
-            console.log("[PortfolioHoldings] 🎯 Positions by status:", rawData.map(h => ({
-                symbol: h.symbol,
-                status: h.status,
-                qty: h.current_quantity,
-                price: h.current_price,
-            })));
 
             // Filter open AND partially_closed positions (both have quantity) and sort by PnL
             const data: OnChainHolding[] = rawData
@@ -727,43 +688,10 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
             // Sort by unrealized PnL percentage (highest profit first)
             data.sort((a, b) => (b.unrealized_pnl_pct ?? 0) - (a.unrealized_pnl_pct ?? 0));
 
-            console.log("[PortfolioHoldings] ✅ AFTER FILTER - Holdings count:", data.length);
-
-            // LOG: What got filtered out?
-            const filteredOut = rawData.filter((h) =>
-                !((h.status === "open" || h.status === "partially_closed" || h.status === "partiallyclosed") && h.current_quantity > 0)
-            );
-            if (filteredOut.length > 0) {
-                console.log("[PortfolioHoldings] ❌ Filtered out " + filteredOut.length + " positions:");
-                filteredOut.forEach(h => {
-                    const reason = h.current_quantity === 0
-                        ? "quantity = 0"
-                        : `status = ${h.status} (not open/partiallyclosed)`;
-                    console.log(`  - ${h.symbol}: ${reason}`);
-                });
-            }
-            console.log("[PortfolioHoldings] 🔍 Holdings details:", data.map(h => ({
-                symbol: h.symbol,
-                mint: h.mint.slice(0, 8) + "...",
-                current_quantity: h.current_quantity,
-                current_price: h.current_price,
-                entry_price: h.entry_price,
-                unrealized_pnl_pct: h.unrealized_pnl_pct,
-                market_cap: h.market_cap,
-                liquidity: h.liquidity,
-                status: h.status,
-            })));
-            // Debug: specifically log market_cap for each holding
-            console.log("[PortfolioHoldings] 📈 Market cap from API:", data.map(h => `${h.symbol}: ${h.market_cap}`).join(", "));
-
-            console.log("[PortfolioHoldings] 📝 Setting holdings from API:", data.length, "items");
-            console.log("[PortfolioHoldings] 📊 Holdings with market_cap:", data.filter(h => h.market_cap && h.market_cap > 0).length);
-
             // Cache market_cap values from API - these are the source of truth
             data.forEach(h => {
                 if (h.market_cap && h.market_cap > 0) {
                     marketCapCacheRef.current.set(h.mint, h.market_cap);
-                    console.log(`[PortfolioHoldings] 💾 Cached market_cap for ${h.symbol}: ${h.market_cap}`);
                 }
             });
 
@@ -780,30 +708,22 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
     }, []);
 
     // Fetch holdings on mount only - WebSocket provides real-time price updates
-    // No polling needed since price_update events come via trading WebSocket
     useEffect(() => {
         // Prevent double fetch in React StrictMode or multiple mounts
-        if (hasFetchedRef.current) {
-            console.log("[PortfolioHoldings] ⏭️ Skipping fetch - already fetched");
-            return;
-        }
+        if (hasFetchedRef.current) return;
         hasFetchedRef.current = true;
-        console.log("[PortfolioHoldings] 🚀 Initial fetch triggered");
         fetchHoldings();
     }, [fetchHoldings]);
 
     // Listen for position opened/closed events to refresh holdings list
     useEffect(() => {
         const unsubPositionOpened = onTradingEvent("position_opened", () => {
-            console.log("[PortfolioHoldings] Position opened - refreshing holdings");
             fetchHoldings();
         });
         const unsubPositionClosed = onTradingEvent("position_closed", () => {
-            console.log("[PortfolioHoldings] Position closed - refreshing holdings");
             fetchHoldings();
         });
         const unsubTakeProfit = onTradingEvent("take_profit_triggered", () => {
-            console.log("[PortfolioHoldings] Take profit triggered - refreshing holdings");
             fetchHoldings();
         });
 
@@ -827,18 +747,7 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
             if (!data?.holdings) return;
 
             // Skip WebSocket updates until API has loaded initial data with market_cap
-            if (!apiLoadedRef.current) {
-                console.log("[PortfolioHoldings] ⏭️ Skipping WS holdings_snapshot - waiting for API to load first");
-                return;
-            }
-
-            console.log("[PortfolioHoldings] 📡 Received holdings_snapshot:", data.holdings.length, "positions");
-            // Debug: Log market_cap values in snapshot
-            console.log("[PortfolioHoldings] 📊 Snapshot market_cap values:", data.holdings.map(h => ({
-                symbol: h.symbol,
-                market_cap: h.market_cap,
-                liquidity: h.liquidity,
-            })));
+            if (!apiLoadedRef.current) return;
 
             // Filter holdings from WebSocket
             const wsHoldings = data.holdings
@@ -860,16 +769,9 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
                 };
             });
 
-            console.log("[PortfolioHoldings] 📊 After applying cache - holdings with market_cap:",
-                wsHoldingsWithCachedMcap.filter(h => h.market_cap && h.market_cap > 0).length,
-                "of", wsHoldingsWithCachedMcap.length);
-
             setHoldings((prevHoldings) => {
-                console.log(`[PortfolioHoldings] 🔄 holdings_snapshot: prev=${prevHoldings.length}, ws=${wsHoldingsWithCachedMcap.length}`);
-
                 // If we have no previous holdings, use WebSocket data (with cached market_cap applied)
                 if (prevHoldings.length === 0) {
-                    console.log("[PortfolioHoldings] 📝 No prev holdings, using WS data with cached market_cap");
                     wsHoldingsWithCachedMcap.sort((a, b) => (b.unrealized_pnl_pct ?? 0) - (a.unrealized_pnl_pct ?? 0));
                     return wsHoldingsWithCachedMcap;
                 }
@@ -907,15 +809,17 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
                     updatedHoldings.sort((a, b) => (b.unrealized_pnl_pct ?? 0) - (a.unrealized_pnl_pct ?? 0));
                 }
 
-                // Log final result
-                console.log("[PortfolioHoldings] 📊 After merge - holdings with market_cap:",
-                    updatedHoldings.filter(h => h.market_cap && h.market_cap > 0).length,
-                    "of", updatedHoldings.length);
+                // Deduplicate by mint address (safety measure)
+                const seenMints = new Set<string>();
+                const deduped = updatedHoldings.filter(h => {
+                    if (seenMints.has(h.mint)) return false;
+                    seenMints.add(h.mint);
+                    return true;
+                });
 
-                return updatedHoldings;
+                return deduped;
             });
 
-            console.log("[PortfolioHoldings] ✅ WebSocket holdings processed:", wsHoldings.length, "from WS");
             setIsLoading(false);
             setError(null);
         });
