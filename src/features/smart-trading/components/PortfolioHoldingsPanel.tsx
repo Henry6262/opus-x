@@ -64,7 +64,7 @@ const ANALYSIS_PHRASES = [
 
 function IdleStateAnimation() {
     return (
-        <div className="relative h-48 overflow-hidden rounded-xl">
+        <div className="relative h-[200px] overflow-hidden rounded-xl">
             {/* GIF as full-width background */}
             <div className="absolute inset-0">
                 <Image
@@ -446,7 +446,6 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
         ? Math.round((holding.current_quantity / holding.initial_quantity) * 100)
         : 100;
     const hasRealizedPnl = (holding.realized_pnl_sol ?? 0) !== 0;
-    const hasPeakData = holding.peak_pnl_pct > 0 && holding.peak_pnl_pct > (pnlPct ?? 0);
 
     return (
         <motion.div
@@ -465,14 +464,6 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 <div className="absolute inset-0 bg-gradient-to-r from-[#c4f70e]/5 to-transparent" />
             </div>
-
-            {/* Peak PnL indicator - absolutely positioned top-right */}
-            {hasPeakData && (
-                <div className="absolute top-2 right-2 flex items-center gap-0.5 text-[10px] text-amber-400/80 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-400/20">
-                    <TrendingUp className="w-2.5 h-2.5" />
-                    <span className="font-mono font-medium">ATH +{Math.round(holding.peak_pnl_pct)}%</span>
-                </div>
-            )}
 
             {/* Main Layout: Image Left | Content Right */}
             <div className="flex gap-2 md:gap-3 items-stretch">
@@ -730,11 +721,11 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
                 price: h.current_price,
             })));
 
-            // Filter open AND partially_closed positions (both have quantity) and sort by value
+            // Filter open AND partially_closed positions (both have quantity) and sort by PnL
             const data: OnChainHolding[] = rawData
                 .filter((h) => (h.status === "open" || h.status === "partially_closed" || h.status === "partiallyclosed") && h.current_quantity > 0);
-            // Sort by current value (quantity * price) descending
-            data.sort((a, b) => (b.current_quantity * b.current_price) - (a.current_quantity * a.current_price));
+            // Sort by unrealized PnL percentage (highest profit first)
+            data.sort((a, b) => (b.unrealized_pnl_pct ?? 0) - (a.unrealized_pnl_pct ?? 0));
 
             console.log("[PortfolioHoldings] ✅ AFTER FILTER - Holdings count:", data.length);
 
@@ -803,6 +794,7 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
     }, [onTradingEvent, fetchHoldings]);
 
     // Listen for holdings_snapshot events from backend WebSocket
+    // Preserve order when same items exist, only re-sort when items change
     useEffect(() => {
         const unsubHoldingsSnapshot = onTradingEvent<{
             holdings: OnChainHolding[];
@@ -815,14 +807,31 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
 
             console.log("[PortfolioHoldings] 📡 Received holdings_snapshot:", data.holdings.length, "positions");
 
-            // Filter and sort holdings (same logic as fetchHoldings)
+            // Filter holdings
             const filteredHoldings = data.holdings
-                .filter((h) => (h.status === "open" || h.status === "partially_closed" || h.status === "partiallyclosed") && h.current_quantity > 0)
-                .sort((a, b) => (b.current_quantity * b.current_price) - (a.current_quantity * a.current_price));
+                .filter((h) => (h.status === "open" || h.status === "partially_closed" || h.status === "partiallyclosed") && h.current_quantity > 0);
+
+            setHoldings((prevHoldings) => {
+                // Check if the set of mints has changed
+                const prevMints = new Set(prevHoldings.map(h => h.mint));
+                const newMints = new Set(filteredHoldings.map(h => h.mint));
+                const sameItems = prevMints.size === newMints.size &&
+                    [...prevMints].every(mint => newMints.has(mint));
+
+                if (sameItems && prevHoldings.length > 0) {
+                    // Same items - preserve order, just update the data
+                    return prevHoldings.map(prevH => {
+                        const updated = filteredHoldings.find(h => h.mint === prevH.mint);
+                        return updated || prevH;
+                    });
+                } else {
+                    // Items changed - sort by PnL percentage (highest first)
+                    filteredHoldings.sort((a, b) => (b.unrealized_pnl_pct ?? 0) - (a.unrealized_pnl_pct ?? 0));
+                    return filteredHoldings;
+                }
+            });
 
             console.log("[PortfolioHoldings] ✅ After filter:", filteredHoldings.length, "holdings");
-
-            setHoldings(filteredHoldings);
             setIsLoading(false);
             setError(null);
         });
@@ -845,10 +854,10 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
 
     // Dynamic height calculation for desktop
     // Height = header + (min(items, maxVisible) * cardHeight)
-    // When 0 items, show a smaller empty state
+    // When 0 items, show a taller empty state for visual balance
     const visibleCount = Math.min(holdings.length, maxVisibleItems);
-    const emptyStateHeight = 140; // Compact empty state
-    const loadingHeight = 140; // Compact loading state
+    const emptyStateHeight = 220; // Taller empty state (~40% more)
+    const loadingHeight = 220; // Taller loading state (~40% more)
 
     // Calculate cards area height
     const cardsAreaHeight = holdings.length === 0
@@ -873,9 +882,9 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
             style={{
                 // On desktop: dynamic height based on items
                 // On mobile: use max-height constraint
-                minHeight: '160px',
+                minHeight: '280px',
                 height: isDesktop ? `${dynamicHeight}px` : 'auto',
-                maxHeight: isDesktop ? 'none' : '400px',
+                maxHeight: isDesktop ? 'none' : '450px',
             }}
         >
             {/* Header - Outside cards */}
