@@ -499,7 +499,7 @@ function mapDevprintStats(
       totalTrades: stats.winning_trades + stats.losing_trades,
       winningTrades: stats.winning_trades,
       losingTrades: stats.losing_trades,
-      winRate: stats.win_rate,
+      winRate: stats.win_rate * 100, // Convert decimal to percentage
       totalProfitSol: stats.total_realized_pnl > 0 ? stats.total_realized_pnl : 0,
       totalLossSol: stats.total_realized_pnl < 0 ? Math.abs(stats.total_realized_pnl) : 0,
       netPnlSol: stats.total_pnl,

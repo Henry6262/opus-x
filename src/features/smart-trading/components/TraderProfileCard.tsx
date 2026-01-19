@@ -95,7 +95,7 @@ export function TraderProfileCard({
   const dailyPnL = stats?.trading?.dailyPnL ?? 0;
 
   const isOnStreak = streak.current >= 2 && streak.type === "win";
-  const walletAddress = "FyPQr9pyuFBLJk8Amn5PyBFcgk3BTZWmCWE2uJHn6TL";
+  const walletAddress = "DwFkx11rhxBCxosphwVSgkG1HcQTCmxPyTgMeSHXUjrB";
   const shortWallet =
     walletAddress && walletAddress.length > 8
       ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
