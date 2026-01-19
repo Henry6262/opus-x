@@ -35,13 +35,14 @@ async function testAnalytics() {
     if (data.positions.closed.length > 0) {
       console.log("\n🔒 Recent Closed Positions (last 5):");
       data.positions.closed.slice(0, 5).forEach((pos, i) => {
-        console.log(`   ${i + 1}. ${pos.tokenSymbol} - P&L: ${pos.realizedPnlSol} SOL (${pos.realizedPnlPct?.toFixed(2)}%)`);
+        const pnlPct = pos.entryAmountSol > 0 ? (pos.realizedPnlSol / pos.entryAmountSol) * 100 : 0;
+        console.log(`   ${i + 1}. ${pos.tokenSymbol} - P&L: ${pos.realizedPnlSol} SOL (${pnlPct.toFixed(2)}%)`);
       });
     }
 
     console.log("\n📊 Wallet Balance:");
-    console.log(`   SOL: ${data.stats.wallet.solBalance} SOL`);
-    console.log(`   Active Value: ${data.stats.wallet.activeValueSol} SOL`);
+    console.log(`   SOL: ${data.stats.trading.walletBalance} SOL`);
+    console.log(`   Real Wallet: ${data.stats.trading.realWalletBalance} SOL`);
 
     console.log("\n=".repeat(60));
     console.log("\n✅ ALL DATA LOOKS GOOD!");

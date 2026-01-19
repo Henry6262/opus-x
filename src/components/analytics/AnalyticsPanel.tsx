@@ -352,146 +352,78 @@ export function AnalyticsPanel() {
   const [analysisChartType, setAnalysisChartType] = useState<"decisions" | "scatter" | "treemap">("decisions");
   const [timeframe, setTimeframe] = useState<Timeframe>("7D");
 
-  // P&L data from real positions - grouped by timeframe
-  const { pnlData, dailyPnlData } = useMemo(() => {
-    const cumulative: { date: string; pnl: number }[] = [];
-    const periodData: { date: string; pnl: number; fill: string }[] = [];
+  // Helper function to determine exit reason
+  const getExitReason = (p: Position): string => {
+    if (p.status === "OPEN" || p.status === "PARTIALLY_CLOSED") return "Open";
+    if (p.status === "STOPPED_OUT" || p.stoppedOut) return "Stop Loss";
+    if (p.target2Hit) return "TP2";
+    if (p.target1Hit) return "TP1";
+    return "Manual";
+  };
 
-    // Determine time range and grouping based on timeframe
-    const now = new Date();
-    let startDate: Date;
-    let intervals: Date[] = [];
-    let formatStr: string;
-    let groupKeyFn: (d: Date) => string;
+  // P&L breakdown by position status (works with any amount of data)
+  const pnlBreakdownData = useMemo(() => {
+    const open = positions.filter(p => p.status === "OPEN" || p.status === "PARTIALLY_CLOSED");
+    const closed = positions.filter(p => p.status === "CLOSED" || p.status === "STOPPED_OUT");
 
-    switch (timeframe) {
-      case "1H":
-        startDate = subHours(now, 1);
-        // 5-minute intervals for 1H (12 points)
-        for (let i = 12; i >= 0; i--) {
-          const d = new Date(now.getTime() - i * 5 * 60 * 1000);
-          intervals.push(d);
-        }
-        formatStr = "HH:mm";
-        groupKeyFn = (d: Date) => {
-          const mins = Math.floor(d.getMinutes() / 5) * 5;
-          return format(new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), mins), "HH:mm");
-        };
-        break;
-      case "4H":
-        startDate = subHours(now, 4);
-        // 15-minute intervals for 4H (16 points)
-        for (let i = 16; i >= 0; i--) {
-          const d = new Date(now.getTime() - i * 15 * 60 * 1000);
-          intervals.push(d);
-        }
-        formatStr = "HH:mm";
-        groupKeyFn = (d: Date) => {
-          const mins = Math.floor(d.getMinutes() / 15) * 15;
-          return format(new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), mins), "HH:mm");
-        };
-        break;
-      case "1D":
-        startDate = subDays(now, 1);
-        // Hourly intervals for 1D (24 points)
-        for (let i = 24; i >= 0; i--) {
-          intervals.push(subHours(now, i));
-        }
-        formatStr = "HH:mm";
-        groupKeyFn = (d: Date) => format(startOfHour(d), "HH:mm");
-        break;
-      case "7D":
-        startDate = subDays(now, 7);
-        // Daily intervals for 7D
-        for (let i = 7; i >= 0; i--) {
-          intervals.push(subDays(now, i));
-        }
-        formatStr = "MMM d";
-        groupKeyFn = (d: Date) => format(startOfDay(d), "MMM d");
-        break;
-      case "30D":
-        startDate = subDays(now, 30);
-        // Daily intervals for 30D
-        for (let i = 30; i >= 0; i--) {
-          intervals.push(subDays(now, i));
-        }
-        formatStr = "MMM d";
-        groupKeyFn = (d: Date) => format(startOfDay(d), "MMM d");
-        break;
-      case "ALL":
-      default:
-        // Find earliest position date or use 90 days
-        const earliestPos = positions.length > 0
-          ? positions.reduce((min, p) => {
-              const d = new Date(p.createdAt);
-              return d < min ? d : min;
-            }, new Date())
-          : subDays(now, 90);
-        startDate = earliestPos;
-        const daysDiff = Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        // Weekly intervals if > 60 days, daily otherwise
-        if (daysDiff > 60) {
-          const weeks = Math.ceil(daysDiff / 7);
-          for (let i = weeks; i >= 0; i--) {
-            intervals.push(subDays(now, i * 7));
-          }
-          formatStr = "MMM d";
-          groupKeyFn = (d: Date) => {
-            const weekStart = new Date(d);
-            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-            return format(weekStart, "MMM d");
-          };
-        } else {
-          for (let i = daysDiff; i >= 0; i--) {
-            intervals.push(subDays(now, i));
-          }
-          formatStr = "MMM d";
-          groupKeyFn = (d: Date) => format(startOfDay(d), "MMM d");
-        }
-        break;
-    }
-
-    if (positions.length === 0) {
-      // Generate placeholder data
-      intervals.forEach((d) => {
-        const dateStr = format(d, formatStr);
-        cumulative.push({ date: dateStr, pnl: 0 });
-        periodData.push({ date: dateStr, pnl: 0, fill: BRAND.primary });
-      });
-      return { pnlData: cumulative, dailyPnlData: periodData };
-    }
-
-    // Filter positions within timeframe and group by period
-    const pnlByPeriod = new Map<string, number>();
-    positions.forEach((pos) => {
-      const posDate = new Date(pos.closedAt || pos.createdAt);
-      if (isAfter(posDate, startDate)) {
-        const key = groupKeyFn(posDate);
-        const pnl = pos.realizedPnlSol + (pos.unrealizedPnl || 0);
-        pnlByPeriod.set(key, (pnlByPeriod.get(key) || 0) + pnl);
+    return [
+      {
+        label: "Closed Positions",
+        realized: closed.reduce((sum, p) => sum + p.realizedPnlSol, 0),
+        unrealized: 0,
+        total: closed.reduce((sum, p) => sum + p.realizedPnlSol, 0)
+      },
+      {
+        label: "Open Positions",
+        realized: open.reduce((sum, p) => sum + p.realizedPnlSol, 0),
+        unrealized: open.reduce((sum, p) => sum + (p.unrealizedPnl || 0), 0),
+        total: open.reduce((sum, p) => sum + p.realizedPnlSol + (p.unrealizedPnl || 0), 0)
       }
-    });
+    ];
+  }, [positions]);
 
-    // Build cumulative data
-    let total = 0;
-    const seenKeys = new Set<string>();
-    intervals.forEach((d) => {
-      const dateStr = format(d, formatStr);
-      if (seenKeys.has(dateStr)) return; // Skip duplicates
-      seenKeys.add(dateStr);
+  // Exit Performance Analysis (works with 5+ trades)
+  const exitPerformanceData = useMemo(() => {
+    const grouped = positions.reduce((acc, p) => {
+      const reason = getExitReason(p);
+      if (!acc[reason]) acc[reason] = { winning: 0, losing: 0 };
 
-      const periodPnl = pnlByPeriod.get(dateStr) || 0;
-      total += periodPnl;
-      cumulative.push({ date: dateStr, pnl: parseFloat(total.toFixed(4)) });
-      periodData.push({
-        date: dateStr,
-        pnl: parseFloat(periodPnl.toFixed(4)),
-        fill: periodPnl >= 0 ? BRAND.primary : BRAND.red
+      const pnl = p.realizedPnlSol + (p.unrealizedPnl || 0);
+      if (pnl > 0) acc[reason].winning++;
+      else if (pnl < 0) acc[reason].losing++;
+
+      return acc;
+    }, {} as Record<string, {winning: number, losing: number}>);
+
+    return Object.entries(grouped)
+      .map(([reason, counts]) => ({
+        reason,
+        winning: counts.winning,
+        losing: counts.losing
+      }))
+      .sort((a, b) => (b.winning + b.losing) - (a.winning + a.losing)); // Sort by total count
+  }, [positions]);
+
+  // Recent Trades Timeline (works with any amount of data)
+  const recentTradesTimeline = useMemo(() => {
+    return positions
+      .filter(p => p.createdAt)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 20)
+      .reverse() // Show oldest first for timeline
+      .map((p, idx) => {
+        const pnl = p.realizedPnlSol + (p.unrealizedPnl || 0);
+        const date = new Date(p.createdAt);
+        return {
+          index: idx + 1,
+          timestamp: format(date, "MMM d HH:mm"),
+          pnl: parseFloat(pnl.toFixed(2)),
+          symbol: p.tokenSymbol || "???",
+          status: p.status,
+          fill: pnl >= 0 ? BRAND.primary : BRAND.red
+        };
       });
-    });
-
-    return { pnlData: cumulative, dailyPnlData: periodData };
-  }, [positions, timeframe]);
+  }, [positions]);
 
   const decisionData = useMemo(() => [
     { name: "Enter", value: stats.enterDecisions, color: BRAND.primary, fill: BRAND.primary },
@@ -815,6 +747,18 @@ export function AnalyticsPanel() {
 
   const hasData = stats.totalTrades > 0;
 
+  // Calculate realized vs unrealized P&L breakdown
+  const pnlBreakdown = useMemo(() => {
+    const realized = positions
+      .filter(p => p.status === "CLOSED" || p.status === "STOPPED_OUT")
+      .reduce((sum, p) => sum + p.realizedPnlSol, 0);
+    const unrealized = positions
+      .filter(p => p.status === "OPEN" || p.status === "PARTIALLY_CLOSED")
+      .reduce((sum, p) => sum + (p.unrealizedPnl || 0), 0);
+
+    return { realized, unrealized, total: realized + unrealized };
+  }, [positions]);
+
   return (
     <motion.div
       className="space-y-5"
@@ -839,11 +783,11 @@ export function AnalyticsPanel() {
         />
         <StatCard
           label="Total P&L"
-          value={hasData ? stats.totalPnl : 0}
+          value={hasData ? pnlBreakdown.total : 0}
           suffix=" SOL"
           decimals={1}
-          color={stats.totalPnl >= 0 ? BRAND.primary : BRAND.red}
-          subtext="Realized gains"
+          color={pnlBreakdown.total >= 0 ? BRAND.primary : BRAND.red}
+          subtext={`${pnlBreakdown.realized.toFixed(2)} realized + ${pnlBreakdown.unrealized.toFixed(2)} unrealized`}
         />
         <RadialCard
           value={hasData ? Math.round(stats.avgConfidence) : 0}
@@ -854,87 +798,31 @@ export function AnalyticsPanel() {
 
       {/* Charts Grid - Compact 2-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* P&L Chart - Main chart */}
+        {/* P&L Breakdown Chart */}
         <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3">
-          <ChartHeader label="P&L">
-            <InlineSelect
-              options={TIMEFRAMES}
-              value={timeframe}
-              onChange={(v) => setTimeframe(v as Timeframe)}
-            />
-            <span className="text-white/20">|</span>
-            <InlineSelect
-              options={[
-                { value: "area", label: "Area" },
-                { value: "bar", label: "Bar" },
-                { value: "composed", label: "+Vol" },
-              ]}
-              value={pnlChartType}
-              onChange={(v) => setPnlChartType(v as "area" | "bar" | "line" | "composed")}
-            />
-          </ChartHeader>
+          <ChartHeader label="P&L Breakdown" />
           <ResponsiveContainer width="100%" height={140}>
-            {pnlChartType === "area" ? (
-              <AreaChart data={pnlData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="pnlGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={BRAND.primary} stopOpacity={0.2} />
-                    <stop offset="100%" stopColor={BRAND.primary} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} interval="preserveStartEnd" />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} tickFormatter={(v) => `${v > 0 ? "+" : ""}${v}`} width={30} />
-                <Tooltip content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0].payload;
-                  return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white/50">P&L:</span> <span className="text-white font-mono ml-1">{d.pnl > 0 ? "+" : ""}{d.pnl} SOL</span></div>;
-                }} />
-                <Area type="monotone" dataKey="pnl" stroke={BRAND.primary} strokeWidth={1.5} fill="url(#pnlGradient)" />
-              </AreaChart>
-            ) : pnlChartType === "bar" ? (
-              <BarChart data={dailyPnlData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} interval="preserveStartEnd" />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} tickFormatter={(v) => `${v > 0 ? "+" : ""}${v}`} width={30} />
-                <ReferenceLine y={0} stroke="rgba(255,255,255,0.1)" />
-                <Tooltip content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0].payload;
-                  return <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]"><span className="text-white/50">Daily:</span> <span className="font-mono ml-1" style={{ color: d.pnl >= 0 ? BRAND.primary : BRAND.red }}>{d.pnl > 0 ? "+" : ""}{d.pnl} SOL</span></div>;
-                }} />
-                <Bar dataKey="pnl" radius={[2, 2, 0, 0]}>
-                  {dailyPnlData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            ) : (
-              <ComposedChart data={composedData} margin={{ top: 5, right: 25, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="pnlGradient2" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={BRAND.primary} stopOpacity={0.2} />
-                    <stop offset="100%" stopColor={BRAND.primary} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} interval="preserveStartEnd" />
-                <YAxis yAxisId="pnl" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} tickFormatter={(v) => `${v > 0 ? "+" : ""}${v}`} width={30} />
-                <YAxis yAxisId="trades" orientation="right" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.15)", fontSize: 8 }} width={20} />
-                <Tooltip content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0].payload;
-                  return (
-                    <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]">
-                      <div><span className="text-white/50">P&L:</span> <span className="font-mono ml-1" style={{ color: BRAND.primary }}>{d.pnl > 0 ? "+" : ""}{d.pnl} SOL</span></div>
-                      <div><span className="text-white/50">Trades:</span> <span className="font-mono ml-1" style={{ color: BRAND.amber }}>{d.trades}</span></div>
-                    </div>
-                  );
-                }} />
-                <Area yAxisId="pnl" type="monotone" dataKey="pnl" stroke={BRAND.primary} strokeWidth={1.5} fill="url(#pnlGradient2)" />
-                <Bar yAxisId="trades" dataKey="trades" fill={BRAND.amber} opacity={0.4} radius={[2, 2, 0, 0]} />
-              </ComposedChart>
-            )}
+            <ComposedChart data={pnlBreakdownData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+              <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} tickFormatter={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)}`} width={35} />
+              <ReferenceLine y={0} stroke="rgba(255,255,255,0.1)" />
+              <Tooltip content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0].payload;
+                return (
+                  <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]">
+                    <div className="text-white/50 mb-1">{d.label}</div>
+                    <div><span className="text-white/50">Realized:</span> <span className="font-mono ml-1" style={{ color: BRAND.primary }}>{d.realized > 0 ? "+" : ""}{d.realized.toFixed(2)} SOL</span></div>
+                    {d.unrealized !== 0 && <div><span className="text-white/50">Unrealized:</span> <span className="font-mono ml-1" style={{ color: BRAND.amber }}>{d.unrealized > 0 ? "+" : ""}{d.unrealized.toFixed(2)} SOL</span></div>}
+                    <div className="border-t border-white/10 mt-1 pt-1"><span className="text-white/50">Total:</span> <span className="font-mono ml-1 text-white font-bold">{d.total > 0 ? "+" : ""}{d.total.toFixed(2)} SOL</span></div>
+                  </div>
+                );
+              }} />
+              <Bar dataKey="realized" stackId="a" fill={BRAND.primary} name="Realized" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="unrealized" stackId="a" fill={BRAND.amber} opacity={0.6} name="Unrealized" radius={[2, 2, 0, 0]} />
+              <Line dataKey="total" stroke="#fff" strokeWidth={2} name="Total" dot={{ r: 3, fill: "#fff" }} />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
 
@@ -1027,6 +915,89 @@ export function AnalyticsPanel() {
               ))
             )}
           </div>
+        </div>
+      </div>
+
+      {/* New charts - Exit Performance & Recent Trades */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Exit Performance Analysis */}
+        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3">
+          <ChartHeader label="Exit Performance" />
+          {exitPerformanceData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart data={exitPerformanceData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="reason" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} width={25} />
+                <Tooltip content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0].payload;
+                  const total = d.winning + d.losing;
+                  const winRate = total > 0 ? Math.round((d.winning / total) * 100) : 0;
+                  return (
+                    <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]">
+                      <div className="text-white/50 mb-1">{d.reason}</div>
+                      <div><span className="text-white/50">Wins:</span> <span className="font-mono ml-1" style={{ color: BRAND.primary }}>{d.winning}</span></div>
+                      <div><span className="text-white/50">Losses:</span> <span className="font-mono ml-1" style={{ color: BRAND.red }}>{d.losing}</span></div>
+                      <div className="border-t border-white/10 mt-1 pt-1"><span className="text-white/50">Win Rate:</span> <span className="font-mono ml-1 text-white font-bold">{winRate}%</span></div>
+                    </div>
+                  );
+                }} />
+                <Bar dataKey="winning" stackId="a" fill={BRAND.primary} name="Wins" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="losing" stackId="a" fill={BRAND.red} name="Losses" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[140px] flex items-center justify-center text-xs text-white/20">Complete 5 trades to see exit performance</div>
+          )}
+        </div>
+
+        {/* Recent Trades Timeline */}
+        <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-3">
+          <ChartHeader label="Recent Trades Timeline" />
+          {recentTradesTimeline.length > 0 ? (
+            <ResponsiveContainer width="100%" height={140}>
+              <LineChart data={recentTradesTimeline} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                <XAxis dataKey="index" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} label={{ value: "Trade #", position: "insideBottom", offset: -5, fontSize: 9, fill: "rgba(255,255,255,0.25)" }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} tickFormatter={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)}`} width={35} />
+                <ReferenceLine y={0} stroke="rgba(255,255,255,0.1)" />
+                <Tooltip content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0].payload;
+                  return (
+                    <div className="bg-black/90 border border-white/10 rounded px-2 py-1 text-[10px]">
+                      <div className="text-white/50 mb-1">{d.symbol}</div>
+                      <div><span className="text-white/50">Time:</span> <span className="font-mono ml-1 text-white">{d.timestamp}</span></div>
+                      <div><span className="text-white/50">P&L:</span> <span className="font-mono ml-1" style={{ color: d.fill }}>{d.pnl > 0 ? "+" : ""}{d.pnl} SOL</span></div>
+                      <div><span className="text-white/50">Status:</span> <span className="font-mono ml-1 text-white/70">{d.status}</span></div>
+                    </div>
+                  );
+                }} />
+                <Line
+                  type="monotone"
+                  dataKey="pnl"
+                  stroke={BRAND.primary}
+                  strokeWidth={2}
+                  dot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={3}
+                        fill={payload.fill}
+                        stroke={payload.fill}
+                        strokeWidth={1}
+                      />
+                    );
+                  }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[140px] flex items-center justify-center text-xs text-white/20">No trades yet</div>
+          )}
         </div>
       </div>
 
