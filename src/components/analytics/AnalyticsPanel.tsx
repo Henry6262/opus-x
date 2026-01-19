@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { supabase } from "@/lib/supabase";
 import { smartTradingService } from "@/features/smart-trading/service";
 import type { DashboardStatsResponse, Position } from "@/features/smart-trading/types";
 import { motion, AnimatePresence } from "motion/react";
@@ -690,35 +689,26 @@ export function AnalyticsPanel() {
 
   async function fetchAnalytics() {
     try {
-      // Fetch from both Supabase (AI logs) and trading API (positions/stats) in parallel
-      const [supabaseData, tradingData] = await Promise.all([
-        fetchSupabaseData(),
-        fetchTradingData(),
-      ]);
+      // Fetch from DevPrint backend only (no Supabase needed)
+      const tradingData = await fetchTradingData();
 
-      console.log("📊 Analytics Data:", {
-        supabase: supabaseData,
-        trading: tradingData,
-      });
+      console.log("📊 Analytics Data:", tradingData);
 
-      // Merge stats from both sources
+      // Use DevPrint data only
       setStats({
-        // From Supabase AI logs
-        totalAnalyzed: supabaseData.total || tradingData.totalTrades || 0,
-        enterDecisions: supabaseData.enters || 0,
-        passDecisions: supabaseData.passes || 0,
-        watchDecisions: supabaseData.watches || 0,
-        // From Trading API (more accurate)
-        winRate: tradingData.winRate || (supabaseData.enters && supabaseData.total
-          ? Math.round((supabaseData.enters / supabaseData.total) * 100) : 0),
+        totalAnalyzed: tradingData.totalTrades || 0,
+        enterDecisions: tradingData.totalTrades || 0, // All trades are enters
+        passDecisions: 0, // We don't track passes in DevPrint history
+        watchDecisions: 0,
+        winRate: tradingData.winRate || 0,
         totalPnl: tradingData.totalPnl || 0,
         totalTrades: tradingData.totalTrades || 0,
         winningTrades: tradingData.winningTrades || 0,
         losingTrades: tradingData.losingTrades || 0,
-        avgConfidence: supabaseData.avgConfidence || 0,
+        avgConfidence: tradingData.avgConfidence || 0,
       });
 
-      if (supabaseData.logs) setRecentLogs(supabaseData.logs as AnalysisLog[]);
+      if (tradingData.recentDecisions) setRecentLogs(tradingData.recentDecisions);
       if (tradingData.positions) setPositions(tradingData.positions);
       if (tradingData.holdings) setHoldings(tradingData.holdings);
 
@@ -727,6 +717,7 @@ export function AnalyticsPanel() {
         winRate: tradingData.winRate,
         totalPnl: tradingData.totalPnl,
         positions: tradingData.positions?.length,
+        recentDecisions: tradingData.recentDecisions?.length,
       });
 
     } catch (error) {
@@ -736,30 +727,7 @@ export function AnalyticsPanel() {
     }
   }
 
-  async function fetchSupabaseData() {
-    if (!supabase) return { total: 0, enters: 0, passes: 0, watches: 0, logs: [], avgConfidence: 0 };
-
-    try {
-      const [{ count: total }, { count: enters }, { count: passes }, { count: watches }, { data: logs }] =
-        await Promise.all([
-          supabase.from("token_ai_analysis_log").select("*", { count: "exact", head: true }),
-          supabase.from("token_ai_analysis_log").select("*", { count: "exact", head: true }).eq("decision", "ENTER"),
-          supabase.from("token_ai_analysis_log").select("*", { count: "exact", head: true }).eq("decision", "PASS"),
-          supabase.from("token_ai_analysis_log").select("*", { count: "exact", head: true }).in("decision", ["WATCH", "WAIT"]),
-          supabase.from("token_ai_analysis_log").select("*").order("analyzed_at", { ascending: false }).limit(20),
-        ]);
-
-      // Calculate average confidence from logs
-      const avgConfidence = logs && logs.length > 0
-        ? Math.round(logs.reduce((sum, log: any) => sum + (log.confidence || 0), 0) / logs.length * 100)
-        : 0;
-
-      return { total: total || 0, enters: enters || 0, passes: passes || 0, watches: watches || 0, logs: logs || [], avgConfidence };
-    } catch (error) {
-      console.error("Error fetching Supabase data:", error);
-      return { total: 0, enters: 0, passes: 0, watches: 0, logs: [], avgConfidence: 0 };
-    }
-  }
+  // Removed fetchSupabaseData - using DevPrint backend only
 
   async function fetchTradingData() {
     try {
@@ -781,6 +749,38 @@ export function AnalyticsPanel() {
           }))
         : [];
 
+      // Fetch raw history data directly from DevPrint backend to get buy_criteria
+      const baseUrl = process.env.NEXT_PUBLIC_DEVPRNT_CORE_URL || "https://devprint-v2-production.up.railway.app";
+      const historyResponse = await fetch(`${baseUrl}/api/trading/history?limit=50`);
+      const historyData = await historyResponse.json();
+      const rawHistory = historyData.success ? historyData.data : historyData;
+
+      // Map recent decisions from raw history (has buy_criteria with AI analysis)
+      const recentDecisions: AnalysisLog[] = (Array.isArray(rawHistory) ? rawHistory : [])
+        .filter((h: any) => h.buy_criteria?.ai_analysis)
+        .slice(0, 20)
+        .map((h: any) => {
+          const ai = h.buy_criteria.ai_analysis;
+
+          return {
+            id: h.id,
+            token_symbol: h.ticker || "???",
+            token_mint: h.mint,
+            decision: "ENTER", // All history items are entered trades
+            reasoning: ai.reasoning || "No reasoning provided",
+            confidence: Math.round((ai.conviction || 0) * 100), // Convert 0-1 to 0-100
+            analyzed_at: h.entry_time || h.created_at,
+            market_cap: 0, // Not in history response
+            resulted_in_trade: true,
+            price_usd: h.entry_price || 0,
+          };
+        });
+
+      // Calculate average confidence from recent decisions
+      const avgConfidence = recentDecisions.length > 0
+        ? Math.round(recentDecisions.reduce((sum, d) => sum + d.confidence, 0) / recentDecisions.length)
+        : 0;
+
       return {
         totalTrades: dashboardStats.performance.totalTrades,
         winningTrades: dashboardStats.performance.winningTrades,
@@ -789,12 +789,14 @@ export function AnalyticsPanel() {
         totalPnl: dashboardStats.performance.netPnlSol,
         positions: allPositions,
         holdings: holdingsData,
+        recentDecisions,
+        avgConfidence,
       };
     } catch (error) {
       console.error("Error fetching trading data:", error);
       return {
         totalTrades: 0, winningTrades: 0, losingTrades: 0, winRate: 0, totalPnl: 0,
-        positions: [], holdings: [],
+        positions: [], holdings: [], recentDecisions: [], avgConfidence: 0,
       };
     }
   }
@@ -811,7 +813,7 @@ export function AnalyticsPanel() {
     );
   }
 
-  const hasData = stats.totalAnalyzed > 0;
+  const hasData = stats.totalTrades > 0;
 
   return (
     <motion.div
@@ -844,9 +846,9 @@ export function AnalyticsPanel() {
           subtext="Realized gains"
         />
         <RadialCard
-          value={hasData ? Math.round((stats.enterDecisions / stats.totalAnalyzed) * 100) : 0}
-          label="Entry Rate"
-          subLabel="Tokens entered"
+          value={hasData ? Math.round(stats.avgConfidence) : 0}
+          label="Avg Confidence"
+          subLabel="AI conviction"
         />
       </div>
 
