@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { Wallet, Copy, Loader2, Clock, TrendingUp, ArrowUpRight, Brain } from "lucide-react";
+import { Wallet, Copy, Loader2, Clock, Brain } from "lucide-react";
 import { CountUp } from "@/components/animations/CountUp";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 import { useSharedWebSocket } from "../hooks/useWebSocket";
@@ -440,12 +440,6 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
         ? goalMultiplier
         : (currentMarketCap ? getNextMilestone(currentMarketCap) / currentMarketCap : 2);
 
-    // Additional data from backend
-    const hasPartialSells = holding.initial_quantity > holding.current_quantity;
-    const quantityRemaining = hasPartialSells
-        ? Math.round((holding.current_quantity / holding.initial_quantity) * 100)
-        : 100;
-    const hasRealizedPnl = (holding.realized_pnl_sol ?? 0) !== 0;
 
     return (
         <motion.div
@@ -589,25 +583,6 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
                             </div>
                         )}
 
-                        {/* Realized PnL badge (from partial sells) - hidden on mobile */}
-                        {hasRealizedPnl && (
-                            <>
-                                <div className="hidden md:block w-px h-4 bg-white/20 flex-shrink-0" />
-                                <span className={`hidden md:flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${holding.realized_pnl_sol! >= 0 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
-                                    <ArrowUpRight className="w-2.5 h-2.5" />
-                                    {holding.realized_pnl_sol! >= 0 ? "+" : ""}{holding.realized_pnl_sol!.toFixed(3)} realized
-                                </span>
-                            </>
-                        )}
-                        {/* Quantity remaining badge (if partial sells) - hidden on mobile */}
-                        {hasPartialSells && (
-                            <>
-                                <div className="hidden md:block w-px h-4 bg-white/20 flex-shrink-0" />
-                                <span className="hidden md:inline text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/50 flex-shrink-0">
-                                    {quantityRemaining}% left
-                                </span>
-                            </>
-                        )}
                     </div>
                 </div>
             </div>

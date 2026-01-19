@@ -538,7 +538,7 @@ export const smartTradingService = {
       fetchDevprint<{ wallets: DevprintWallet[] }>("/api/wallets"),
       fetchDevprint<DevprintTradingConfig>("/api/trading/config"),
       fetchDevprint<DevprintHolding[]>("/api/trading/holdings"),
-      fetchDevprint<DevprintHistoryItem[]>("/api/trading/history"),
+      fetchDevprint<DevprintHistoryItem[]>("/api/trading/history?limit=100"),
       fetchDevprint<DevprintTradingStats>("/api/trading/stats"),
     ]);
 
