@@ -717,6 +717,8 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
                 current_price: h.current_price,
                 entry_price: h.entry_price,
                 unrealized_pnl_pct: h.unrealized_pnl_pct,
+                market_cap: h.market_cap,
+                liquidity: h.liquidity,
                 status: h.status,
             })));
 

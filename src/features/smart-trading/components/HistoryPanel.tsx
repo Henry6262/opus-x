@@ -195,7 +195,7 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
     const itemCount = viewMode === "trades" ? allClosedTrades.length : (txnsTotal || transactions.length);
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
+        <div className="h-full flex flex-col overflow-hidden max-h-[320px] md:max-h-none">
             {/* Header with Toggle */}
             <div className="flex items-center justify-between px-1 py-3 mb-3 flex-shrink-0">
                 {/* Left: Icon + Title */}
@@ -379,7 +379,7 @@ function TradeRow({ trade, index, onClick }: TradeRowProps) {
             exit={{ opacity: 0, x: 10 }}
             transition={{ delay: index * 0.03 }}
             onClick={onClick}
-            className="p-2.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+            className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors cursor-pointer"
         >
             <div className="flex items-center gap-2">
                 {/* Token Image */}

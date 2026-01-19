@@ -212,33 +212,19 @@ function DecisionCard({ decision }: DecisionCardProps) {
     const config = getDecisionConfig(decision.type);
     const rejectBadge = decision.type === "REJECT" ? getRejectBadge(decision.reasoning) : null;
 
-    // Format timestamp as HH:MM:SS
-    const timestamp = useMemo(() => {
-        return decision.timestamp.toLocaleTimeString('en-US', {
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-    }, [decision.timestamp]);
+    // Format timestamp as relative time (e.g., "2s", "5m", "1h")
+    const relativeTime = useMemo(() => {
+        const now = new Date();
+        const diffMs = now.getTime() - decision.timestamp.getTime();
+        const diffSec = Math.floor(diffMs / 1000);
+        const diffMin = Math.floor(diffSec / 60);
+        const diffHour = Math.floor(diffMin / 60);
 
-    // Get badge styling based on rejection reason
-    const getBadgeStyle = (badge: string | null) => {
-        switch (badge) {
-            case "low-liq":
-            case "low-vol":
-                return "bg-orange-500/20 text-orange-400 border-orange-500/30";
-            case "no-data":
-                return "bg-purple-500/20 text-purple-400 border-purple-500/30";
-            case "high-risk":
-                return "bg-red-500/20 text-red-400 border-red-500/30";
-            case "age":
-            case "holders":
-                return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
-            default:
-                return "bg-white/10 text-white/50 border-white/20";
-        }
-    };
+        if (diffSec < 60) return `${diffSec}s ago`;
+        if (diffMin < 60) return `${diffMin}m ago`;
+        if (diffHour < 24) return `${diffHour}h ago`;
+        return `${Math.floor(diffHour / 24)}d ago`;
+    }, [decision.timestamp]);
 
     return (
         <motion.div
@@ -251,13 +237,17 @@ function DecisionCard({ decision }: DecisionCardProps) {
         >
             {/* Log line */}
             <div className="flex items-start gap-2 py-1.5 px-2">
-                {/* Timestamp */}
-                <span className="text-white/30 flex-shrink-0">[{timestamp}]</span>
-
-                {/* Log level / Decision type - use SKIP for rejections */}
+                {/* Log level / Decision type with badge inline */}
                 <span className={`flex-shrink-0 font-bold ${config.textClass}`}>
                     [{decision.type === "REJECT" ? "SKIP" : config.label}]
                 </span>
+
+                {/* Rejection badge - inline with decision type */}
+                {rejectBadge && (
+                    <span className="flex-shrink-0 text-white/40">
+                        - {rejectBadge}
+                    </span>
+                )}
 
                 {/* Token symbol */}
                 <span className="text-white font-semibold flex-shrink-0">
@@ -293,17 +283,15 @@ function DecisionCard({ decision }: DecisionCardProps) {
                     </a>
                 )}
 
-                {/* Rejection badge - rightmost, pill-shaped */}
-                {rejectBadge && (
-                    <span className={`flex-shrink-0 text-[9px] px-2 py-0.5 rounded-full border ${getBadgeStyle(rejectBadge)}`}>
-                        {rejectBadge}
-                    </span>
-                )}
+                {/* Relative timestamp - top right */}
+                <span className="text-white/30 flex-shrink-0 text-[10px]">
+                    {relativeTime}
+                </span>
             </div>
 
             {/* Reasoning - always visible */}
             {decision.reasoning && (
-                <div className="pl-[72px] pr-2 pb-2 text-white/50">
+                <div className="px-2 pb-2 text-white/50">
                     <span className="text-[#c4f70e]/60">→</span> {decision.reasoning}
 
                     {/* Additional details as inline tags */}
