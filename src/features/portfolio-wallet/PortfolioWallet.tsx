@@ -481,7 +481,7 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                   width={20}
                   height={20}
                 />
-                <span className="text-base font-bold tracking-wide">SUPER ROUTER WALLET</span>
+                <span className="text-base font-bold tracking-wide font-mono">DwFk...jrB</span>
               </div>
               <button
                 onClick={() => setIsExpanded(false)}
