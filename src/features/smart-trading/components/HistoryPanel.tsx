@@ -16,6 +16,7 @@ import {
     List,
     Loader2,
 } from "lucide-react";
+import { SectionHeader } from "./SectionHeader";
 
 // Infinite scroll settings
 const TRADES_PAGE_SIZE = 15;           // For local trades pagination
@@ -61,6 +62,12 @@ interface SelectedTrade {
 }
 
 // ============================================
+// Feature Flag: Enable/disable Trades view (buggy, disabled by default)
+// Set NEXT_PUBLIC_ENABLE_TRADES_VIEW=true in .env.local to enable
+// ============================================
+const TRADES_VIEW_ENABLED = process.env.NEXT_PUBLIC_ENABLE_TRADES_VIEW === "true";
+
+// ============================================
 // Main Component
 // ============================================
 
@@ -68,8 +75,8 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
     const t = useTranslations("dashboard");
     const { history } = usePositions();
 
-    // View state
-    const [viewMode, setViewMode] = useState<ViewMode>("trades");
+    // View state - default to transactions if trades view is disabled
+    const [viewMode, setViewMode] = useState<ViewMode>(TRADES_VIEW_ENABLED ? "trades" : "transactions");
     const [isExpanded, setIsExpanded] = useState(true);
 
     // Infinite scroll state for trades (local pagination)
@@ -196,46 +203,38 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
 
     return (
         <div className="h-full flex flex-col overflow-hidden max-h-[420px] md:max-h-none rounded-xl border border-white/10 p-3">
-            {/* Header with Toggle */}
-            <div className="flex items-center justify-between px-1 py-3 mb-3 flex-shrink-0">
-                {/* Left: Icon + Title */}
-                <div
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                >
-                    <TrendingUp className="w-6 h-6 text-[#c4f70e]" />
-                    <span className="text-lg font-semibold text-white">History</span>
-                    {isExpanded ? (
-                        <ChevronUp className="w-5 h-5 text-white/40" />
-                    ) : (
-                        <ChevronDown className="w-5 h-5 text-white/40" />
-                    )}
-                </div>
-
-                {/* Right: Toggle Pills (pill-shaped) */}
-                <div className="flex items-center bg-white/5 rounded-full p-0.5">
-                    <button
-                        onClick={() => handleViewModeChange("trades")}
-                        className={`px-3 py-1 text-xs font-semibold rounded-full transition-all ${
-                            viewMode === "trades"
-                                ? "bg-[#c4f70e] text-black"
-                                : "text-white/60 hover:text-white"
-                        }`}
-                    >
-                        Trades
-                    </button>
-                    <button
-                        onClick={() => handleViewModeChange("transactions")}
-                        className={`px-3 py-1 text-xs font-semibold rounded-full transition-all ${
-                            viewMode === "transactions"
-                                ? "bg-[#c4f70e] text-black"
-                                : "text-white/60 hover:text-white"
-                        }`}
-                    >
-                        Txns
-                    </button>
-                </div>
-            </div>
+            {/* Header with SectionHeader component */}
+            <SectionHeader
+                icon={<TrendingUp className="w-6 h-6 text-[#c4f70e]" />}
+                title="History"
+                tooltip="Transaction history showing all your buy and sell activity. Click any transaction to view details on Solscan."
+                rightContent={
+                    TRADES_VIEW_ENABLED ? (
+                        <div className="flex items-center bg-white/5 rounded-full p-0.5">
+                            <button
+                                onClick={() => handleViewModeChange("trades")}
+                                className={`px-3 py-1 text-xs font-semibold rounded-full transition-all ${
+                                    viewMode === "trades"
+                                        ? "bg-[#c4f70e] text-black"
+                                        : "text-white/60 hover:text-white"
+                                }`}
+                            >
+                                Trades
+                            </button>
+                            <button
+                                onClick={() => handleViewModeChange("transactions")}
+                                className={`px-3 py-1 text-xs font-semibold rounded-full transition-all ${
+                                    viewMode === "transactions"
+                                        ? "bg-[#c4f70e] text-black"
+                                        : "text-white/60 hover:text-white"
+                                }`}
+                            >
+                                Txns
+                            </button>
+                        </div>
+                    ) : undefined
+                }
+            />
 
             {/* Content */}
             <AnimatePresence mode="wait">
@@ -249,7 +248,7 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
                         className="flex-1 overflow-hidden"
                     >
                         <div className="h-full max-h-[320px] md:max-h-none overflow-y-auto space-y-2 pr-1">
-                            {viewMode === "trades" ? (
+                            {TRADES_VIEW_ENABLED && viewMode === "trades" ? (
                                 <TradesView
                                     trades={visibleTrades}
                                     onTradeClick={handleTradeClick}

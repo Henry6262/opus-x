@@ -10,6 +10,12 @@ import { AnalyticsPanel } from "@/components/analytics/AnalyticsPanel";
 import ShinyText from "@/components/ShinyText";
 
 // ============================================
+// Feature Flag: Enable/disable Analytics tab (hidden by default for production)
+// Set NEXT_PUBLIC_ENABLE_ANALYTICS=true in .env.local to enable
+// ============================================
+const ANALYTICS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true";
+
+// ============================================
 // Main Dashboard
 // ============================================
 
@@ -37,22 +43,24 @@ export function SmartTradingDashboard() {
                 "Trading"
               )}
             </TabsTrigger>
-            <TabsTrigger
-              value="analytics"
-              className="flex-1 md:flex-none rounded-full px-10 md:px-12 py-3 md:py-4 text-base md:text-lg font-bold uppercase tracking-widest text-white/40 transition-all duration-300 data-[state=active]:text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#c4f70e]/20 data-[state=active]:to-cyan-500/10 data-[state=active]:shadow-[inset_0_0_20px_rgba(196,247,14,0.3),0_0_30px_rgba(196,247,14,0.15)] data-[state=active]:border data-[state=active]:border-[#c4f70e]/30 hover:text-white/60 hover:bg-white/5"
-            >
-              {activeTab === "analytics" ? (
-                <ShinyText
-                  text="Analytics"
-                  speed={3}
-                  color="#c4f70e"
-                  shineColor="#ffffff"
-                  className="font-bold"
-                />
-              ) : (
-                "Analytics"
-              )}
-            </TabsTrigger>
+            {ANALYTICS_ENABLED && (
+              <TabsTrigger
+                value="analytics"
+                className="flex-1 md:flex-none rounded-full px-10 md:px-12 py-3 md:py-4 text-base md:text-lg font-bold uppercase tracking-widest text-white/40 transition-all duration-300 data-[state=active]:text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#c4f70e]/20 data-[state=active]:to-cyan-500/10 data-[state=active]:shadow-[inset_0_0_20px_rgba(196,247,14,0.3),0_0_30px_rgba(196,247,14,0.15)] data-[state=active]:border data-[state=active]:border-[#c4f70e]/30 hover:text-white/60 hover:bg-white/5"
+              >
+                {activeTab === "analytics" ? (
+                  <ShinyText
+                    text="Analytics"
+                    speed={3}
+                    color="#c4f70e"
+                    shineColor="#ffffff"
+                    className="font-bold"
+                  />
+                ) : (
+                  "Analytics"
+                )}
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -82,9 +90,11 @@ export function SmartTradingDashboard() {
           </div>
         </TabsContent>
 
-        <TabsContent value="analytics">
-          <AnalyticsPanel />
-        </TabsContent>
+        {ANALYTICS_ENABLED && (
+          <TabsContent value="analytics">
+            <AnalyticsPanel />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

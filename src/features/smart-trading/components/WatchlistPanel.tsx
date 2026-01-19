@@ -43,7 +43,11 @@ export function WatchlistPanel() {
     try {
       setIsLoading(true);
       const response = await smartTradingService.getWatchlist();
-      setTokens(response.tokens);
+      // Deduplicate tokens by mint address
+      const uniqueTokens = response.tokens.filter(
+        (token, index, self) => index === self.findIndex((t) => t.mint === token.mint)
+      );
+      setTokens(uniqueTokens);
       setStats(response.stats);
       setError(null);
     } catch (err) {
@@ -85,7 +89,13 @@ export function WatchlistPanel() {
           checked_at: new Date(data.timestamp).toISOString(),
         },
       };
-      setTokens((prev) => [newToken, ...prev]);
+      setTokens((prev) => {
+        // Prevent duplicates - skip if token already exists
+        if (prev.some((t) => t.mint === newToken.mint)) {
+          return prev;
+        }
+        return [newToken, ...prev];
+      });
     });
 
     const unsubUpdated = onTradingEvent<WatchlistUpdatedEvent>("watchlist_updated", (data) => {
@@ -146,6 +156,7 @@ export function WatchlistPanel() {
       <SectionHeader
         icon={<Eye className="w-6 h-6 text-[#c4f70e]" />}
         title="Watchlist"
+        tooltip="Tokens being monitored that didn't meet initial entry criteria. They're re-checked periodically and may qualify for entry as metrics improve."
       />
 
       {/* Loading */}
