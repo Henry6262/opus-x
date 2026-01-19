@@ -20,7 +20,7 @@ export function SmartTradingDashboard() {
     <div className="space-y-4 -mt-12 px-4 lg:px-8">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex justify-center mb-6">
-          <TabsList className="w-full md:w-auto bg-black/40 backdrop-blur-xl border border-white/10 rounded-full p-2 gap-2">
+          <TabsList className="w-full md:w-auto bg-black/40 backdrop-blur-xl border border-white/10 rounded-full p-0 gap-0">
             <TabsTrigger
               value="trading"
               className="flex-1 md:flex-none rounded-full px-10 md:px-12 py-3 md:py-4 text-base md:text-lg font-bold uppercase tracking-widest text-white/40 transition-all duration-300 data-[state=active]:text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#c4f70e]/20 data-[state=active]:to-cyan-500/10 data-[state=active]:shadow-[inset_0_0_20px_rgba(196,247,14,0.3),0_0_30px_rgba(196,247,14,0.15)] data-[state=active]:border data-[state=active]:border-[#c4f70e]/30 hover:text-white/60 hover:bg-white/5"

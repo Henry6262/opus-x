@@ -7,6 +7,7 @@ import { Wallet, Copy, Loader2, Clock, TrendingUp, ArrowUpRight, Brain } from "l
 import { CountUp } from "@/components/animations/CountUp";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 import { useSharedWebSocket } from "../hooks/useWebSocket";
+import { useSmartTradingConfig } from "../context/SmartTradingContext";
 import { TransactionDrawer } from "./TransactionDrawer";
 import { AiReasoningDrawer } from "./AiReasoningDrawer";
 import { SectionHeader } from "./SectionHeader";
@@ -249,9 +250,15 @@ interface ProgressBarProps {
 function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, currentMarketCap, entryMarketCap }: ProgressBarProps) {
     const goal = Math.max(goalMultiplier, 1.01);
 
+    // Progress calculation: how far toward the GAIN (not the multiplier)
+    // At 1x (entry): 0% progress
+    // At goal x: 100% progress
+    // Formula: (currentMultiplier - 1) / (goal - 1)
     let progressRaw = progressOverride ?? null;
     if (progressRaw === null || progressRaw === undefined) {
-        progressRaw = currentMultiplier / goal;
+        // Calculate progress toward the gain target
+        const gainProgress = (currentMultiplier - 1) / (goal - 1);
+        progressRaw = gainProgress;
     }
     const clamped = Math.min(Math.max(progressRaw, 0), 1);
     const progress = clamped > 0 && clamped < 0.02 ? 0.02 : clamped;
@@ -392,11 +399,12 @@ function AnimatedPercent({ value, className = "" }: AnimatedPercentProps) {
 interface HoldingCardProps {
     holding: OnChainHolding;
     index: number;
+    takeProfitTargetPercent?: number; // e.g., 100 = 100% gain = 2x
     onClick?: () => void;
     onAiClick?: () => void;
 }
 
-function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
+function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, onAiClick }: HoldingCardProps) {
     // All data comes from backend via holdings_snapshot
     const currentPriceUsd = holding.current_price ?? 0;
     const entryPriceUsd = holding.entry_price ?? 0;
@@ -408,7 +416,8 @@ function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
 
     // Calculate multiplier for progress bar
     const currentMultiplier = hasEntryPrice && entryPriceUsd > 0 ? currentPriceUsd / entryPriceUsd : null;
-    const goalMultiplier = 2; // Default 2x target
+    // Goal multiplier from TP target: 100% gain = 2x, 200% gain = 3x, etc.
+    const goalMultiplier = 1 + (takeProfitTargetPercent / 100);
 
     // Market cap data for progress bar
     const currentMarketCap = holding.market_cap ?? undefined;
@@ -456,6 +465,14 @@ function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 <div className="absolute inset-0 bg-gradient-to-r from-[#c4f70e]/5 to-transparent" />
             </div>
+
+            {/* Peak PnL indicator - absolutely positioned top-right */}
+            {hasPeakData && (
+                <div className="absolute top-2 right-2 flex items-center gap-0.5 text-[10px] text-amber-400/80 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-400/20">
+                    <TrendingUp className="w-2.5 h-2.5" />
+                    <span className="font-mono font-medium">ATH +{Math.round(holding.peak_pnl_pct)}%</span>
+                </div>
+            )}
 
             {/* Main Layout: Image Left | Content Right */}
             <div className="flex gap-2 md:gap-3 items-stretch">
@@ -536,13 +553,6 @@ function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
                                 ) : (
                                     <div className="text-base md:text-xl font-bold font-mono tabular-nums text-white/40">
                                         —
-                                    </div>
-                                )}
-                                {/* Peak PnL indicator (shows missed opportunity) - hidden on mobile */}
-                                {hasPeakData && (
-                                    <div className="hidden md:flex items-center gap-0.5 text-[10px] text-amber-400/70">
-                                        <TrendingUp className="w-2.5 h-2.5" />
-                                        <span className="font-mono">peak +{Math.round(holding.peak_pnl_pct)}%</span>
                                     </div>
                                 )}
                             </div>
@@ -647,6 +657,11 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
     const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
     const isFetchingRef = useRef(false);
     const { on: onTradingEvent } = useSharedWebSocket({ path: "/ws/trading" });
+
+    // Get trading config for TP targets
+    const { config } = useSmartTradingConfig();
+    // First TP target (e.g., 100 = 100% gain = 2x multiplier)
+    const takeProfitTargetPercent = config?.target1Percent ?? 100;
 
     // Handle holding card click - open transaction drawer
     const handleHoldingClick = useCallback((holding: OnChainHolding) => {
@@ -858,6 +873,7 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
             style={{
                 // On desktop: dynamic height based on items
                 // On mobile: use max-height constraint
+                minHeight: '160px',
                 height: isDesktop ? `${dynamicHeight}px` : 'auto',
                 maxHeight: isDesktop ? 'none' : '400px',
             }}
@@ -907,6 +923,7 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
                             key={`${holding.mint}-${index}`}
                             holding={holding}
                             index={index}
+                            takeProfitTargetPercent={takeProfitTargetPercent}
                             onClick={() => handleHoldingClick(holding)}
                             onAiClick={() => handleAiClick(holding)}
                         />
