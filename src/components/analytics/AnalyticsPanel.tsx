@@ -696,6 +696,11 @@ export function AnalyticsPanel() {
         fetchTradingData(),
       ]);
 
+      console.log("📊 Analytics Data:", {
+        supabase: supabaseData,
+        trading: tradingData,
+      });
+
       // Merge stats from both sources
       setStats({
         // From Supabase AI logs
@@ -717,8 +722,15 @@ export function AnalyticsPanel() {
       if (tradingData.positions) setPositions(tradingData.positions);
       if (tradingData.holdings) setHoldings(tradingData.holdings);
 
+      console.log("✅ Stats set:", {
+        totalTrades: tradingData.totalTrades,
+        winRate: tradingData.winRate,
+        totalPnl: tradingData.totalPnl,
+        positions: tradingData.positions?.length,
+      });
+
     } catch (error) {
-      console.error("Error fetching analytics:", error);
+      console.error("❌ Error fetching analytics:", error);
     } finally {
       setLoading(false);
     }
