@@ -280,7 +280,10 @@ function ProgressBar({
 
     // Progress calculation based on current PnL percentage
     // Map PnL% to visual position: 0% -> 0, 50% -> 33%, 100% -> 66%, 200% -> 95%
+    // When a TP is hit, progress should be at least at that TP position
     let progress = 0;
+
+    // Calculate progress based on PnL%
     if (pnlPct <= 0) {
         progress = 0;
     } else if (pnlPct >= TP3_THRESHOLD) {
@@ -297,6 +300,13 @@ function ProgressBar({
         // Before TP1 (0% to 50%): interpolate between 0% and 33%
         const ratio = pnlPct / TP1_THRESHOLD;
         progress = ratio * 0.33;
+    }
+
+    // Ensure progress is at least at the hit TP position
+    if (tp2Hit && progress < 0.66) {
+        progress = 0.66;
+    } else if (tp1Hit && progress < 0.33) {
+        progress = 0.33;
     }
 
     // Show market cap badge if we have data
