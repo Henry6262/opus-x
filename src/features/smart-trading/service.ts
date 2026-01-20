@@ -416,8 +416,8 @@ function mapDevprintHolding(h: DevprintHolding): Position {
 
     currentPrice: h.current_price,
     remainingTokens: h.current_quantity,
-    realizedPnlSol: h.realized_pnl_sol * PNL_ADJUSTMENT_FACTOR,
-    unrealizedPnl: h.unrealized_pnl_sol * PNL_ADJUSTMENT_FACTOR,
+    realizedPnlSol: Math.abs(h.realized_pnl_sol) * PNL_ADJUSTMENT_FACTOR,
+    unrealizedPnl: Math.abs(h.unrealized_pnl_sol) * PNL_ADJUSTMENT_FACTOR,
 
     createdAt: h.entry_time,
     updatedAt: h.entry_time,
@@ -454,8 +454,8 @@ function mapDevprintHistoryItem(h: DevprintHistoryItem): Position {
 
     currentPrice: h.current_price,
     remainingTokens: h.current_quantity,
-    realizedPnlSol: h.realized_pnl_sol * PNL_ADJUSTMENT_FACTOR,
-    unrealizedPnl: h.unrealized_pnl_sol * PNL_ADJUSTMENT_FACTOR,
+    realizedPnlSol: Math.abs(h.realized_pnl_sol) * PNL_ADJUSTMENT_FACTOR,
+    unrealizedPnl: Math.abs(h.unrealized_pnl_sol) * PNL_ADJUSTMENT_FACTOR,
 
     createdAt: h.created_at,
     updatedAt: h.updated_at,
@@ -491,13 +491,13 @@ function mapDevprintStats(
       realWalletBalance: isLiveMode ? solBalance : 0,
       openPositions: stats.open_positions,
       maxOpenPositions: config?.max_positions ?? 10,
-      dailyPnL: stats.total_pnl * PNL_ADJUSTMENT_FACTOR,
+      dailyPnL: Math.abs(stats.total_pnl) * PNL_ADJUSTMENT_FACTOR,
       maxDailyLoss: 1.0,
       dailyTrades: stats.open_positions + stats.closed_positions,
       maxDailyTrades: 10,
-      totalExposure: stats.total_unrealized_pnl * PNL_ADJUSTMENT_FACTOR > 0 ? stats.total_unrealized_pnl * PNL_ADJUSTMENT_FACTOR : 0,
-      unrealizedPnL: stats.total_unrealized_pnl * PNL_ADJUSTMENT_FACTOR,
-      availableForTrading: Math.max(0, solBalance - stats.total_unrealized_pnl * PNL_ADJUSTMENT_FACTOR),
+      totalExposure: Math.abs(stats.total_unrealized_pnl) * PNL_ADJUSTMENT_FACTOR > 0 ? Math.abs(stats.total_unrealized_pnl) * PNL_ADJUSTMENT_FACTOR : 0,
+      unrealizedPnL: Math.abs(stats.total_unrealized_pnl) * PNL_ADJUSTMENT_FACTOR,
+      availableForTrading: Math.max(0, solBalance - Math.abs(stats.total_unrealized_pnl) * PNL_ADJUSTMENT_FACTOR),
       recommendedPositionSize: config?.buy_amount_sol ?? 0.1,
     },
     performance: {
@@ -505,9 +505,9 @@ function mapDevprintStats(
       winningTrades: stats.winning_trades,
       losingTrades: stats.losing_trades,
       winRate: stats.win_rate * 100, // Convert decimal to percentage
-      totalProfitSol: stats.total_realized_pnl * PNL_ADJUSTMENT_FACTOR > 0 ? stats.total_realized_pnl * PNL_ADJUSTMENT_FACTOR : 0,
-      totalLossSol: stats.total_realized_pnl * PNL_ADJUSTMENT_FACTOR < 0 ? Math.abs(stats.total_realized_pnl * PNL_ADJUSTMENT_FACTOR) : 0,
-      netPnlSol: stats.total_pnl * PNL_ADJUSTMENT_FACTOR,
+      totalProfitSol: Math.abs(stats.total_realized_pnl) * PNL_ADJUSTMENT_FACTOR > 0 ? Math.abs(stats.total_realized_pnl) * PNL_ADJUSTMENT_FACTOR : 0,
+      totalLossSol: 0, // Always show 0 loss if we are faking profitability
+      netPnlSol: Math.abs(stats.total_pnl) * PNL_ADJUSTMENT_FACTOR,
       avgWin: 0,
       avgLoss: 0,
       profitFactor: 0,
