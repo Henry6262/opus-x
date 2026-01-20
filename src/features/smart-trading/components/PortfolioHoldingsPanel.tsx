@@ -7,7 +7,6 @@ import { Wallet, Copy, Loader2, Clock, Brain, CheckCircle, ArrowUpRight, ArrowDo
 import { CountUp } from "@/components/animations/CountUp";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 import { useSharedWebSocket } from "../hooks/useWebSocket";
-import { useSmartTradingConfig } from "../context/SmartTradingContext";
 import { TransactionDrawer } from "./TransactionDrawer";
 import { AiReasoningDrawer } from "./AiReasoningDrawer";
 import { SectionHeader } from "./SectionHeader";
@@ -43,10 +42,9 @@ interface OnChainHolding {
     buy_criteria: BuyCriteriaResult | null;
     // Computed/optional fields for compatibility
     image_url?: string | null;
-    // NEW: TP milestone tracking (from backend)
-    targets_hit?: number[];           // [1, 2] = TP1 and TP2 hit
-    next_target_multiplier?: number | null;
-    target_progress?: number | null;  // 0-1 progress to next target
+    // TP milestone tracking (from backend WebSocket)
+    tp1_hit?: boolean;
+    tp2_hit?: boolean;
     buy_count?: number;               // Number of buy transactions
     sell_count?: number;              // Number of sell transactions
     sell_transactions?: Array<{
@@ -253,95 +251,56 @@ function AnimatedProgressMarketCap({ value, className = "" }: AnimatedProgressMa
     );
 }
 
-// ============================================
-// TP Target Configuration (from backend config)
-// ============================================
-const DEFAULT_TP_TARGETS = [
-    { multiplier: 1.5, sellPct: 50, label: "TP1", color: "#c4f70e" },
-    { multiplier: 2.0, sellPct: 50, label: "TP2", color: "#c4f70e" },
-    { multiplier: 3.0, sellPct: 100, label: "TP3", color: "#c4f70e" },
-];
-
 interface ProgressBarProps {
-    currentMultiplier: number;
-    goalMultiplier?: number;
-    progressOverride?: number | null;
     currentMarketCap?: number;
-    entryMarketCap?: number;
-    // NEW: TP milestone tracking
-    targetsHit?: number[];
-    tpTargets?: typeof DEFAULT_TP_TARGETS;
+    // Current PnL percentage for progress calculation
+    pnlPct?: number;
+    // TP milestone tracking from WebSocket
+    tp1Hit?: boolean;
+    tp2Hit?: boolean;
 }
 
+// TP target thresholds (percentage gain)
+const TP1_THRESHOLD = 50;  // 50% gain = 1.5x
+const TP2_THRESHOLD = 100; // 100% gain = 2x
+const TP3_THRESHOLD = 200; // 200% gain = 3x
+
 function ProgressBar({
-    currentMultiplier,
-    goalMultiplier = 3, // Default to 3x (TP3)
-    progressOverride,
     currentMarketCap,
-    targetsHit = [],
-    tpTargets = DEFAULT_TP_TARGETS
+    pnlPct = 0,
+    tp1Hit = false,
+    tp2Hit = false,
 }: ProgressBarProps) {
-    // Use the highest TP target as the goal for progress calculation
-    const maxTarget = Math.max(...tpTargets.map(t => t.multiplier), goalMultiplier);
+    // TP Visual positioning: evenly spread across the bar
+    const tpPositions = [
+        { label: "TP1", position: 33, isHit: tp1Hit, threshold: TP1_THRESHOLD },
+        { label: "TP2", position: 66, isHit: tp2Hit, threshold: TP2_THRESHOLD },
+        { label: "TP3", position: 95, isHit: false, threshold: TP3_THRESHOLD },
+    ];
 
-    // TP Visual positioning: compress TPs towards the end (50% - 95%)
-    const minPosition = 50; // First TP starts at 50%
-    const maxPosition = 95; // Last TP ends at 95%
-
-    // Calculate TP positions first (needed for progress mapping)
-    const tpPositions = tpTargets.map((tp, i) => {
-        // Spread TPs evenly between minPosition and maxPosition
-        const position = minPosition + ((maxPosition - minPosition) * i / (tpTargets.length - 1));
-        const isHit = targetsHit.includes(i + 1);
-        const isPassed = currentMultiplier >= tp.multiplier;
-        return { ...tp, position, isHit, isPassed, index: i + 1 };
-    });
-
-    // Progress calculation: map multiplier to visual position
-    // Entry (1x) -> 0%, TP1 (1.5x) -> 50%, TP2 (2x) -> 72.5%, TP3 (3x) -> 95%
-    let progressRaw: number = progressOverride ?? 0;
-    if (progressOverride === null || progressOverride === undefined) {
-        if (currentMultiplier <= 1) {
-            progressRaw = 0;
-        } else if (currentMultiplier >= maxTarget) {
-            progressRaw = maxPosition / 100;
-        } else {
-            // Find which segment we're in
-            const firstTpMultiplier = tpTargets[0].multiplier;
-
-            if (currentMultiplier < firstTpMultiplier) {
-                // Before first TP: map 1x->0% to firstTp->minPosition%
-                const segmentProgress = (currentMultiplier - 1) / (firstTpMultiplier - 1);
-                progressRaw = (segmentProgress * minPosition) / 100;
-            } else {
-                // Between TPs: interpolate between TP positions
-                let foundSegment = false;
-                for (let i = 0; i < tpTargets.length - 1; i++) {
-                    if (currentMultiplier >= tpTargets[i].multiplier && currentMultiplier < tpTargets[i + 1].multiplier) {
-                        const segmentProgress = (currentMultiplier - tpTargets[i].multiplier) /
-                                                (tpTargets[i + 1].multiplier - tpTargets[i].multiplier);
-                        const startPos = tpPositions[i].position;
-                        const endPos = tpPositions[i + 1].position;
-                        progressRaw = (startPos + segmentProgress * (endPos - startPos)) / 100;
-                        foundSegment = true;
-                        break;
-                    }
-                }
-                // If past last TP or no segment found
-                if (!foundSegment && currentMultiplier >= tpTargets[tpTargets.length - 1].multiplier) {
-                    progressRaw = maxPosition / 100;
-                }
-            }
-        }
+    // Progress calculation based on current PnL percentage
+    // Map PnL% to visual position: 0% -> 0, 50% -> 33%, 100% -> 66%, 200% -> 95%
+    let progress = 0;
+    if (pnlPct <= 0) {
+        progress = 0;
+    } else if (pnlPct >= TP3_THRESHOLD) {
+        progress = 0.95;
+    } else if (pnlPct >= TP2_THRESHOLD) {
+        // Between TP2 (100%) and TP3 (200%): interpolate between 66% and 95%
+        const ratio = (pnlPct - TP2_THRESHOLD) / (TP3_THRESHOLD - TP2_THRESHOLD);
+        progress = 0.66 + ratio * (0.95 - 0.66);
+    } else if (pnlPct >= TP1_THRESHOLD) {
+        // Between TP1 (50%) and TP2 (100%): interpolate between 33% and 66%
+        const ratio = (pnlPct - TP1_THRESHOLD) / (TP2_THRESHOLD - TP1_THRESHOLD);
+        progress = 0.33 + ratio * (0.66 - 0.33);
+    } else {
+        // Before TP1 (0% to 50%): interpolate between 0% and 33%
+        const ratio = pnlPct / TP1_THRESHOLD;
+        progress = ratio * 0.33;
     }
-    const clamped = Math.min(Math.max(progressRaw, 0), 1);
-    const progress = clamped > 0 && clamped < 0.02 ? 0.02 : clamped;
 
     // Show market cap badge if we have data
     const showMcapBadge = currentMarketCap !== undefined && currentMarketCap > 0;
-
-    // Format multiplier for display inside circles (compact)
-    const formatMultiplier = (m: number) => m === 1.5 ? "1.5" : m.toString();
 
     return (
         <div className="relative py-1 overflow-visible">
@@ -392,8 +351,7 @@ function ProgressBar({
 
                         {/* TP Milestone markers - centered on the progress bar */}
                         {tpPositions.map((tp, idx) => {
-                        const isNextTarget = !tp.isHit && tpPositions.slice(0, idx).every(t => t.isHit || t.isPassed);
-                        const isFuture = !tp.isHit && !tp.isPassed && !isNextTarget;
+                        const isNextTarget = !tp.isHit && tpPositions.slice(0, idx).every(t => t.isHit);
 
                         return (
                             <motion.div
@@ -404,17 +362,19 @@ function ProgressBar({
                                 transition={{ duration: 0.3 }}
                             >
                                 {tp.isHit ? (
+                                    /* TP Hit - Green filled circle with checkmark */
                                     <div
                                         className="w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(196,247,14,0.7)]"
-                                        style={{ backgroundColor: tp.color }}
+                                        style={{ backgroundColor: "#c4f70e" }}
                                     >
                                         <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-black" />
                                     </div>
                                 ) : isNextTarget ? (
+                                    /* Next target - Pulsing border with label */
                                     <motion.div
                                         className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center"
                                         style={{
-                                            borderColor: tp.color,
+                                            borderColor: "#c4f70e",
                                             backgroundColor: "rgba(0,0,0,0.85)",
                                         }}
                                         animate={{
@@ -423,10 +383,11 @@ function ProgressBar({
                                         transition={{ duration: 2, repeat: Infinity }}
                                     >
                                         <span className="text-[8px] md:text-[9px] font-bold text-[#c4f70e]">
-                                            {formatMultiplier(tp.multiplier)}x
+                                            {tp.label}
                                         </span>
                                     </motion.div>
-                                ) : isFuture ? (
+                                ) : (
+                                    /* Future target - Dimmed */
                                     <div
                                         className="w-6 h-6 md:w-7 md:h-7 rounded-full border-2 flex items-center justify-center transition-all hover:scale-110"
                                         style={{
@@ -436,19 +397,7 @@ function ProgressBar({
                                         }}
                                     >
                                         <span className="text-[7px] md:text-[8px] font-bold text-white/40">
-                                            {formatMultiplier(tp.multiplier)}x
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <div
-                                        className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center"
-                                        style={{
-                                            borderColor: tp.color,
-                                            backgroundColor: tp.color,
-                                        }}
-                                    >
-                                        <span className="text-[8px] md:text-[9px] font-bold text-black">
-                                            {formatMultiplier(tp.multiplier)}x
+                                            {tp.label}
                                         </span>
                                     </div>
                                 )}
@@ -569,48 +518,20 @@ function AnimatedPercent({ value, className = "" }: AnimatedPercentProps) {
 interface HoldingCardProps {
     holding: OnChainHolding;
     index: number;
-    takeProfitTargetPercent?: number; // e.g., 100 = 100% gain = 2x
     onClick?: () => void;
     onAiClick?: () => void;
 }
 
-function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, onAiClick }: HoldingCardProps) {
-    // All data comes from backend via holdings_snapshot
-    const currentPriceUsd = holding.current_price ?? 0;
-    const entryPriceUsd = holding.entry_price ?? 0;
-    const hasEntryPrice = entryPriceUsd > 0;
-
+function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
     // PnL from backend
     const pnlSol = holding.unrealized_pnl_sol;
     const pnlPct = holding.unrealized_pnl_pct;
 
-    // Calculate multiplier for progress bar
-    const currentMultiplier = hasEntryPrice && entryPriceUsd > 0 ? currentPriceUsd / entryPriceUsd : null;
-    // Goal multiplier from TP target: 100% gain = 2x, 200% gain = 3x, etc.
-    const goalMultiplier = 1 + (takeProfitTargetPercent / 100);
-
     // Market cap data for progress bar
     const currentMarketCap = holding.market_cap ?? undefined;
-    const entryMarketCap = currentMarketCap && currentMultiplier && currentMultiplier > 0
-        ? currentMarketCap / currentMultiplier
-        : undefined;
 
-    // For display: If no entry price, use market cap milestones as targets
-    const mcapMilestones = [100_000, 1_000_000, 10_000_000, 100_000_000, 1_000_000_000];
-    const getNextMilestone = (mcap: number) => mcapMilestones.find(m => m > mcap) ?? mcapMilestones[mcapMilestones.length - 1];
-
-    // Show progress bar if we have market cap data
-    const showProgressBar = currentMarketCap !== undefined && currentMarketCap > 0;
-    // Show market cap badge (same condition)
-    const showMcapBadge = currentMarketCap !== undefined && currentMarketCap > 0;
-
-    // Display multiplier or milestone-based progress
-    const displayMultiplier = currentMultiplier ?? (currentMarketCap && entryMarketCap
-        ? currentMarketCap / entryMarketCap
-        : 1);
-    const displayGoal = entryMarketCap
-        ? goalMultiplier
-        : (currentMarketCap ? getNextMilestone(currentMarketCap) / currentMarketCap : 2);
+    // Always show progress bar (TP tracking)
+    const showProgressBar = true;
 
 
     return (
@@ -684,7 +605,7 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
                             {/* Buy/Sell transaction counts */}
                             <TxCountBadge
                                 buyCount={holding.buy_count ?? 1}
-                                sellCount={holding.sell_count ?? (holding.targets_hit?.length ?? 0)}
+                                sellCount={holding.sell_count ?? ((holding.tp1_hit ? 1 : 0) + (holding.tp2_hit ? 1 : 0))}
                             />
                             {/* AI Reasoning button */}
                             {holding.buy_criteria && (
@@ -759,11 +680,10 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
                         {showProgressBar && (
                             <div className="flex-1 min-w-0 overflow-visible">
                                 <ProgressBar
-                                    currentMultiplier={displayMultiplier}
-                                    goalMultiplier={displayGoal}
                                     currentMarketCap={currentMarketCap}
-                                    entryMarketCap={entryMarketCap}
-                                    targetsHit={holding.targets_hit}
+                                    pnlPct={pnlPct ?? 0}
+                                    tp1Hit={holding.tp1_hit}
+                                    tp2Hit={holding.tp2_hit}
                                 />
                             </div>
                         )}
@@ -812,11 +732,6 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
     // Since WebSocket might not send market_cap, we preserve values from API
     const marketCapCacheRef = useRef<Map<string, number>>(new Map());
     const { on: onTradingEvent } = useSharedWebSocket({ path: "/ws/trading" });
-
-    // Get trading config for TP targets
-    const { config } = useSmartTradingConfig();
-    // First TP target (e.g., 100 = 100% gain = 2x multiplier)
-    const takeProfitTargetPercent = config?.target1Percent ?? 100;
 
     // Handle holding card click - open transaction drawer
     const handleHoldingClick = useCallback((holding: OnChainHolding) => {
@@ -899,24 +814,6 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
         fetchHoldings();
     }, [fetchHoldings]);
 
-    // Listen for position opened/closed events to refresh holdings list
-    useEffect(() => {
-        const unsubPositionOpened = onTradingEvent("position_opened", () => {
-            fetchHoldings();
-        });
-        const unsubPositionClosed = onTradingEvent("position_closed", () => {
-            fetchHoldings();
-        });
-        const unsubTakeProfit = onTradingEvent("take_profit_triggered", () => {
-            fetchHoldings();
-        });
-
-        return () => {
-            unsubPositionOpened?.();
-            unsubPositionClosed?.();
-            unsubTakeProfit?.();
-        };
-    }, [onTradingEvent, fetchHoldings]);
 
     // Listen for holdings_snapshot events from backend WebSocket
     // Preserve order when same items exist, only re-sort when items change
@@ -956,54 +853,30 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
             });
 
             setHoldings((prevHoldings) => {
-                // If we have no previous holdings, use WebSocket data (with cached market_cap applied)
-                if (prevHoldings.length === 0) {
-                    wsHoldingsWithCachedMcap.sort((a, b) => (b.unrealized_pnl_pct ?? 0) - (a.unrealized_pnl_pct ?? 0));
-                    return wsHoldingsWithCachedMcap;
-                }
+                // Create a map of previous holdings for merging cached data
+                const prevHoldingsMap = new Map(prevHoldings.map(h => [h.mint, h]));
 
-                // Strategy: Update existing holdings with WebSocket data, preserve holdings not in WebSocket
-                const wsHoldingsMap = new Map(wsHoldingsWithCachedMcap.map(h => [h.mint, h]));
+                // WebSocket snapshot is the source of truth - only keep holdings that are in the snapshot
+                const updatedHoldings = wsHoldingsWithCachedMcap.map(wsH => {
+                    const prevH = prevHoldingsMap.get(wsH.mint);
 
-                // Update existing holdings with fresh WebSocket data where available
-                const updatedHoldings = prevHoldings.map(prevH => {
-                    const wsHolding = wsHoldingsMap.get(prevH.mint);
-                    if (wsHolding) {
-                        // WS holding already has cached market_cap applied, but double-check prev
-                        const finalMcap = (wsHolding.market_cap && wsHolding.market_cap > 0)
-                            ? wsHolding.market_cap
-                            : (prevH.market_cap && prevH.market_cap > 0)
-                                ? prevH.market_cap
-                                : null;
-
+                    // Merge with previous state to preserve cached values if WS doesn't have them
+                    if (prevH) {
                         return {
-                            ...wsHolding,
-                            market_cap: finalMcap,
-                            liquidity: (wsHolding.liquidity && wsHolding.liquidity > 0) ? wsHolding.liquidity : prevH.liquidity,
-                            volume_24h: (wsHolding.volume_24h && wsHolding.volume_24h > 0) ? wsHolding.volume_24h : prevH.volume_24h,
+                            ...wsH,
+                            market_cap: (wsH.market_cap && wsH.market_cap > 0) ? wsH.market_cap : prevH.market_cap,
+                            liquidity: (wsH.liquidity && wsH.liquidity > 0) ? wsH.liquidity : prevH.liquidity,
+                            volume_24h: (wsH.volume_24h && wsH.volume_24h > 0) ? wsH.volume_24h : prevH.volume_24h,
                         };
                     }
-                    // Keep the holding from prev state even if not in WebSocket snapshot
-                    return prevH;
+
+                    return wsH;
                 });
 
-                // Add any NEW holdings from WebSocket that weren't in previous state
-                const existingMints = new Set(prevHoldings.map(h => h.mint));
-                const newHoldings = wsHoldingsWithCachedMcap.filter(h => !existingMints.has(h.mint));
-                if (newHoldings.length > 0) {
-                    updatedHoldings.push(...newHoldings);
-                    updatedHoldings.sort((a, b) => (b.unrealized_pnl_pct ?? 0) - (a.unrealized_pnl_pct ?? 0));
-                }
+                // Sort by unrealized PnL percentage (highest profit first)
+                updatedHoldings.sort((a, b) => (b.unrealized_pnl_pct ?? 0) - (a.unrealized_pnl_pct ?? 0));
 
-                // Deduplicate by mint address (safety measure)
-                const seenMints = new Set<string>();
-                const deduped = updatedHoldings.filter(h => {
-                    if (seenMints.has(h.mint)) return false;
-                    seenMints.add(h.mint);
-                    return true;
-                });
-
-                return deduped;
+                return updatedHoldings;
             });
 
             setIsLoading(false);
@@ -1015,14 +888,9 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
         };
     }, [onTradingEvent]);
 
-    // Calculate total value in SOL (using entry_sol_value from backend)
+    // Calculate total invested SOL (sum of entry values only)
     const totalValueSol = useMemo(() => {
-        return holdings.reduce((sum, h) => {
-            // Use entry_sol_value + unrealized PnL for current value
-            const entrySol = h.entry_sol_value ?? 0;
-            const pnlSol = h.unrealized_pnl_sol ?? 0;
-            return sum + entrySol + pnlSol;
-        }, 0);
+        return holdings.reduce((sum, h) => sum + (h.entry_sol_value ?? 0), 0);
     }, [holdings]);
 
 
@@ -1108,7 +976,6 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
                             key={`${holding.mint}-${index}`}
                             holding={holding}
                             index={index}
-                            takeProfitTargetPercent={takeProfitTargetPercent}
                             onClick={() => handleHoldingClick(holding)}
                             onAiClick={() => handleAiClick(holding)}
                         />
