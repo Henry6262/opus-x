@@ -64,7 +64,7 @@ export function MobileBottomBar() {
                     whileHover={{ scale: 1.15, opacity: 1 }}
                     whileTap={{ scale: 0.95 }}
                 >
-                    <XIcon className="w-5 h-5 md:w-4 md:h-4 text-white/70 hover:text-white transition-colors" />
+                    <XIcon className="w-7 h-7 md:w-5 md:h-5 text-white/70 hover:text-white transition-colors" />
                 </motion.a>
 
                 {/* DexScreener Icon Button */}
@@ -76,7 +76,7 @@ export function MobileBottomBar() {
                     whileHover={{ scale: 1.15, opacity: 1 }}
                     whileTap={{ scale: 0.95 }}
                 >
-                    <DexScreenerIcon className="w-5 h-5 md:w-4 md:h-4 text-white/70 hover:text-white transition-colors" />
+                    <DexScreenerIcon className="w-7 h-7 md:w-5 md:h-5 text-white/70 hover:text-white transition-colors" />
                 </motion.a>
 
                 {/* CA Copy Icon Button */}
@@ -96,7 +96,7 @@ export function MobileBottomBar() {
                                 exit={{ scale: 0, rotate: 180 }}
                                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
                             >
-                                <Check className="w-5 h-5 md:w-4 md:h-4 text-green-400" />
+                                <Check className="w-7 h-7 md:w-5 md:h-5 text-green-400" />
                             </motion.div>
                         ) : (
                             <motion.div
@@ -106,7 +106,7 @@ export function MobileBottomBar() {
                                 exit={{ scale: 0 }}
                                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
                             >
-                                <Copy className="w-5 h-5 md:w-4 md:h-4 text-white/70 hover:text-white transition-colors" />
+                                <Copy className="w-7 h-7 md:w-5 md:h-5 text-white/70 hover:text-white transition-colors" />
                             </motion.div>
                         )}
                     </AnimatePresence>

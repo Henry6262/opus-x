@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { Wallet, Copy, Loader2, Clock, Brain } from "lucide-react";
+import { Wallet, Copy, Loader2, Clock, Brain, CheckCircle, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { CountUp } from "@/components/animations/CountUp";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 import { useSharedWebSocket } from "../hooks/useWebSocket";
@@ -43,6 +43,20 @@ interface OnChainHolding {
     buy_criteria: BuyCriteriaResult | null;
     // Computed/optional fields for compatibility
     image_url?: string | null;
+    // NEW: TP milestone tracking (from backend)
+    targets_hit?: number[];           // [1, 2] = TP1 and TP2 hit
+    next_target_multiplier?: number | null;
+    target_progress?: number | null;  // 0-1 progress to next target
+    buy_count?: number;               // Number of buy transactions
+    sell_count?: number;              // Number of sell transactions
+    sell_transactions?: Array<{
+        signature: string;
+        target_level: number;
+        sol_received: number;
+        quantity: number;
+        timestamp: string;
+        status: "pending" | "confirmed" | "failed";
+    }>;
 }
 
 // ============================================
@@ -239,84 +253,197 @@ function AnimatedProgressMarketCap({ value, className = "" }: AnimatedProgressMa
     );
 }
 
+// ============================================
+// TP Target Configuration (from backend config)
+// ============================================
+const DEFAULT_TP_TARGETS = [
+    { multiplier: 1.5, sellPct: 50, label: "TP1", color: "#c4f70e" },
+    { multiplier: 2.0, sellPct: 50, label: "TP2", color: "#c4f70e" },
+    { multiplier: 3.0, sellPct: 100, label: "TP3", color: "#c4f70e" },
+];
+
 interface ProgressBarProps {
     currentMultiplier: number;
     goalMultiplier?: number;
     progressOverride?: number | null;
     currentMarketCap?: number;
     entryMarketCap?: number;
+    // NEW: TP milestone tracking
+    targetsHit?: number[];
+    tpTargets?: typeof DEFAULT_TP_TARGETS;
 }
 
-function ProgressBar({ currentMultiplier, goalMultiplier = 2, progressOverride, currentMarketCap, entryMarketCap }: ProgressBarProps) {
-    const goal = Math.max(goalMultiplier, 1.01);
+function ProgressBar({
+    currentMultiplier,
+    goalMultiplier = 3, // Default to 3x (TP3)
+    progressOverride,
+    currentMarketCap,
+    targetsHit = [],
+    tpTargets = DEFAULT_TP_TARGETS
+}: ProgressBarProps) {
+    // Use the highest TP target as the goal for progress calculation
+    const maxTarget = Math.max(...tpTargets.map(t => t.multiplier), goalMultiplier);
 
-    // Progress calculation: how far toward the GAIN (not the multiplier)
-    // At 1x (entry): 0% progress
-    // At goal x: 100% progress
-    // Formula: (currentMultiplier - 1) / (goal - 1)
+    // Progress calculation: 0% at entry (1x), 100% at max target
+    // Map: 1x -> 0%, maxTarget -> 100%
     let progressRaw = progressOverride ?? null;
     if (progressRaw === null || progressRaw === undefined) {
-        // Calculate progress toward the gain target
-        const gainProgress = (currentMultiplier - 1) / (goal - 1);
+        const gainProgress = (currentMultiplier - 1) / (maxTarget - 1);
         progressRaw = gainProgress;
     }
     const clamped = Math.min(Math.max(progressRaw, 0), 1);
     const progress = clamped > 0 && clamped < 0.02 ? 0.02 : clamped;
-    const isCloseToGoal = progress > 0.8;
 
-    // Calculate target market cap
-    // If we have entry mcap, use: entryMcap × goal
-    // Otherwise, derive from current: currentMcap × (goal / currentMultiplier)
-    let targetMarketCap: number | undefined;
-    if (entryMarketCap && entryMarketCap > 0) {
-        targetMarketCap = entryMarketCap * goal;
-    } else if (currentMarketCap && currentMarketCap > 0 && currentMultiplier > 0) {
-        // currentMcap = entryMcap × currentMultiplier
-        // targetMcap = entryMcap × goal = currentMcap × (goal / currentMultiplier)
-        targetMarketCap = currentMarketCap * (goal / currentMultiplier);
-    }
+    // Calculate where each TP milestone sits on the progress bar (0-100%)
+    const tpPositions = tpTargets.map((tp, i) => {
+        const position = ((tp.multiplier - 1) / (maxTarget - 1)) * 100;
+        const isHit = targetsHit.includes(i + 1);
+        const isPassed = currentMultiplier >= tp.multiplier;
+        return { ...tp, position, isHit, isPassed, index: i + 1 };
+    });
 
     // Show market cap badge if we have data
     const showMcapBadge = currentMarketCap !== undefined && currentMarketCap > 0;
 
+    // Format multiplier for display inside circles (compact)
+    const formatMultiplier = (m: number) => m === 1.5 ? "1.5" : m.toString();
+
     return (
-        <div className="flex items-center gap-2 md:gap-3">
-            {/* Progress Track - thin bar with badge on top */}
-            <div className="flex-1 relative flex items-center">
-                {/* Progress bar - slightly taller on desktop */}
-                <div className="relative h-2 md:h-2.5 w-full rounded-full bg-white/10 overflow-hidden">
-                    {/* Progress Fill - Always lime green (progress toward TP target) */}
-                    <motion.div
-                        className="absolute inset-y-0 left-0 rounded-full"
-                        style={{
-                            background: "linear-gradient(90deg, #22c55e, #c4f70e)",
-                        }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress * 100}%` }}
-                        transition={{ type: "spring", stiffness: 120, damping: 18 }}
-                    />
-                </div>
-
-                {/* Market cap badge - centered on top of progress bar */}
-                {showMcapBadge && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <AnimatedProgressMarketCap
-                            value={currentMarketCap}
-                            className="text-[11px] md:text-xs font-mono font-bold tabular-nums text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+        <div className="relative py-2 overflow-visible">
+            {/* Progress Track with TP milestones - compact layout */}
+            <div className="flex items-center overflow-visible">
+                <div className="flex-1 relative overflow-visible">
+                    {/* Progress bar track */}
+                    <div className="relative h-3 md:h-4 w-full rounded-full bg-white/10 overflow-visible">
+                        {/* Progress Fill */}
+                        <motion.div
+                            className="absolute inset-y-0 left-0 rounded-full"
+                            style={{
+                                background: "linear-gradient(90deg, #22c55e, #c4f70e)",
+                            }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress * 100}%` }}
+                            transition={{ type: "spring", stiffness: 120, damping: 18 }}
                         />
-                    </div>
-                )}
-            </div>
 
-            {/* Target: MCap Goal */}
-            <div className="flex items-center gap-1">
-                <span className={`px-2.5 py-0.5 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-bold font-mono tabular-nums ${isCloseToGoal ? "bg-[#c4f70e]/20 text-[#c4f70e]" : "bg-black/40 text-white/70"}`}>
-                    {targetMarketCap !== undefined && targetMarketCap > 0
-                        ? formatMarketCap(targetMarketCap)
-                        : `${goal.toFixed(1)}x`
-                    }
-                </span>
+                        {/* Glow effect at progress edge */}
+                        <motion.div
+                            className="absolute inset-y-0 w-3 blur-sm rounded-full"
+                            style={{
+                                left: `calc(${progress * 100}% - 6px)`,
+                                background: "#c4f70e",
+                                opacity: 0.5,
+                            }}
+                            animate={{ opacity: [0.3, 0.6, 0.3] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                        />
+
+                        {/* TP Milestone markers - centered on the progress bar */}
+                        {tpPositions.map((tp, idx) => {
+                        const isNextTarget = !tp.isHit && tpPositions.slice(0, idx).every(t => t.isHit || t.isPassed);
+                        const isFuture = !tp.isHit && !tp.isPassed && !isNextTarget;
+
+                        return (
+                            <motion.div
+                                key={tp.label}
+                                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10"
+                                style={{ left: `${tp.position}%` }}
+                                animate={tp.isHit ? { scale: [1, 1.15, 1] } : {}}
+                                transition={{ duration: 0.3 }}
+                            >
+                                {tp.isHit ? (
+                                    <div
+                                        className="w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(196,247,14,0.7)]"
+                                        style={{ backgroundColor: tp.color }}
+                                    >
+                                        <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-black" />
+                                    </div>
+                                ) : isNextTarget ? (
+                                    <motion.div
+                                        className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center"
+                                        style={{
+                                            borderColor: tp.color,
+                                            backgroundColor: "rgba(0,0,0,0.85)",
+                                        }}
+                                        animate={{
+                                            boxShadow: ["0 0 0px rgba(196,247,14,0.3)", "0 0 8px rgba(196,247,14,0.6)", "0 0 0px rgba(196,247,14,0.3)"]
+                                        }}
+                                        transition={{ duration: 2, repeat: Infinity }}
+                                    >
+                                        <span className="text-[8px] md:text-[9px] font-bold text-[#c4f70e]">
+                                            {formatMultiplier(tp.multiplier)}x
+                                        </span>
+                                    </motion.div>
+                                ) : isFuture ? (
+                                    <div
+                                        className="w-6 h-6 md:w-7 md:h-7 rounded-full border-2 flex items-center justify-center transition-all hover:scale-110"
+                                        style={{
+                                            borderColor: "rgba(255,255,255,0.25)",
+                                            backgroundColor: "rgba(20,20,20,0.9)",
+                                            backdropFilter: "blur(4px)"
+                                        }}
+                                    >
+                                        <span className="text-[7px] md:text-[8px] font-bold text-white/40">
+                                            {formatMultiplier(tp.multiplier)}x
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div
+                                        className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center"
+                                        style={{
+                                            borderColor: tp.color,
+                                            backgroundColor: tp.color,
+                                        }}
+                                    >
+                                        <span className="text-[8px] md:text-[9px] font-bold text-black">
+                                            {formatMultiplier(tp.multiplier)}x
+                                        </span>
+                                    </div>
+                                )}
+                            </motion.div>
+                        );
+                    })}
+
+                        {/* Market cap badge - ABSOLUTELY positioned below progress bar */}
+                        {showMcapBadge && (
+                            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1">
+                                <AnimatedProgressMarketCap
+                                    value={currentMarketCap!}
+                                    className="text-[9px] md:text-[10px] font-mono font-medium tabular-nums text-white/50"
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
+        </div>
+    );
+}
+
+// ============================================
+// Buy/Sell Transaction Counter Badge
+// ============================================
+
+interface TxCountBadgeProps {
+    buyCount?: number;
+    sellCount?: number;
+}
+
+function TxCountBadge({ buyCount = 1, sellCount = 0 }: TxCountBadgeProps) {
+    return (
+        <div className="flex items-center gap-2">
+            {/* Buy count - no background */}
+            <div className="flex items-center gap-0.5 text-green-400">
+                <ArrowUpRight className="w-3 h-3" />
+                <span className="text-[10px] font-bold tabular-nums">{buyCount}</span>
+            </div>
+            {/* Sell count - no background (only show if > 0) */}
+            {sellCount > 0 && (
+                <div className="flex items-center gap-0.5 text-red-400">
+                    <ArrowDownRight className="w-3 h-3" />
+                    <span className="text-[10px] font-bold tabular-nums">{sellCount}</span>
+                </div>
+            )}
         </div>
     );
 }
@@ -431,6 +558,8 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
 
     // Show progress bar if we have market cap data
     const showProgressBar = currentMarketCap !== undefined && currentMarketCap > 0;
+    // Show market cap badge (same condition)
+    const showMcapBadge = currentMarketCap !== undefined && currentMarketCap > 0;
 
     // Display multiplier or milestone-based progress
     const displayMultiplier = currentMultiplier ?? (currentMarketCap && entryMarketCap
@@ -459,6 +588,16 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
                 <div className="absolute inset-0 bg-gradient-to-r from-[#c4f70e]/5 to-transparent" />
             </div>
 
+            {/* Entry Time Badge - Absolute Top Left */}
+            {holding.entry_time && (
+                <div className="absolute top-1.5 left-1.5 z-20">
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[9px] font-medium text-white/70 border border-white/10">
+                        <Clock className="w-2.5 h-2.5" />
+                        {formatRelativeTime(holding.entry_time)}
+                    </span>
+                </div>
+            )}
+
             {/* Main Layout: Image Left | Content Right */}
             <div className="flex gap-2 md:gap-3 items-stretch">
                 {/* LEFT: Token Avatar - smaller on mobile */}
@@ -483,28 +622,27 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
 
                 {/* RIGHT: All Content */}
                 <div className="flex-1 min-w-0">
-                    {/* Row 1: Token Info + PnL */}
+                    {/* Row 1: Token name + Copy + Buy/Sell + AI | PnL% */}
                     <div className="flex items-start justify-between mb-1">
-                        {/* Token name, time, copy button */}
-                        <div className="flex items-center gap-1.5 md:gap-2">
+                        {/* Token name + Copy button + Buy/Sell counts + AI button */}
+                        <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                             <span className="font-bold text-white text-sm md:text-base">{holding.symbol}</span>
-                            {/* Entry time badge */}
-                            {holding.entry_time && (
-                                <span className="flex items-center gap-0.5 text-[10px] text-white/40">
-                                    <Clock className="w-2.5 h-2.5" />
-                                    {formatRelativeTime(holding.entry_time)}
-                                </span>
-                            )}
+                            {/* Copy button */}
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     navigator.clipboard.writeText(holding.mint);
                                 }}
-                                className="p-0.5 md:p-1 rounded hover:bg-white/10 transition-colors"
+                                className="p-0.5 rounded hover:bg-white/10 transition-colors"
                                 title="Copy Contract Address"
                             >
-                                <Copy className="w-3 h-3 md:w-3.5 md:h-3.5 text-white/40 hover:text-white/70" />
+                                <Copy className="w-3 h-3 text-white/40 hover:text-white/70" />
                             </button>
+                            {/* Buy/Sell transaction counts */}
+                            <TxCountBadge
+                                buyCount={holding.buy_count ?? 1}
+                                sellCount={holding.sell_count ?? (holding.targets_hit?.length ?? 0)}
+                            />
                             {/* AI Reasoning button */}
                             {holding.buy_criteria && (
                                 <button
@@ -545,44 +683,47 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
                     </div>
 
                     {/* Row 2: Entry SOL + Progress Bar (full width) */}
-                    <div className="flex items-center gap-4 md:gap-6 mt-1">
-                        {/* Entry Amount (SOL invested) + Unrealized PnL attached */}
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <div className="flex items-center gap-1 text-white">
-                                <span className="font-mono font-bold tabular-nums text-sm md:text-base">
-                                    {holding.entry_sol_value?.toFixed(2) ?? "0.00"}
-                                </span>
-                                <Image
-                                    src="/logos/solana.png"
-                                    alt="SOL"
-                                    width={14}
-                                    height={14}
-                                    className="opacity-80 md:w-[16px] md:h-[16px]"
-                                />
+                    <div className="flex items-center gap-4 md:gap-6 mt-1 overflow-visible">
+                        {/* Left side: SOL entry value */}
+                        <div className="flex flex-col gap-0.5 flex-shrink-0">
+                            {/* Entry Amount (SOL invested) + Unrealized PnL */}
+                            <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1 text-white">
+                                    <span className="font-mono font-bold tabular-nums text-sm md:text-base">
+                                        {holding.entry_sol_value?.toFixed(2) ?? "0.00"}
+                                    </span>
+                                    <Image
+                                        src="/logos/solana.png"
+                                        alt="SOL"
+                                        width={14}
+                                        height={14}
+                                        className="opacity-80 md:w-[16px] md:h-[16px]"
+                                    />
+                                </div>
+                                {/* Unrealized PnL - only show if >= 0.1 SOL */}
+                                {pnlSol !== null && Math.abs(pnlSol) >= 0.1 && (
+                                    <span className={`font-mono tabular-nums text-xs md:text-sm flex-shrink-0 ${pnlSol >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                        ({pnlSol >= 0 ? "+" : ""}{pnlSol.toFixed(1)})
+                                    </span>
+                                )}
                             </div>
-                            {/* Unrealized PnL - only show if >= 0.1 SOL */}
-                            {pnlSol !== null && Math.abs(pnlSol) >= 0.1 && (
-                                <span className={`font-mono tabular-nums text-xs md:text-sm flex-shrink-0 ${pnlSol >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                    ({pnlSol >= 0 ? "+" : ""}{pnlSol.toFixed(1)})
-                                </span>
-                            )}
                         </div>
 
                         {/* Separator */}
-                        <div className="w-px h-4 bg-white/20 flex-shrink-0" />
+                        <div className="w-px h-8 bg-white/20 flex-shrink-0" />
 
-                        {/* Progress Bar - fills remaining space */}
+                        {/* Progress Bar with TP milestones + Market Cap badge inside */}
                         {showProgressBar && (
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 overflow-visible">
                                 <ProgressBar
                                     currentMultiplier={displayMultiplier}
                                     goalMultiplier={displayGoal}
                                     currentMarketCap={currentMarketCap}
                                     entryMarketCap={entryMarketCap}
+                                    targetsHit={holding.targets_hit}
                                 />
                             </div>
                         )}
-
                     </div>
                 </div>
             </div>
@@ -747,7 +888,9 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
             if (!data?.holdings) return;
 
             // Skip WebSocket updates until API has loaded initial data with market_cap
-            if (!apiLoadedRef.current) return;
+            if (!apiLoadedRef.current) {
+                return;
+            }
 
             // Filter holdings from WebSocket
             const wsHoldings = data.holdings
@@ -880,6 +1023,8 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
                 icon={<Wallet className="w-6 h-6 text-[#c4f70e]" />}
                 title="Portfolio"
                 tooltip="Your active token positions. Click any holding to view transaction history and AI reasoning."
+                count={holdings.length}
+                countColor="lime"
                 rightContent={
                     totalValueSol > 0 ? (
                         <span className="text-white text-[15px] font-semibold">
