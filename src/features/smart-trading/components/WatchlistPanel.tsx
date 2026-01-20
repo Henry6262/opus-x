@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence } from "motion/react";
-import { Eye, Loader2, Wifi, WifiOff } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 import { smartTradingService } from "../service";
 import { useSharedWebSocket } from "../hooks/useWebSocket";
-import { WatchlistCard } from "./WatchlistCard";
+import { WatchlistCard, type AiReasoningEntry } from "./WatchlistCard";
 import { SectionHeader } from "./SectionHeader";
 import type {
   WatchlistToken,
@@ -15,6 +15,22 @@ import type {
   WatchlistRemovedEvent,
   WatchlistGraduatedEvent,
 } from "../types";
+
+// ============================================
+// Types
+// ============================================
+
+interface AiReasoningEvent {
+  symbol: string;
+  mint: string;
+  reasoning: string;
+  conviction: number;
+  will_trade: boolean;
+  timestamp: number;
+}
+
+// Max number of AI reasonings to store per token
+const MAX_REASONINGS_PER_TOKEN = 10;
 
 // ============================================
 // WatchlistPanel
@@ -31,9 +47,13 @@ export function WatchlistPanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // AI Reasoning history per token (keyed by mint address)
+  const [aiReasoningsMap, setAiReasoningsMap] = useState<Map<string, AiReasoningEntry[]>>(new Map());
+
   const isFetchingRef = useRef(false);
-  const { on: onTradingEvent, status: wsStatus } = useSharedWebSocket({ path: "/ws/trading" });
-  const isConnected = wsStatus === "connected";
+  const { on: onTradingEvent } = useSharedWebSocket({ path: "/ws/trading" });
+  // Separate WebSocket for AI reasoning events
+  const { on: onReasoningEvent } = useSharedWebSocket({ path: "/ws/trading/reasoning" });
 
   // Fetch initial data
   const fetchWatchlist = useCallback(async () => {
@@ -131,10 +151,22 @@ export function WatchlistPanel() {
 
     const unsubRemoved = onTradingEvent<WatchlistRemovedEvent>("watchlist_removed", (data) => {
       setTokens((prev) => prev.filter((t) => t.mint !== data.mint));
+      // Clean up AI reasonings for removed token
+      setAiReasoningsMap((prev) => {
+        const next = new Map(prev);
+        next.delete(data.mint);
+        return next;
+      });
     });
 
     const unsubGraduated = onTradingEvent<WatchlistGraduatedEvent>("watchlist_graduated", (data) => {
       setTokens((prev) => prev.filter((t) => t.mint !== data.mint));
+      // Clean up AI reasonings for removed token
+      setAiReasoningsMap((prev) => {
+        const next = new Map(prev);
+        next.delete(data.mint);
+        return next;
+      });
     });
 
     return () => {
@@ -144,6 +176,36 @@ export function WatchlistPanel() {
       unsubGraduated?.();
     };
   }, [onTradingEvent]);
+
+  // Listen for AI reasoning events from dedicated reasoning WebSocket
+  useEffect(() => {
+    const unsubAiReasoning = onReasoningEvent<AiReasoningEvent>("ai_reasoning", (data) => {
+      console.log("[WatchlistPanel] ai_reasoning from /ws/trading/reasoning:", data.symbol, {
+        conviction: data.conviction,
+        will_trade: data.will_trade,
+      });
+
+      const newEntry: AiReasoningEntry = {
+        reasoning: data.reasoning,
+        conviction: data.conviction,
+        will_trade: data.will_trade,
+        timestamp: data.timestamp,
+      };
+
+      setAiReasoningsMap((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(data.mint) || [];
+        // Add new entry at the beginning, keep only the last N entries
+        const updated = [newEntry, ...existing].slice(0, MAX_REASONINGS_PER_TOKEN);
+        next.set(data.mint, updated);
+        return next;
+      });
+    });
+
+    return () => {
+      unsubAiReasoning?.();
+    };
+  }, [onReasoningEvent]);
 
   // Hide if empty
   if (!isLoading && tokens.length === 0 && !error) {
@@ -182,7 +244,11 @@ export function WatchlistPanel() {
           <div className="flex gap-2">
             <AnimatePresence mode="popLayout">
               {tokens.map((token) => (
-                <WatchlistCard key={token.mint} token={token} />
+                <WatchlistCard
+                  key={token.mint}
+                  token={token}
+                  aiReasonings={aiReasoningsMap.get(token.mint)}
+                />
               ))}
             </AnimatePresence>
           </div>

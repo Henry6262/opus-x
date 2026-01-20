@@ -344,7 +344,18 @@ function ProgressBar({
     const formatMultiplier = (m: number) => m === 1.5 ? "1.5" : m.toString();
 
     return (
-        <div className="relative py-2 overflow-visible">
+        <div className="relative py-1 overflow-visible">
+            {/* Market cap badge - ABOVE the progress bar, aligned with it */}
+            {showMcapBadge && (
+                <div className="flex items-center gap-1 mb-1 ml-[67px] md:ml-[77px]">
+                    <span className="text-[9px] md:text-[10px] font-medium text-white/50 uppercase">mcap:</span>
+                    <AnimatedProgressMarketCap
+                        value={currentMarketCap!}
+                        className="text-[10px] md:text-[11px] font-mono font-bold tabular-nums text-white/90"
+                    />
+                </div>
+            )}
+
             {/* Progress Track with TP milestones - compact layout */}
             <div className="flex items-center gap-2 overflow-visible">
                 {/* TP's Label with target icon */}
@@ -366,19 +377,6 @@ function ProgressBar({
                             animate={{ width: `${progress * 100}%` }}
                             transition={{ type: "spring", stiffness: 120, damping: 18 }}
                         />
-
-                        {/* Market cap badge - INSIDE the progress bar on the left */}
-                        {showMcapBadge && (
-                            <div className="absolute left-1.5 top-1/2 -translate-y-1/2 z-20">
-                                <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-black/60 backdrop-blur-sm">
-                                    <span className="text-[8px] md:text-[9px] font-medium text-white/80 uppercase">mcap:</span>
-                                    <AnimatedProgressMarketCap
-                                        value={currentMarketCap!}
-                                        className="text-[9px] md:text-[10px] font-mono font-bold tabular-nums text-white"
-                                    />
-                                </div>
-                            </div>
-                        )}
 
                         {/* Glow effect at progress edge */}
                         <motion.div
