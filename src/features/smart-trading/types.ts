@@ -499,6 +499,19 @@ export interface WatchlistResponse {
   stats: WatchlistStats;
 }
 
+/** AI reasoning entry for a watchlist token */
+export interface WatchlistReasoningEntry {
+  reasoning: string;
+  conviction: number;
+  will_trade: boolean;
+  timestamp: number;
+}
+
+/** Response from /api/trading/watchlist/reasoning */
+export interface WatchlistReasoningResponse {
+  reasoning: Record<string, WatchlistReasoningEntry[]>; // keyed by mint address
+}
+
 /** WebSocket event: Token added to watchlist */
 export interface WatchlistAddedEvent {
   mint: string;

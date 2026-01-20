@@ -19,6 +19,7 @@ import type {
   RankedMigration,
   DashboardInitResponse,
   WatchlistResponse,
+  WatchlistReasoningResponse,
   BuyCriteriaResult,
 } from "./types";
 import { SignalSource } from "./types";
@@ -718,6 +719,20 @@ export const smartTradingService = {
    */
   async getWatchlist(): Promise<WatchlistResponse> {
     return fetchDevprint<WatchlistResponse>("/api/trading/watchlist");
+  },
+
+  /**
+   * Get AI reasoning history for watchlist tokens
+   * Returns the most recent AI reasoning for each token mint
+   */
+  async getWatchlistReasoning(): Promise<WatchlistReasoningResponse> {
+    try {
+      return await fetchDevprint<WatchlistReasoningResponse>("/api/trading/watchlist/reasoning");
+    } catch (err) {
+      // If endpoint doesn't exist yet, return empty map
+      if (isDev) console.warn("[smartTradingService] Watchlist reasoning endpoint not available:", err);
+      return { reasoning: {} };
+    }
   },
 
   // ============================================

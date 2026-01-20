@@ -55,20 +55,38 @@ export function WatchlistPanel() {
   // Separate WebSocket for AI reasoning events
   const { on: onReasoningEvent } = useSharedWebSocket({ path: "/ws/trading/reasoning" });
 
-  // Fetch initial data
+  // Fetch initial data (watchlist + reasoning backfill)
   const fetchWatchlist = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
 
     try {
       setIsLoading(true);
-      const response = await smartTradingService.getWatchlist();
+
+      // Fetch watchlist and reasoning in parallel
+      const [watchlistResponse, reasoningResponse] = await Promise.all([
+        smartTradingService.getWatchlist(),
+        smartTradingService.getWatchlistReasoning(),
+      ]);
+
       // Deduplicate tokens by mint address
-      const uniqueTokens = response.tokens.filter(
+      const uniqueTokens = watchlistResponse.tokens.filter(
         (token, index, self) => index === self.findIndex((t) => t.mint === token.mint)
       );
       setTokens(uniqueTokens);
-      setStats(response.stats);
+      setStats(watchlistResponse.stats);
+
+      // Backfill AI reasoning history from API response
+      if (reasoningResponse.reasoning && Object.keys(reasoningResponse.reasoning).length > 0) {
+        console.log("[WatchlistPanel] Backfilling AI reasoning for", Object.keys(reasoningResponse.reasoning).length, "tokens");
+        const reasoningMap = new Map<string, AiReasoningEntry[]>();
+        for (const [mint, entries] of Object.entries(reasoningResponse.reasoning)) {
+          // entries is already an array of AiReasoningEntry
+          reasoningMap.set(mint, entries.slice(0, MAX_REASONINGS_PER_TOKEN));
+        }
+        setAiReasoningsMap(reasoningMap);
+      }
+
       setError(null);
     } catch (err) {
       console.error("[WatchlistPanel] Failed to fetch:", err);
