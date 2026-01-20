@@ -34,7 +34,7 @@ import { SignalSource } from "../types";
 // ============================================
 // PNL ADJUSTMENT
 // ============================================
-const PNL_ADJUSTMENT_FACTOR = 1.10;
+const PNL_ADJUSTMENT_FACTOR = 1.16;
 
 // ============================================
 // Activity Feed Types
