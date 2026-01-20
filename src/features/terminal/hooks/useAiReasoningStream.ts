@@ -28,6 +28,8 @@ interface UseAiReasoningStreamProps {
     maxThinkingSteps?: number;
     /** Minimum interval between AI messages (ms) */
     throttleMs?: number;
+    /** Whether boot sequence has completed */
+    isBootComplete?: boolean;
 }
 
 /** AI reasoning event from /ws/trading/reasoning */
@@ -74,10 +76,14 @@ export function useAiReasoningStream({
     enabled = true,
     maxThinkingSteps = 5,
     throttleMs = 1000,
+    isBootComplete = true,
 }: UseAiReasoningStreamProps = {}): void {
     const { log, startThinking, stopThinking, setThinkingStep } = useTerminal();
     const lastMessageTimeRef = useRef<number>(0);
     const thinkingCountRef = useRef<Map<string, number>>(new Map());
+
+    // Effective enabled state - only active after boot completes
+    const effectiveEnabled = enabled && isBootComplete;
 
     // Throttled log function
     const throttledLog = useCallback(
@@ -215,7 +221,7 @@ export function useAiReasoningStream({
 
     // Subscribe to WebSocket events via custom event system
     useEffect(() => {
-        if (!enabled) return;
+        if (!effectiveEnabled) return;
 
         // Custom event handlers for AI-related WebSocket events
         const handleAiReasoning = (event: CustomEvent<AiReasoningEvent>) => {
@@ -325,7 +331,7 @@ export function useAiReasoningStream({
             window.removeEventListener("terminal:take_profit", handleTakeProfit as EventListener);
             window.removeEventListener("terminal:position_closed", handlePositionClosed as EventListener);
         };
-    }, [enabled, emitAiReasoning, emitNoMarketData, throttledLog]);
+    }, [effectiveEnabled, emitAiReasoning, emitNoMarketData, throttledLog]);
 }
 
 /**

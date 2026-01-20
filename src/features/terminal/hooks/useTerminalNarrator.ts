@@ -5,6 +5,7 @@ import { useTerminal } from "../TerminalProvider";
 import {
   generateMessage,
   getCategoryColor,
+  getCategoryIcon,
   shouldStream,
 } from "../ai-personality";
 import {
@@ -38,6 +39,8 @@ interface NarratorState {
 
 interface UseTerminalNarratorProps extends NarratorConfig {
   state: NarratorState;
+  /** Whether boot sequence has completed */
+  isBootComplete?: boolean;
 }
 
 // ============================================
@@ -57,8 +60,12 @@ export function useTerminalNarrator({
   throttleMs = DEFAULT_THROTTLE_MS,
   idleIntervalMs = DEFAULT_IDLE_INTERVAL_MS,
   enabled = true,
+  isBootComplete = true,
 }: UseTerminalNarratorProps): void {
   const { log } = useTerminal();
+
+  // Effective enabled state - only active after boot completes
+  const effectiveEnabled = enabled && isBootComplete;
 
   // Track state
   const prevStateRef = useRef<NarratorState | null>(null);
@@ -111,15 +118,17 @@ export function useTerminalNarrator({
       const { category, context } = resolveEvent(event);
       const text = generateMessage(category, context);
       const color = getCategoryColor(category);
+      const icon = getCategoryIcon(category);
       const isStreaming = shouldStream(category);
 
-      log({ text, color, isStreaming });
+      log({ text, color, icon, isStreaming });
       lastMessageTimeRef.current = now;
       recentEventsRef.current.add(eventKey);
 
       // Reset idle timer after any message
       resetIdleTimer();
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [log, throttleMs]
   );
 
@@ -156,15 +165,13 @@ export function useTerminalNarrator({
     idleTimerRef.current = setInterval(emitIdleMessage, idleIntervalMs);
   }, [emitIdleMessage, idleIntervalMs]);
 
-  // Boot sequence
+  // Boot sequence - now handled by useTerminalBoot, so skip the narrator boot
   useEffect(() => {
-    if (!enabled || hasBootedRef.current) return;
+    if (!effectiveEnabled || hasBootedRef.current) return;
     hasBootedRef.current = true;
 
-    // Initial boot message
-    emitEvent({ type: "system:boot", priority: "high" }, true);
-
-    // Start idle timer
+    // Don't emit boot message - that's handled by useTerminalBoot now
+    // Just start the idle timer
     resetIdleTimer();
 
     return () => {
@@ -172,7 +179,7 @@ export function useTerminalNarrator({
         clearInterval(idleTimerRef.current);
       }
     };
-  }, [enabled, emitEvent, resetIdleTimer]);
+  }, [effectiveEnabled, resetIdleTimer]);
 
   // Queue processor
   useEffect(() => {
@@ -185,7 +192,7 @@ export function useTerminalNarrator({
   // ============================================
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!effectiveEnabled) return;
 
     const prevState = prevStateRef.current;
 
@@ -334,11 +341,11 @@ export function useTerminalNarrator({
 
     // Update previous state
     prevStateRef.current = { ...state };
-  }, [state, enabled, emitEvent]);
+  }, [state, effectiveEnabled, emitEvent]);
 
   // Periodic scanning message (less frequent now)
   useEffect(() => {
-    if (!enabled || !state.tradingEnabled) return;
+    if (!effectiveEnabled || !state.tradingEnabled) return;
 
     // Random scanning message every 30-60 seconds (was 20-40)
     const scanInterval = setInterval(
@@ -352,7 +359,7 @@ export function useTerminalNarrator({
     );
 
     return () => clearInterval(scanInterval);
-  }, [enabled, state.tradingEnabled, emitEvent]);
+  }, [effectiveEnabled, state.tradingEnabled, emitEvent]);
 }
 
 // ============================================

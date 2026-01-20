@@ -26,6 +26,8 @@ import {
   VolumeX,
 } from "lucide-react";
 import { useTerminal } from "./TerminalProvider";
+import { useTerminalBoot, BOOT_DURATION } from "./hooks/useTerminalBoot";
+import DecryptedText from "@/components/DecryptedText";
 import type { TerminalLogEntry, TerminalIconType } from "./types";
 
 // Icon component map for efficient rendering
@@ -118,6 +120,56 @@ function MatrixRain() {
 }
 
 // ============================================
+// Rich Text Parser for Highlighted Values
+// ============================================
+
+// Highlight type to CSS class mapping
+const highlightClasses: Record<string, string> = {
+  "token": "terminal-hl-token",
+  "price": "terminal-hl-price",
+  "pnl-pos": "terminal-hl-pnl-pos",
+  "pnl-neg": "terminal-hl-pnl-neg",
+  "score": "terminal-hl-score",
+  "count": "terminal-hl-count",
+  "address": "terminal-hl-address",
+  "mcap": "terminal-hl-mcap",
+};
+
+// Parse text with [[type:value]] markers into React elements
+function parseRichText(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const regex = /\[\[([a-z-]+):([^\]]+)\]\]/g;
+  let lastIndex = 0;
+  let match;
+  let keyIndex = 0;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+
+    // Add the highlighted span
+    const [, type, value] = match;
+    const className = highlightClasses[type] || "";
+    parts.push(
+      <span key={keyIndex++} className={className}>
+        {value}
+      </span>
+    );
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : [text];
+}
+
+// ============================================
 // Typewriter Effect Component
 // ============================================
 
@@ -139,6 +191,9 @@ function TypewriterText({
   const indexRef = useRef(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Strip highlight markers for character counting during streaming
+  const plainText = useMemo(() => text.replace(/\[\[[a-z-]+:([^\]]+)\]\]/g, "$1"), [text]);
+
   useEffect(() => {
     // Reset when text changes
     setDisplayedText("");
@@ -154,15 +209,45 @@ function TypewriterText({
     }
 
     const typeNextChar = () => {
-      if (indexRef.current >= text.length) {
+      if (indexRef.current >= plainText.length) {
         setIsComplete(true);
+        setDisplayedText(text); // Show full text with markers at the end
         onComplete?.();
         return;
       }
 
-      const char = text[indexRef.current];
+      const char = plainText[indexRef.current];
       indexRef.current++;
-      setDisplayedText(text.slice(0, indexRef.current));
+
+      // Build displayed text by showing characters up to current index
+      // We need to map plain text index back to rich text
+      let richIndex = 0;
+      let plainIndex = 0;
+      while (plainIndex < indexRef.current && richIndex < text.length) {
+        // Check if we're at a marker start
+        const markerMatch = text.slice(richIndex).match(/^\[\[([a-z-]+):([^\]]+)\]\]/);
+        if (markerMatch) {
+          // Include the entire marker if we've typed through its content
+          const contentLength = markerMatch[2].length;
+          if (plainIndex + contentLength <= indexRef.current) {
+            richIndex += markerMatch[0].length;
+            plainIndex += contentLength;
+          } else {
+            // Partial marker - show partial content
+            const partialLength = indexRef.current - plainIndex;
+            const partialContent = markerMatch[2].slice(0, partialLength);
+            setDisplayedText(text.slice(0, richIndex) + `[[${markerMatch[1]}:${partialContent}]]`);
+            break;
+          }
+        } else {
+          richIndex++;
+          plainIndex++;
+        }
+      }
+
+      if (plainIndex >= indexRef.current) {
+        setDisplayedText(text.slice(0, richIndex));
+      }
 
       // Calculate delay for next character
       let delay = baseSpeed;
@@ -190,11 +275,14 @@ function TypewriterText({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [text, isStreaming, baseSpeed, onComplete]);
+  }, [text, plainText, isStreaming, baseSpeed, onComplete]);
+
+  // Parse and render rich text
+  const renderedContent = useMemo(() => parseRichText(displayedText), [displayedText]);
 
   return (
     <>
-      {displayedText}
+      {renderedContent}
       {isStreaming && !isComplete && <span className="streaming-cursor">|</span>}
     </>
   );
@@ -255,11 +343,34 @@ function TerminalLine({
 }
 
 // ============================================
+// CRT Noise Overlay Component
+// ============================================
+
+function TerminalNoise() {
+  return (
+    <div
+      className="terminal-noise"
+      aria-hidden="true"
+    />
+  );
+}
+
+// ============================================
+// Scanline Overlay Component
+// ============================================
+
+function ScanlineOverlay() {
+  return (
+    <div className="terminal-scanlines" aria-hidden="true" />
+  );
+}
+
+// ============================================
 // Main Terminal Component
 // ============================================
 
 export function Terminal() {
-  const { logs } = useTerminal();
+  const { logs, log, setBootPhase, bootPhase, isBootComplete } = useTerminal();
   // Start open on desktop (md breakpoint = 768px), collapsed on mobile
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -271,6 +382,15 @@ export function Terminal() {
   const terminalRef = useRef<HTMLElement>(null);
   const prevLastLogIdRef = useRef(logs[logs.length - 1]?.id);
   const initialLogCountRef = useRef(logs.length);
+
+  // Boot sequence - runs once on mount
+  useTerminalBoot({
+    log,
+    onBootComplete: () => {
+      setBootPhase('ready');
+    },
+    enabled: bootPhase === 'booting',
+  });
 
   // Check if at bottom helper
   const checkIsAtBottom = useCallback(() => {
@@ -385,16 +505,35 @@ export function Terminal() {
 
       <aside
         ref={terminalRef}
-        className={`terminal terminal-glass ${animationComplete ? 'animation-complete' : ''}`}
+        className={`terminal terminal-glass ${animationComplete ? 'animation-complete' : ''} ${!isBootComplete ? 'terminal-booting' : ''}`}
         onScroll={handleScroll}
       >
         <MatrixRain />
+        <TerminalNoise />
+        <ScanlineOverlay />
         <div className="terminal-header">
-          <div className="terminal-status-indicator">
-            <span className="terminal-status-dot" />
-            <span className="terminal-status-text">LIVE</span>
+          <div className={`terminal-status-indicator ${!isBootComplete ? 'terminal-status-booting' : ''}`}>
+            <span className={`terminal-status-dot ${!isBootComplete ? 'terminal-status-dot--booting' : ''}`} />
+            <span className="terminal-status-text">
+              {isBootComplete ? 'LIVE' : 'BOOT'}
+            </span>
           </div>
-          <div className="terminal-title">AI REASONING TERMINAL</div>
+          <div className="terminal-title">
+            {isBootComplete ? (
+              'AI REASONING TERMINAL'
+            ) : (
+              <DecryptedText
+                text="AI REASONING TERMINAL"
+                speed={40}
+                maxIterations={15}
+                animateOn="view"
+                sequential
+                revealDirection="start"
+                className="text-inherit"
+                encryptedClassName="text-[var(--matrix-green)] opacity-60"
+              />
+            )}
+          </div>
           <div
             className="terminal-dots"
             onClick={() => setIsCollapsed(true)}

@@ -43,6 +43,8 @@ export interface MessageContext {
   score?: number;
   count?: number;
   reason?: string;
+  marketCap?: number;
+  address?: string;
 }
 
 // Message templates organized by category
@@ -282,32 +284,86 @@ function getTemplate(category: MessageCategory): string {
 }
 
 /**
- * Interpolate context variables into a template
+ * Rich text formatting markers for terminal values
+ * These get parsed by Terminal component to render with colors
+ * Format: [[type:value]] where type determines the color
+ */
+export type HighlightType = "token" | "price" | "pnl-pos" | "pnl-neg" | "score" | "count" | "address" | "mcap";
+
+/**
+ * Wrap a value with highlight markers for rich terminal display
+ */
+function highlight(type: HighlightType, value: string): string {
+  return `[[${type}:${value}]]`;
+}
+
+/**
+ * Format a price value with SOL suffix
+ */
+function formatPrice(price: number): string {
+  if (price >= 1) {
+    return `${price.toFixed(4)} SOL`;
+  } else if (price >= 0.001) {
+    return `${price.toFixed(6)} SOL`;
+  } else {
+    return `${price.toExponential(2)} SOL`;
+  }
+}
+
+/**
+ * Format a market cap value
+ */
+function formatMcap(mcap: number): string {
+  if (mcap >= 1_000_000) {
+    return `$${(mcap / 1_000_000).toFixed(2)}M`;
+  } else if (mcap >= 1_000) {
+    return `$${(mcap / 1_000).toFixed(1)}K`;
+  } else {
+    return `$${mcap.toFixed(0)}`;
+  }
+}
+
+/**
+ * Interpolate context variables into a template with rich formatting
  */
 function interpolate(template: string, context: MessageContext): string {
   let result = template;
 
   if (context.tokenSymbol) {
-    result = result.replace(/{tokenSymbol}/g, `$${context.tokenSymbol}`);
+    // Token symbols get bright cyan highlight
+    result = result.replace(/{tokenSymbol}/g, highlight("token", `$${context.tokenSymbol}`));
   }
   if (context.tokenName) {
     result = result.replace(/{tokenName}/g, context.tokenName);
   }
   if (context.price !== undefined) {
-    result = result.replace(/{price}/g, context.price.toFixed(6));
+    // Prices get amber highlight
+    result = result.replace(/{price}/g, highlight("price", formatPrice(context.price)));
   }
   if (context.pnl !== undefined) {
+    // PnL gets green for positive, red for negative
     const sign = context.pnl >= 0 ? "+" : "";
-    result = result.replace(/{pnl}/g, `${sign}${context.pnl.toFixed(4)}`);
+    const type: HighlightType = context.pnl >= 0 ? "pnl-pos" : "pnl-neg";
+    result = result.replace(/{pnl}/g, highlight(type, `${sign}${context.pnl.toFixed(4)} SOL`));
   }
   if (context.score !== undefined) {
-    result = result.replace(/{score}/g, context.score.toFixed(1));
+    // Scores get appropriate color based on value
+    const scoreValue = context.score;
+    result = result.replace(/{score}/g, highlight("score", scoreValue.toFixed(0)));
   }
   if (context.count !== undefined) {
-    result = result.replace(/{count}/g, String(context.count));
+    result = result.replace(/{count}/g, highlight("count", String(context.count)));
   }
   if (context.reason) {
     result = result.replace(/{reason}/g, context.reason);
+  }
+  if (context.marketCap !== undefined) {
+    result = result.replace(/{marketCap}/g, highlight("mcap", formatMcap(context.marketCap)));
+  }
+  if (context.address) {
+    // Addresses get truncated and highlighted
+    const truncated = `${context.address.slice(0, 4)}...${context.address.slice(-4)}`;
+    result = result.replace(/{address}/g, highlight("address", truncated));
   }
 
   return result;
@@ -333,55 +389,58 @@ export function getCategoryIcon(category: MessageCategory): TerminalIconType | u
 
 /**
  * Get the appropriate color for a message category
+ * Using bright, distinct colors from the app palette
  */
 export function getCategoryColor(category: MessageCategory): string {
   switch (category) {
     case "boot":
-      return "var(--solana-cyan)";
+      return "var(--solana-cyan)"; // Bright teal #14f195
     case "scanning":
+      return "var(--solana-cyan)"; // Teal for scanning activity
     case "analyzing":
-      return "var(--matrix-green)";
+      return "var(--warning-amber)"; // Amber for active analysis
     case "executing":
     case "position_opened":
-      return "var(--warning-amber)";
+      return "var(--matrix-green)"; // Bright green for trades
     case "success":
-      return "var(--matrix-green)";
+      return "var(--matrix-green)"; // Bright green for wins
     case "rejection":
+      return "var(--text-secondary)"; // Muted for rejections
     case "position_closed":
-      return "var(--text-secondary)";
+      return "var(--solana-cyan)"; // Teal for completed positions
     case "stop_loss":
-      return "var(--alert-red)";
+      return "var(--alert-red)"; // Red for losses
     case "migration_detected":
-      return "var(--solana-purple)";
+      return "var(--warning-amber)"; // Amber for new migrations (attention!)
     case "wallet_signal":
-      return "var(--solana-cyan)";
+      return "var(--solana-cyan)"; // Bright teal for wallet signals
     case "ai_decision":
-      return "var(--matrix-green)";
+      return "var(--matrix-green)"; // Bright green for decisions
     case "idle":
-      return "var(--text-tertiary)";
+      return "var(--text-tertiary)"; // Muted for idle
     case "insight":
-      return "var(--solana-cyan)";
+      return "var(--solana-cyan)"; // Teal for insights
     case "position_update":
-      return "var(--warning-amber)";
-    // NEW: AI Reasoning colors
+      return "var(--warning-amber)"; // Amber for price updates
+    // AI Reasoning colors - using brighter palette
     case "ai_thinking":
-      return "var(--solana-purple)";
+      return "var(--solana-cyan)"; // Teal for thinking start
     case "ai_thinking_step":
-      return "var(--text-secondary)";
+      return "var(--text-secondary)"; // Muted for sub-steps
     case "ai_reasoning":
-      return "var(--matrix-green)";
+      return "var(--matrix-green)"; // Green for reasoning
     case "ai_market_analysis":
-      return "var(--solana-cyan)";
+      return "var(--solana-cyan)"; // Teal for market analysis
     case "ai_trade_eval":
-      return "var(--warning-amber)";
+      return "var(--warning-amber)"; // Amber for trade evaluation
     case "ai_risk":
-      return "var(--alert-red)";
+      return "var(--alert-red)"; // Red for risk warnings
     case "ai_confidence":
-      return "var(--solana-purple)";
+      return "var(--warning-amber)"; // Amber for confidence (NOT purple)
     case "ai_verdict":
-      return "var(--matrix-green)";
+      return "var(--matrix-green)"; // Bright green for final verdict
     case "ai_no_data":
-      return "var(--text-tertiary)";
+      return "var(--text-tertiary)"; // Muted for no data
     default:
       return "var(--text-primary)";
   }

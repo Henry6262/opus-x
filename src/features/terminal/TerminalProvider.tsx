@@ -1,16 +1,21 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, useRef } from "react";
 import type { TerminalLogEntry, ThinkingState } from "./types";
+
+export type BootPhase = 'booting' | 'ready';
 
 interface TerminalContextValue {
   logs: TerminalLogEntry[];
-  log: (entry: Omit<TerminalLogEntry, "id" | "time"> & { time?: string }) => string;
+  log: (entry: Omit<TerminalLogEntry, "id" | "time"> & { time?: string; isBootMessage?: boolean }) => string;
   updateLog: (id: string, updates: Partial<Pick<TerminalLogEntry, 'text' | 'color' | 'isStreaming' | 'icon'>>) => void;
   thinkingState: ThinkingState;
   startThinking: (tokenSymbol: string) => void;
   stopThinking: () => void;
   setThinkingStep: (step: string) => void;
+  bootPhase: BootPhase;
+  setBootPhase: (phase: BootPhase) => void;
+  isBootComplete: boolean;
 }
 
 const TerminalContext = createContext<TerminalContextValue | null>(null);
@@ -39,30 +44,83 @@ export function TerminalProvider({
 }) {
   const [logs, setLogs] = useState<TerminalLogEntry[]>(initialLogs);
   const [thinkingState, setThinkingState] = useState<ThinkingState>({ isActive: false });
+  const [bootPhase, setBootPhase] = useState<BootPhase>('booting');
+
+  // Queue for messages that arrive during boot
+  const pendingMessagesRef = useRef<Array<Omit<TerminalLogEntry, "id" | "time"> & { time?: string }>>([]);
+
+  // Derived state for convenience
+  const isBootComplete = bootPhase === 'ready';
 
   const log = useCallback(
-    (entry: Omit<TerminalLogEntry, "id" | "time"> & { time?: string }): string => {
+    (entry: Omit<TerminalLogEntry, "id" | "time"> & { time?: string; isBootMessage?: boolean }): string => {
+      const { isBootMessage, ...logEntry } = entry;
+
+      // During boot phase, only allow boot messages through
+      // Queue non-boot messages to be processed after boot
+      if (bootPhase === 'booting' && !isBootMessage) {
+        // Queue the message for later (up to 10 pending)
+        if (pendingMessagesRef.current.length < 10) {
+          pendingMessagesRef.current.push(logEntry);
+        }
+        return ''; // Return empty ID for queued messages
+      }
+
       const id = createLogId();
-      const time = entry.time || formatTime(new Date());
+      const time = logEntry.time || formatTime(new Date());
       setLogs((prev) => {
         const next = [
           ...prev,
           {
             id,
             time,
-            text: entry.text,
-            color: entry.color,
-            type: entry.type,
-            isStreaming: entry.isStreaming,
-            icon: entry.icon,
+            text: logEntry.text,
+            color: logEntry.color,
+            type: logEntry.type,
+            isStreaming: logEntry.isStreaming,
+            icon: logEntry.icon,
           },
         ];
         return next.slice(-maxLogs);
       });
       return id;
     },
-    [maxLogs]
+    [maxLogs, bootPhase]
   );
+
+  // Handle boot phase transition - process queued messages
+  const handleSetBootPhase = useCallback((phase: BootPhase) => {
+    setBootPhase(phase);
+
+    // When boot completes, process any queued messages with staggered timing
+    if (phase === 'ready' && pendingMessagesRef.current.length > 0) {
+      const messages = [...pendingMessagesRef.current];
+      pendingMessagesRef.current = [];
+
+      // Stagger queued messages to prevent flood
+      messages.forEach((msg, index) => {
+        setTimeout(() => {
+          const id = createLogId();
+          const time = formatTime(new Date());
+          setLogs((prev) => {
+            const next = [
+              ...prev,
+              {
+                id,
+                time,
+                text: msg.text,
+                color: msg.color,
+                type: msg.type,
+                isStreaming: msg.isStreaming,
+                icon: msg.icon,
+              },
+            ];
+            return next.slice(-maxLogs);
+          });
+        }, (index + 1) * 500); // 500ms stagger
+      });
+    }
+  }, [maxLogs]);
 
   const updateLog = useCallback((id: string, updates: Partial<Pick<TerminalLogEntry, 'text' | 'color' | 'isStreaming'>>) => {
     setLogs((prev) => {
@@ -98,8 +156,19 @@ export function TerminalProvider({
   }, []);
 
   const value = useMemo(
-    () => ({ logs, log, updateLog, thinkingState, startThinking, stopThinking, setThinkingStep }),
-    [logs, log, updateLog, thinkingState, startThinking, stopThinking, setThinkingStep]
+    () => ({
+      logs,
+      log,
+      updateLog,
+      thinkingState,
+      startThinking,
+      stopThinking,
+      setThinkingStep,
+      bootPhase,
+      setBootPhase: handleSetBootPhase,
+      isBootComplete,
+    }),
+    [logs, log, updateLog, thinkingState, startThinking, stopThinking, setThinkingStep, bootPhase, handleSetBootPhase, isBootComplete]
   );
 
   return <TerminalContext.Provider value={value}>{children}</TerminalContext.Provider>;

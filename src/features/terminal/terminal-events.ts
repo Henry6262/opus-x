@@ -83,6 +83,8 @@ const eventMappings: Record<TerminalEventType, EventMapping> = {
     contextMapper: (data) => ({
       tokenSymbol: data?.tokenSymbol as string | undefined,
       price: data?.price as number | undefined,
+      address: data?.address as string | undefined,
+      marketCap: data?.marketCap as number | undefined,
     }),
   },
   "position:closed": {
@@ -90,6 +92,7 @@ const eventMappings: Record<TerminalEventType, EventMapping> = {
     contextMapper: (data) => ({
       tokenSymbol: data?.tokenSymbol as string | undefined,
       pnl: data?.pnl as number | undefined,
+      address: data?.address as string | undefined,
     }),
   },
   "position:profit": {
@@ -97,6 +100,7 @@ const eventMappings: Record<TerminalEventType, EventMapping> = {
     contextMapper: (data) => ({
       tokenSymbol: data?.tokenSymbol as string | undefined,
       pnl: data?.pnl as number | undefined,
+      address: data?.address as string | undefined,
     }),
   },
   "position:stop_loss": {
@@ -104,6 +108,7 @@ const eventMappings: Record<TerminalEventType, EventMapping> = {
     contextMapper: (data) => ({
       tokenSymbol: data?.tokenSymbol as string | undefined,
       pnl: data?.pnl as number | undefined,
+      address: data?.address as string | undefined,
     }),
   },
 
@@ -112,6 +117,8 @@ const eventMappings: Record<TerminalEventType, EventMapping> = {
     category: "migration_detected",
     contextMapper: (data) => ({
       tokenSymbol: data?.tokenSymbol as string | undefined,
+      address: data?.address as string | undefined,
+      marketCap: data?.marketCap as number | undefined,
     }),
   },
   "migration:analyzing": {

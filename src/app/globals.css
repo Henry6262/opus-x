@@ -1331,6 +1331,94 @@ main {
   border-radius: var(--radius-lg);
 }
 
+/* CRT Noise Overlay - subtle film grain effect */
+.terminal-noise {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: var(--radius-lg);
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  animation: terminal-noise-flicker 0.15s infinite steps(5);
+}
+
+@keyframes terminal-noise-flicker {
+  0%, 100% { opacity: 0.03; }
+  25% { opacity: 0.025; }
+  50% { opacity: 0.035; }
+  75% { opacity: 0.02; }
+}
+
+/* CRT Scanline Overlay - horizontal lines */
+.terminal-scanlines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: var(--radius-lg);
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 1px,
+    rgba(0, 0, 0, 0.08) 1px,
+    rgba(0, 0, 0, 0.08) 2px
+  );
+  animation: scanline-move 6s linear infinite;
+}
+
+@keyframes scanline-move {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100px; }
+}
+
+/* Booting state - amber glow during initialization */
+.terminal.terminal-booting {
+  animation: terminal-boot-glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes terminal-boot-glow {
+  0% {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.9),
+      0 12px 32px rgba(0, 0, 0, 0.95),
+      inset 0 0 30px rgba(255, 170, 0, 0.05);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.9),
+      0 12px 32px rgba(0, 0, 0, 0.95),
+      inset 0 0 50px rgba(255, 170, 0, 0.1);
+  }
+}
+
+/* Booting status indicator - amber color */
+.terminal-status-booting {
+  background: rgba(255, 170, 0, 0.15) !important;
+  box-shadow: 0 0 10px rgba(255, 170, 0, 0.2) !important;
+}
+
+.terminal-status-dot--booting {
+  background: var(--warning-amber) !important;
+  box-shadow: 0 0 6px var(--warning-amber), 0 0 12px var(--warning-amber) !important;
+  animation: boot-pulse 0.6s ease-in-out infinite !important;
+}
+
+@keyframes boot-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+}
+
 /* Glowing inner highlight */
 .terminal.terminal-glass .terminal-content {
   position: relative;
@@ -1893,6 +1981,7 @@ main {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.2s ease, filter 0.3s ease;
   margin-right: var(--space-2);
   opacity: 0.9;
   flex-shrink: 0;
@@ -1901,6 +1990,36 @@ main {
 .terminal-icon svg {
   width: 14px;
   height: 14px;
+  filter: drop-shadow(0 0 2px currentColor);
+}
+
+/* Icon glow animation on new messages */
+.terminal-line-new .terminal-icon {
+  animation: icon-glow-in 0.5s ease-out;
+}
+
+@keyframes icon-glow-in {
+  0% {
+    transform: scale(0.8);
+    filter: drop-shadow(0 0 8px currentColor);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 12px currentColor);
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 2px currentColor);
+    opacity: 0.9;
+  }
+}
+
+/* Hover effect on terminal lines */
+.terminal-line:hover .terminal-icon {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 6px currentColor);
+  opacity: 1;
 }
 
 /* AI Thinking step styling */
@@ -1944,6 +2063,90 @@ main {
   51%, 100% {
     opacity: 0;
   }
+}
+
+/* ============================================
+   Terminal Rich Text Highlight Classes
+   For inline colored values in terminal messages
+   ============================================ */
+
+/* Token symbols - bright cyan */
+.terminal-hl-token {
+  color: var(--solana-cyan);
+  font-weight: 600;
+  text-shadow: 0 0 6px rgba(20, 241, 149, 0.5);
+}
+
+/* Price values - amber/gold */
+.terminal-hl-price {
+  color: var(--warning-amber);
+  font-weight: 600;
+  text-shadow: 0 0 4px rgba(255, 170, 0, 0.4);
+}
+
+/* Positive PnL - bright green */
+.terminal-hl-pnl-pos {
+  color: var(--matrix-green);
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(0, 255, 106, 0.6);
+  animation: pnl-pos-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pnl-pos-pulse {
+  0%, 100% {
+    text-shadow: 0 0 8px rgba(0, 255, 106, 0.6);
+  }
+  50% {
+    text-shadow: 0 0 14px rgba(0, 255, 106, 0.9);
+  }
+}
+
+/* Negative PnL - bright red */
+.terminal-hl-pnl-neg {
+  color: var(--alert-red);
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(255, 0, 51, 0.5);
+}
+
+/* Score values - cyan or color varies */
+.terminal-hl-score {
+  color: var(--solana-cyan);
+  font-weight: 700;
+  background: linear-gradient(90deg, rgba(20, 241, 149, 0.2), transparent);
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+/* Count values - muted but visible */
+.terminal-hl-count {
+  color: var(--warning-amber);
+  font-weight: 600;
+}
+
+/* Address values - cyan with monospace feel */
+.terminal-hl-address {
+  color: var(--solana-cyan);
+  font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+  font-size: 0.9em;
+  background: rgba(20, 241, 149, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(20, 241, 149, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.terminal-hl-address:hover {
+  background: rgba(20, 241, 149, 0.2);
+  border-color: rgba(20, 241, 149, 0.5);
+  text-shadow: 0 0 6px rgba(20, 241, 149, 0.5);
+}
+
+/* Market cap values - gold with emphasis */
+.terminal-hl-mcap {
+  color: #c4f70e; /* Lime yellow from palette */
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(196, 247, 14, 0.5);
 }
 
 .terminal-prompt {

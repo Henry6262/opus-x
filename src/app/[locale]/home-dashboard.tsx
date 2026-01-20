@@ -11,7 +11,7 @@ import {
   useWalletSignals,
 } from "@/features/smart-trading";
 import { TraderProfileCard } from "@/features/smart-trading/components/TraderProfileCard";
-import { TerminalProvider, useTerminalNarrator, useAiReasoningStream } from "@/features/terminal";
+import { TerminalProvider, useTerminal, useTerminalNarrator, useAiReasoningStream } from "@/features/terminal";
 import { useAiMood } from "@/hooks/useAiMood";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MobileBottomBar } from "@/components/MobileBottomBar";
@@ -110,6 +110,9 @@ function DashboardContent() {
   // Defer below-fold content for faster initial mobile load
   const { ref: dashboardRef, isInView: dashboardInView } = useInView("200px");
 
+  // Get boot completion state from terminal context
+  const { isBootComplete } = useTerminal();
+
   // Smart Trading data from unified WebSocket-first context (live updates!)
   const { config } = useSmartTradingConfig();
   const { dashboardStats } = useDashboardStats();
@@ -130,19 +133,23 @@ function DashboardContent() {
   );
 
   // AI Terminal Narrator - generates AI reasoning messages based on trading events
+  // Only activates AFTER boot sequence completes
   useTerminalNarrator({
     state: narratorState,
     throttleMs: 5000,
     idleIntervalMs: 20000,
     enabled: true,
+    isBootComplete,
   });
 
-  // 🚀 NEW: AI Reasoning Stream - bridges WebSocket events directly to terminal
+  // AI Reasoning Stream - bridges WebSocket events directly to terminal
   // This enables live streaming of AI analysis, decisions, and reasoning
+  // Only activates AFTER boot sequence completes
   useAiReasoningStream({
     enabled: true,
     maxThinkingSteps: 6,
     throttleMs: 800, // Faster than narrator for real-time feel
+    isBootComplete,
   });
 
   // AI Mood System - dynamically calculates mood based on migration data
