@@ -438,11 +438,13 @@ export interface HoldingData {
   peak_price: number;
   peak_pnl_pct: number;
   realized_pnl_sol: number;
-  status: "open" | "partially_closed" | "closed";
+  status: "open" | "partially_closed" | "partiallyclosed" | "closed" | "pending";
   market_cap: number | null;
   liquidity: number | null;
   volume_24h: number | null;
   buy_signature: string | null;
+  /** Token image URL (optional, fallback to DexScreener if missing) */
+  image_url?: string | null;
   /** AI reasoning - why we decided to buy this token */
   buy_criteria: BuyCriteriaResult | null;
 }

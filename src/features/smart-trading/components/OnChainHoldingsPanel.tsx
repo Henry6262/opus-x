@@ -11,19 +11,10 @@ import { useSearchParams } from "next/navigation";
 // Types for On-Chain Holdings
 // ============================================
 
-interface OnChainHolding {
-    mint: string;
-    symbol: string;
-    name: string;
-    amount: number;
-    decimals: number;
-    image_url: string | null;
-    price_usd: number | null;
-    value_usd: number | null;
-    market_cap: number | null;
-    liquidity: number | null;
-    volume_24h: number | null;
-}
+import type { HoldingData } from "../types";
+
+// Use the correct HoldingData type from shared types
+type OnChainHolding = HoldingData;
 
 // ============================================
 // Holdings Card Component
@@ -47,7 +38,11 @@ function HoldingCard({ holding }: HoldingCardProps) {
         return val.toFixed(2);
     };
 
-    const isPositive = (holding.value_usd || 0) >= (holding.amount * (holding.price_usd || 0) * 0.95);
+    // Calculate current value in SOL
+    const currentValueSol = holding.current_quantity * holding.current_price;
+
+    // PnL is positive if unrealized PnL >= 0
+    const isPositive = (holding.unrealized_pnl_sol || 0) >= 0;
 
     return (
         <motion.div
@@ -65,6 +60,7 @@ function HoldingCard({ holding }: HoldingCardProps) {
                         width={32}
                         height={32}
                         className="object-cover"
+                        unoptimized
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white/40">
@@ -89,24 +85,23 @@ function HoldingCard({ holding }: HoldingCardProps) {
                 <div className="text-[10px] text-white/40 truncate">{holding.name}</div>
             </div>
 
-            {/* Amount */}
+            {/* Amount & Entry Price */}
             <div className="text-right">
-                <div className="text-sm font-medium font-mono tabular-nums text-white">{formatAmount(holding.amount)}</div>
+                <div className="text-sm font-medium font-mono tabular-nums text-white">{formatAmount(holding.current_quantity)}</div>
                 <div className="text-[10px] font-mono tabular-nums text-white/40">
-                    {holding.price_usd ? `@$${holding.price_usd.toFixed(6)}` : "No price"}
+                    {holding.current_price ? `@${holding.current_price.toFixed(8)} SOL` : "No price"}
                 </div>
             </div>
 
-            {/* Value */}
-            <div className="text-right min-w-[70px]">
-                <div className={`text-sm font-bold font-mono tabular-nums ${isPositive ? "text-green-400" : "text-red-400"}`}>
-                    {formatValue(holding.value_usd)}
+            {/* Current Value SOL + PnL% */}
+            <div className="text-right min-w-[90px]">
+                <div className="text-sm font-medium font-mono tabular-nums text-white flex items-center justify-end gap-1">
+                    {currentValueSol.toFixed(3)}
+                    <Image src="/logos/solana.png" alt="SOL" width={12} height={12} />
                 </div>
-                {holding.liquidity && (
-                    <div className="text-[10px] font-mono tabular-nums text-white/30">
-                        Liq: {formatValue(holding.liquidity)}
-                    </div>
-                )}
+                <div className={`text-[10px] font-mono tabular-nums font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
+                    {isPositive ? "+" : ""}{holding.unrealized_pnl_pct?.toFixed(1) || "0.0"}%
+                </div>
             </div>
         </motion.div>
     );
@@ -150,11 +145,9 @@ export function OnChainHoldingsPanel({ walletAddress, minValueUsd = 0.1 }: OnCha
 
     try {
       setIsLoading(true);
-      const params = new URLSearchParams();
-      params.set("wallet", effectiveWallet);
-      params.set("min_value_usd", minValueUsd.toString());
-
-      const url = buildDevprntApiUrl(`/api/trading/holdings?${params.toString()}`);
+      // Note: /api/trading/holdings doesn't accept wallet parameter - it returns holdings for the configured trading wallet
+      // This panel shows the same portfolio data as PortfolioHoldingsPanel
+      const url = buildDevprntApiUrl("/api/trading/holdings");
       const response = await fetch(url.toString());
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
@@ -169,9 +162,27 @@ export function OnChainHoldingsPanel({ walletAddress, minValueUsd = 0.1 }: OnCha
         throw new Error(friendlyError(result.error));
       }
 
-      const data: OnChainHolding[] = (result?.data as OnChainHolding[]) || [];
-      setHoldings(data);
-      setTotalValue(data.reduce((sum, h) => sum + (h.value_usd || 0), 0));
+      const rawData: OnChainHolding[] = (result?.data as OnChainHolding[]) || [];
+
+      // Filter open and partially_closed positions
+      const data = rawData.filter(
+        (h) => (h.status === "open" || h.status === "partially_closed") && h.current_quantity > 0
+      );
+
+      // Add image_url if missing (use DexScreener)
+      const enrichedData = data.map(h => ({
+        ...h,
+        image_url: h.image_url || `https://dd.dexscreener.com/ds-data/tokens/solana/${h.mint}.png`,
+      }));
+
+      setHoldings(enrichedData);
+
+      // Calculate total value in SOL (entry + unrealized PnL)
+      const totalSol = enrichedData.reduce((sum, h) => {
+        const currentValue = h.entry_sol_value + (h.unrealized_pnl_sol || 0);
+        return sum + currentValue;
+      }, 0);
+      setTotalValue(totalSol);
       setError(null);
     } catch (err) {
       console.error("Failed to fetch on-chain holdings:", err);
@@ -197,8 +208,9 @@ export function OnChainHoldingsPanel({ walletAddress, minValueUsd = 0.1 }: OnCha
                         {holdings.length}
                     </span>
                     {totalValue > 0 && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold font-mono tabular-nums rounded bg-green-500/20 text-green-400">
-                            ${totalValue.toFixed(2)}
+                        <span className="px-2 py-0.5 text-[10px] font-bold font-mono tabular-nums rounded bg-green-500/20 text-green-400 flex items-center gap-1">
+                            {totalValue.toFixed(2)}
+                            <Image src="/logos/solana.png" alt="SOL" width={10} height={10} />
                         </span>
                     )}
                 </div>

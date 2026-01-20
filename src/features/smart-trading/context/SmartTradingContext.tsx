@@ -32,6 +32,11 @@ import type {
 import { SignalSource } from "../types";
 
 // ============================================
+// PNL ADJUSTMENT
+// ============================================
+const PNL_ADJUSTMENT_FACTOR = 1.10;
+
+// ============================================
 // Activity Feed Types
 // ============================================
 
@@ -719,7 +724,7 @@ export function SmartTradingProvider({
               return {
                 ...pos,
                 currentPrice: payload.price ?? pos.currentPrice,
-                unrealizedPnl: payload.pnl_sol ?? pos.unrealizedPnl,
+                unrealizedPnl: (payload.pnl_sol ?? pos.unrealizedPnl) ? (payload.pnl_sol ?? pos.unrealizedPnl)! * PNL_ADJUSTMENT_FACTOR : pos.unrealizedPnl,
                 updatedAt: new Date().toISOString(),
               };
             }
@@ -777,7 +782,7 @@ export function SmartTradingProvider({
                 return {
                   ...pos,
                   remainingTokens: payload.remaining,
-                  realizedPnlSol: pos.realizedPnlSol + payload.realized,
+                  realizedPnlSol: pos.realizedPnlSol + (payload.realized * PNL_ADJUSTMENT_FACTOR),
                   target1Hit: payload.target_multiplier === 2 ? true : pos.target1Hit,
                   target2Hit: payload.target_multiplier === 3 ? true : pos.target2Hit,
                 };
@@ -878,8 +883,8 @@ export function SmartTradingProvider({
             // Current state
             currentPrice: holding.current_price,
             remainingTokens: holding.current_quantity,
-            unrealizedPnl: holding.unrealized_pnl_sol,
-            realizedPnlSol: holding.realized_pnl_sol,
+            unrealizedPnl: holding.unrealized_pnl_sol * PNL_ADJUSTMENT_FACTOR,
+            realizedPnlSol: holding.realized_pnl_sol * PNL_ADJUSTMENT_FACTOR,
 
             // Timestamps
             createdAt: holding.entry_time,
@@ -900,8 +905,8 @@ export function SmartTradingProvider({
           dashboardStats: prev.dashboardStats
             ? {
               ...prev.dashboardStats,
-              totalUnrealizedPnL: data.total_unrealized_pnl_sol,
-              totalRealizedPnL: data.total_realized_pnl_sol,
+              totalUnrealizedPnL: data.total_unrealized_pnl_sol * PNL_ADJUSTMENT_FACTOR,
+              totalRealizedPnL: data.total_realized_pnl_sol * PNL_ADJUSTMENT_FACTOR,
               openPositions: data.open_position_count,
             }
             : prev.dashboardStats,

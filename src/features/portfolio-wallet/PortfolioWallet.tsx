@@ -10,6 +10,7 @@ import { CountUp } from "@/components/animations";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 import type { PortfolioWalletProps, TimeFilter, PortfolioStats, WalletView, Position as UiPosition, Transaction, ChartHistoryEntry } from "./types";
 import { useDashboardStats, usePositions, useSmartTradingConfig } from "@/features/smart-trading";
+import { useSharedWebSocket } from "@/features/smart-trading/hooks/useWebSocket";
 
 // Generate mock chart data (placeholder until we have historical data API)
 function generateChartData(timeFilter: TimeFilter, isProfitable: boolean) {
@@ -55,7 +56,7 @@ function formatTimeAgo(dateInput: string | Date): string {
   return `${days}d ago`;
 }
 
-// Type for on-chain holdings from API (same as PortfolioHoldingsPanel)
+// Type for on-chain holdings from API (IDENTICAL to PortfolioHoldingsPanel)
 interface OnChainHolding {
   id: string;
   mint: string;
@@ -72,7 +73,7 @@ interface OnChainHolding {
   peak_price: number;
   peak_pnl_pct: number;
   realized_pnl_sol: number;
-  status: "open" | "partially_closed" | "closed" | "pending";
+  status: "open" | "partially_closed" | "partiallyclosed" | "closed" | "pending";
   market_cap: number | null;
   liquidity: number | null;
   volume_24h: number | null;
@@ -94,6 +95,14 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   const [fetchedHoldings, setFetchedHoldings] = useState<OnChainHolding[]>([]);
   const [isLoadingHoldingsApi, setIsLoadingHoldingsApi] = useState(false);
   const [holdingsApiError, setHoldingsApiError] = useState<string | null>(null);
+
+  // Market cap cache and API loaded flag (same as PortfolioHoldingsPanel)
+  const marketCapCacheRef = useRef<Map<string, number>>(new Map());
+  const apiLoadedRef = useRef(false);
+  const hasFetchedRef = useRef(false);
+
+  // WebSocket for real-time updates (same as PortfolioHoldingsPanel)
+  const { on: onTradingEvent } = useSharedWebSocket({ path: "/ws/trading" });
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeView, setActiveView] = useState<WalletView>("overview");
@@ -176,7 +185,7 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     totalTrades: dashboardStats?.performance.totalTrades || 0,
   };
 
-  // Map holdings to UI positions - using backend API data
+  // Map holdings to UI positions - using backend API data (IDENTICAL to PortfolioHoldingsPanel)
   const uiPositions: UiPosition[] = useMemo(() => {
     // Use API holdings (same source as main dashboard's PortfolioHoldingsPanel)
     if (fetchedHoldings.length > 0) {
@@ -197,12 +206,13 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
       }));
     }
 
-    // Fallback to context positions
+    // Fallback to context positions - also sort by PnL% to match portfolio panel
     return positions
       .filter(p => p.status === "OPEN" || p.status === "PARTIALLY_CLOSED")
       .map(p => {
         const quantity = p.remainingTokens;
         const currentPrice = p.currentPrice || p.entryPriceSol;
+        const pnlPercent = p.entryPriceSol > 0 ? (currentPrice - p.entryPriceSol) / p.entryPriceSol * 100 : 0;
 
         return {
           id: p.id,
@@ -214,12 +224,14 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
           quantity,
           value: quantity * currentPrice,
           pnl: p.unrealizedPnl || 0,
-          pnlPercent: p.entryPriceSol > 0 ? (currentPrice - p.entryPriceSol) / p.entryPriceSol * 100 : 0,
+          pnlPercent,
           entryTime: new Date(p.createdAt),
           isValidated: true,
           birdeyeValueUsd: null,
         };
-      });
+      })
+      // Sort by PnL% descending (same as PortfolioHoldingsPanel)
+      .sort((a, b) => b.pnlPercent - a.pnlPercent);
   }, [fetchedHoldings, positions]);
 
   type EnrichedTransaction = {
@@ -310,46 +322,166 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     };
   }, [mapEnrichedTransaction]);
 
-  // Fetch holdings from API (same as main dashboard's PortfolioHoldingsPanel)
-  useEffect(() => {
-    let cancelled = false;
+  // Fetch holdings from API (IDENTICAL to PortfolioHoldingsPanel)
+  const fetchHoldings = useCallback(async () => {
+    if (hasFetchedRef.current && fetchedHoldings.length > 0) return; // Prevent duplicate fetches
 
-    const fetchHoldings = async () => {
-      setIsLoadingHoldingsApi(true);
-      setHoldingsApiError(null);
-      try {
-        const url = buildDevprntApiUrl("/api/trading/holdings");
-        const response = await fetch(url.toString());
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const result = await response.json();
-        if (result?.success === false) {
-          throw new Error(result.error || "Failed to load holdings");
-        }
-        const rawData = (result?.data as OnChainHolding[]) || [];
-        // Filter open AND partially_closed positions (same as PortfolioHoldingsPanel)
-        const data = rawData.filter(
-          (h) => (h.status === "open" || h.status === "partially_closed") && h.current_quantity > 0
-        );
-        // Sort by current value descending
-        data.sort((a, b) => (b.current_quantity * b.current_price) - (a.current_quantity * a.current_price));
-        if (!cancelled) {
-          setFetchedHoldings(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch wallet holdings", err);
-        if (!cancelled) {
-          setHoldingsApiError(err instanceof Error ? err.message : "Failed to load holdings");
-        }
-      } finally {
-        if (!cancelled) setIsLoadingHoldingsApi(false);
+    setIsLoadingHoldingsApi(true);
+    setHoldingsApiError(null);
+    try {
+      const url = buildDevprntApiUrl("/api/trading/holdings");
+      const response = await fetch(url.toString());
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = await response.json();
+      if (result?.success === false) {
+        throw new Error(result.error || "Failed to load holdings");
       }
-    };
+      const rawData = (result?.data as OnChainHolding[]) || [];
 
+      // Filter open AND partially_closed positions (handles both spellings like PortfolioHoldingsPanel)
+      const data = rawData.filter(
+        (h) => (h.status === "open" || h.status === "partially_closed" || h.status === "partiallyclosed") && h.current_quantity > 0
+      );
+
+      // Sort by unrealized PnL percentage (highest profit first) - SAME AS PORTFOLIO PANEL
+      data.sort((a, b) => (b.unrealized_pnl_pct ?? 0) - (a.unrealized_pnl_pct ?? 0));
+
+      // Cache market_cap values from API - these are the source of truth
+      data.forEach(h => {
+        if (h.market_cap && h.market_cap > 0) {
+          marketCapCacheRef.current.set(h.mint, h.market_cap);
+        }
+      });
+
+      apiLoadedRef.current = true;
+      hasFetchedRef.current = true;
+      setFetchedHoldings(data);
+    } catch (err) {
+      console.error("Failed to fetch wallet holdings", err);
+      setHoldingsApiError(err instanceof Error ? err.message : "Failed to load holdings");
+    } finally {
+      setIsLoadingHoldingsApi(false);
+    }
+  }, [fetchedHoldings.length]);
+
+  // Initial fetch on mount
+  useEffect(() => {
     fetchHoldings();
+  }, [fetchHoldings]);
+
+  // Listen for position opened/closed events to refresh holdings list (same as PortfolioHoldingsPanel)
+  useEffect(() => {
+    const unsubPositionOpened = onTradingEvent("position_opened", () => {
+      hasFetchedRef.current = false; // Allow refetch
+      fetchHoldings();
+    });
+    const unsubPositionClosed = onTradingEvent("position_closed", () => {
+      hasFetchedRef.current = false;
+      fetchHoldings();
+    });
+    const unsubTakeProfit = onTradingEvent("take_profit_triggered", () => {
+      hasFetchedRef.current = false;
+      fetchHoldings();
+    });
+
     return () => {
-      cancelled = true;
+      unsubPositionOpened?.();
+      unsubPositionClosed?.();
+      unsubTakeProfit?.();
     };
-  }, []);
+  }, [onTradingEvent, fetchHoldings]);
+
+  // Listen for holdings_snapshot events from backend WebSocket (IDENTICAL to PortfolioHoldingsPanel)
+  useEffect(() => {
+    const unsubHoldingsSnapshot = onTradingEvent<{
+      holdings: OnChainHolding[];
+      total_unrealized_pnl_sol: number;
+      total_realized_pnl_sol: number;
+      open_position_count: number;
+      timestamp: number;
+    }>("holdings_snapshot", (data) => {
+      if (!data?.holdings) return;
+
+      // Skip WebSocket updates until API has loaded initial data with market_cap
+      if (!apiLoadedRef.current) return;
+
+      // Filter holdings from WebSocket (handles both spellings)
+      const wsHoldings = data.holdings
+        .filter((h) => (h.status === "open" || h.status === "partially_closed" || h.status === "partiallyclosed") && h.current_quantity > 0);
+
+      // Apply cached market_cap to all WebSocket holdings before processing
+      const wsHoldingsWithCachedMcap = wsHoldings.map(h => {
+        const cachedMcap = marketCapCacheRef.current.get(h.mint);
+        const finalMcap = (h.market_cap && h.market_cap > 0) ? h.market_cap : cachedMcap ?? null;
+
+        // Update cache if WS has valid market_cap
+        if (h.market_cap && h.market_cap > 0) {
+          marketCapCacheRef.current.set(h.mint, h.market_cap);
+        }
+
+        return {
+          ...h,
+          market_cap: finalMcap,
+        };
+      });
+
+      setFetchedHoldings((prevHoldings) => {
+        // If we have no previous holdings, use WebSocket data
+        if (prevHoldings.length === 0) {
+          wsHoldingsWithCachedMcap.sort((a, b) => (b.unrealized_pnl_pct ?? 0) - (a.unrealized_pnl_pct ?? 0));
+          return wsHoldingsWithCachedMcap;
+        }
+
+        // Strategy: Update existing holdings with WebSocket data, preserve holdings not in WebSocket
+        const wsHoldingsMap = new Map(wsHoldingsWithCachedMcap.map(h => [h.mint, h]));
+
+        // Update existing holdings with fresh WebSocket data where available
+        const updatedHoldings = prevHoldings.map(prevH => {
+          const wsHolding = wsHoldingsMap.get(prevH.mint);
+          if (wsHolding) {
+            const finalMcap = (wsHolding.market_cap && wsHolding.market_cap > 0)
+              ? wsHolding.market_cap
+              : (prevH.market_cap && prevH.market_cap > 0)
+                ? prevH.market_cap
+                : null;
+
+            return {
+              ...wsHolding,
+              market_cap: finalMcap,
+              liquidity: (wsHolding.liquidity && wsHolding.liquidity > 0) ? wsHolding.liquidity : prevH.liquidity,
+              volume_24h: (wsHolding.volume_24h && wsHolding.volume_24h > 0) ? wsHolding.volume_24h : prevH.volume_24h,
+            };
+          }
+          return prevH;
+        });
+
+        // Add any NEW holdings from WebSocket that weren't in previous state
+        const existingMints = new Set(prevHoldings.map(h => h.mint));
+        const newHoldings = wsHoldingsWithCachedMcap.filter(h => !existingMints.has(h.mint));
+        if (newHoldings.length > 0) {
+          updatedHoldings.push(...newHoldings);
+          updatedHoldings.sort((a, b) => (b.unrealized_pnl_pct ?? 0) - (a.unrealized_pnl_pct ?? 0));
+        }
+
+        // Deduplicate by mint address
+        const seenMints = new Set<string>();
+        const deduped = updatedHoldings.filter(h => {
+          if (seenMints.has(h.mint)) return false;
+          seenMints.add(h.mint);
+          return true;
+        });
+
+        return deduped;
+      });
+
+      setIsLoadingHoldingsApi(false);
+      setHoldingsApiError(null);
+    });
+
+    return () => {
+      unsubHoldingsSnapshot?.();
+    };
+  }, [onTradingEvent]);
 
   const transactions: Transaction[] =
     fetchedTransactions.length > 0 ? fetchedTransactions : mapHistoryToTransactions;
