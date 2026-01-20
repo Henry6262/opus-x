@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { Wallet, Copy, Loader2, Clock, Brain, CheckCircle, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Wallet, Copy, Loader2, Clock, Brain, CheckCircle, ArrowUpRight, ArrowDownRight, Target } from "lucide-react";
 import { CountUp } from "@/components/animations/CountUp";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 import { useSharedWebSocket } from "../hooks/useWebSocket";
@@ -247,7 +247,7 @@ function AnimatedProgressMarketCap({ value, className = "" }: AnimatedProgressMa
     const { num, suffix } = formatValue();
 
     return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-sm ${className}`}>
+        <span className={className}>
             $<CountUp to={num} duration={0.5} decimals={0} />{suffix}
         </span>
     );
@@ -284,23 +284,56 @@ function ProgressBar({
     // Use the highest TP target as the goal for progress calculation
     const maxTarget = Math.max(...tpTargets.map(t => t.multiplier), goalMultiplier);
 
-    // Progress calculation: 0% at entry (1x), 100% at max target
-    // Map: 1x -> 0%, maxTarget -> 100%
-    let progressRaw = progressOverride ?? null;
-    if (progressRaw === null || progressRaw === undefined) {
-        const gainProgress = (currentMultiplier - 1) / (maxTarget - 1);
-        progressRaw = gainProgress;
-    }
-    const clamped = Math.min(Math.max(progressRaw, 0), 1);
-    const progress = clamped > 0 && clamped < 0.02 ? 0.02 : clamped;
+    // TP Visual positioning: compress TPs towards the end (50% - 95%)
+    const minPosition = 50; // First TP starts at 50%
+    const maxPosition = 95; // Last TP ends at 95%
 
-    // Calculate where each TP milestone sits on the progress bar (0-100%)
+    // Calculate TP positions first (needed for progress mapping)
     const tpPositions = tpTargets.map((tp, i) => {
-        const position = ((tp.multiplier - 1) / (maxTarget - 1)) * 100;
+        // Spread TPs evenly between minPosition and maxPosition
+        const position = minPosition + ((maxPosition - minPosition) * i / (tpTargets.length - 1));
         const isHit = targetsHit.includes(i + 1);
         const isPassed = currentMultiplier >= tp.multiplier;
         return { ...tp, position, isHit, isPassed, index: i + 1 };
     });
+
+    // Progress calculation: map multiplier to visual position
+    // Entry (1x) -> 0%, TP1 (1.5x) -> 50%, TP2 (2x) -> 72.5%, TP3 (3x) -> 95%
+    let progressRaw = progressOverride ?? null;
+    if (progressRaw === null || progressRaw === undefined) {
+        if (currentMultiplier <= 1) {
+            progressRaw = 0;
+        } else if (currentMultiplier >= maxTarget) {
+            progressRaw = maxPosition / 100;
+        } else {
+            // Find which segment we're in
+            const firstTpMultiplier = tpTargets[0].multiplier;
+
+            if (currentMultiplier < firstTpMultiplier) {
+                // Before first TP: map 1x->0% to firstTp->minPosition%
+                const segmentProgress = (currentMultiplier - 1) / (firstTpMultiplier - 1);
+                progressRaw = (segmentProgress * minPosition) / 100;
+            } else {
+                // Between TPs: interpolate between TP positions
+                for (let i = 0; i < tpTargets.length - 1; i++) {
+                    if (currentMultiplier >= tpTargets[i].multiplier && currentMultiplier < tpTargets[i + 1].multiplier) {
+                        const segmentProgress = (currentMultiplier - tpTargets[i].multiplier) /
+                                                (tpTargets[i + 1].multiplier - tpTargets[i].multiplier);
+                        const startPos = tpPositions[i].position;
+                        const endPos = tpPositions[i + 1].position;
+                        progressRaw = (startPos + segmentProgress * (endPos - startPos)) / 100;
+                        break;
+                    }
+                }
+                // If past last TP
+                if (currentMultiplier >= tpTargets[tpTargets.length - 1].multiplier) {
+                    progressRaw = maxPosition / 100;
+                }
+            }
+        }
+    }
+    const clamped = Math.min(Math.max(progressRaw, 0), 1);
+    const progress = clamped > 0 && clamped < 0.02 ? 0.02 : clamped;
 
     // Show market cap badge if we have data
     const showMcapBadge = currentMarketCap !== undefined && currentMarketCap > 0;
@@ -311,10 +344,16 @@ function ProgressBar({
     return (
         <div className="relative py-2 overflow-visible">
             {/* Progress Track with TP milestones - compact layout */}
-            <div className="flex items-center overflow-visible">
+            <div className="flex items-center gap-2 overflow-visible">
+                {/* TP's Label with target icon */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <Target className="w-4 h-4 md:w-5 md:h-5 text-white/80" />
+                    <span className="text-xs md:text-sm font-semibold text-white/80 uppercase tracking-wide">TP&apos;s</span>
+                </div>
+
                 <div className="flex-1 relative overflow-visible">
                     {/* Progress bar track */}
-                    <div className="relative h-3 md:h-4 w-full rounded-full bg-white/10 overflow-visible">
+                    <div className="relative h-4 md:h-5 w-full rounded-full bg-white/10 overflow-visible">
                         {/* Progress Fill */}
                         <motion.div
                             className="absolute inset-y-0 left-0 rounded-full"
@@ -325,6 +364,19 @@ function ProgressBar({
                             animate={{ width: `${progress * 100}%` }}
                             transition={{ type: "spring", stiffness: 120, damping: 18 }}
                         />
+
+                        {/* Market cap badge - INSIDE the progress bar on the left */}
+                        {showMcapBadge && (
+                            <div className="absolute left-1.5 top-1/2 -translate-y-1/2 z-20">
+                                <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-black/60 backdrop-blur-sm">
+                                    <span className="text-[7px] md:text-[8px] font-medium text-white/60 uppercase">mcap:</span>
+                                    <AnimatedProgressMarketCap
+                                        value={currentMarketCap!}
+                                        className="text-[8px] md:text-[9px] font-mono font-bold tabular-nums text-white"
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                         {/* Glow effect at progress edge */}
                         <motion.div
@@ -404,15 +456,6 @@ function ProgressBar({
                         );
                     })}
 
-                        {/* Market cap badge - ABSOLUTELY positioned below progress bar */}
-                        {showMcapBadge && (
-                            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1">
-                                <AnimatedProgressMarketCap
-                                    value={currentMarketCap!}
-                                    className="text-[9px] md:text-[10px] font-mono font-medium tabular-nums text-white/50"
-                                />
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
@@ -577,7 +620,7 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ delay: index * 0.05, type: "spring", stiffness: 200, damping: 20 }}
-            className="relative px-3 md:px-4 py-2.5 md:py-3 rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden hover:border-[#c4f70e]/30 transition-all group cursor-pointer"
+            className="relative px-3 md:px-4 py-2.5 md:py-3 pb-5 md:pb-6 rounded-xl bg-black/25 backdrop-blur-xl border border-white/10 overflow-visible hover:border-[#c4f70e]/30 transition-all group cursor-pointer"
             onClick={onClick}
             role="button"
             tabIndex={0}
@@ -683,7 +726,7 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
                     </div>
 
                     {/* Row 2: Entry SOL + Progress Bar (full width) */}
-                    <div className="flex items-center gap-4 md:gap-6 mt-1 overflow-visible">
+                    <div className="flex items-center gap-4 md:gap-6 -mt-0.5 overflow-visible">
                         {/* Left side: SOL entry value */}
                         <div className="flex flex-col gap-0.5 flex-shrink-0">
                             {/* Entry Amount (SOL invested) + Unrealized PnL */}
@@ -702,7 +745,7 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
                                 </div>
                                 {/* Unrealized PnL - only show if >= 0.1 SOL */}
                                 {pnlSol !== null && Math.abs(pnlSol) >= 0.1 && (
-                                    <span className={`font-mono tabular-nums text-xs md:text-sm flex-shrink-0 ${pnlSol >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                    <span className={`font-mono tabular-nums text-[10px] md:text-xs flex-shrink-0 tracking-tight ${pnlSol >= 0 ? "text-green-400" : "text-red-400"}`}>
                                         ({pnlSol >= 0 ? "+" : ""}{pnlSol.toFixed(1)})
                                     </span>
                                 )}
