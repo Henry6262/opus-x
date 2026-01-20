@@ -299,8 +299,8 @@ function ProgressBar({
 
     // Progress calculation: map multiplier to visual position
     // Entry (1x) -> 0%, TP1 (1.5x) -> 50%, TP2 (2x) -> 72.5%, TP3 (3x) -> 95%
-    let progressRaw = progressOverride ?? null;
-    if (progressRaw === null || progressRaw === undefined) {
+    let progressRaw: number = progressOverride ?? 0;
+    if (progressOverride === null || progressOverride === undefined) {
         if (currentMultiplier <= 1) {
             progressRaw = 0;
         } else if (currentMultiplier >= maxTarget) {
@@ -315,6 +315,7 @@ function ProgressBar({
                 progressRaw = (segmentProgress * minPosition) / 100;
             } else {
                 // Between TPs: interpolate between TP positions
+                let foundSegment = false;
                 for (let i = 0; i < tpTargets.length - 1; i++) {
                     if (currentMultiplier >= tpTargets[i].multiplier && currentMultiplier < tpTargets[i + 1].multiplier) {
                         const segmentProgress = (currentMultiplier - tpTargets[i].multiplier) /
@@ -322,11 +323,12 @@ function ProgressBar({
                         const startPos = tpPositions[i].position;
                         const endPos = tpPositions[i + 1].position;
                         progressRaw = (startPos + segmentProgress * (endPos - startPos)) / 100;
+                        foundSegment = true;
                         break;
                     }
                 }
-                // If past last TP
-                if (currentMultiplier >= tpTargets[tpTargets.length - 1].multiplier) {
+                // If past last TP or no segment found
+                if (!foundSegment && currentMultiplier >= tpTargets[tpTargets.length - 1].multiplier) {
                     progressRaw = maxPosition / 100;
                 }
             }
@@ -369,10 +371,10 @@ function ProgressBar({
                         {showMcapBadge && (
                             <div className="absolute left-1.5 top-1/2 -translate-y-1/2 z-20">
                                 <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-black/60 backdrop-blur-sm">
-                                    <span className="text-[7px] md:text-[8px] font-medium text-white/60 uppercase">mcap:</span>
+                                    <span className="text-[8px] md:text-[9px] font-medium text-white/80 uppercase">mcap:</span>
                                     <AnimatedProgressMarketCap
                                         value={currentMarketCap!}
-                                        className="text-[8px] md:text-[9px] font-mono font-bold tabular-nums text-white"
+                                        className="text-[9px] md:text-[10px] font-mono font-bold tabular-nums text-white"
                                     />
                                 </div>
                             </div>
@@ -650,7 +652,7 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
                             imageUrl={holding.image_url}
                             symbol={holding.symbol}
                             mint={holding.mint}
-                            size={64}
+                            size={72}
                         />
                     </div>
                     <div className="md:hidden">
@@ -658,7 +660,7 @@ function HoldingCard({ holding, index, takeProfitTargetPercent = 100, onClick, o
                             imageUrl={holding.image_url}
                             symbol={holding.symbol}
                             mint={holding.mint}
-                            size={44}
+                            size={52}
                         />
                     </div>
                 </div>
