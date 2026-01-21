@@ -89,7 +89,7 @@ export function TradingAnalyticsDashboard() {
         }}
       />
 
-      <div className="relative z-10 p-4 md:p-6">
+      <div className="relative z-10 p-5 md:p-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <motion.div

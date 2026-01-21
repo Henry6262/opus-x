@@ -122,10 +122,12 @@ class ProductionVersioningAPI {
     versionId: string,
     startDate?: string,
     endDate?: string,
+    bucket?: '1d' | '3h',
   ): Promise<VersionMetrics[]> {
     const params = new URLSearchParams();
     if (startDate) params.set('start_date', startDate);
     if (endDate) params.set('end_date', endDate);
+    if (bucket) params.set('bucket', bucket);
     const query = params.toString();
     const data = await this.fetch<any[]>(
       `/api/versions/${versionId}/metrics${query ? '?' + query : ''}`
@@ -138,6 +140,7 @@ class ProductionVersioningAPI {
     metric: MetricType,
     startDate?: string,
     endDate?: string,
+    bucket?: '1d' | '3h',
   ): Promise<VersionComparisonData> {
     // Backend doesn't have compare endpoint yet - do client-side comparison
     const versions = await this.listVersions();
@@ -147,7 +150,7 @@ class ProductionVersioningAPI {
     const summary: Record<string, any> = {};
 
     for (const versionId of versionIds) {
-      const metrics = await this.getVersionMetrics(versionId, startDate, endDate);
+      const metrics = await this.getVersionMetrics(versionId, startDate, endDate, bucket);
       metricsByVersion[versionId] = metrics;
 
       // Calculate summary

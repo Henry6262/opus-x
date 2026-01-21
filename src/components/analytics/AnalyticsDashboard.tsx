@@ -126,6 +126,45 @@ function MetricSelector({ selectedMetric, onChange, compact = false, className }
 }
 
 // ============================================
+// TIMEFRAME SELECTOR
+// ============================================
+
+interface TimeframeSelectorProps {
+  selectedBucket: '1d' | '3h';
+  onChange: (bucket: '1d' | '3h') => void;
+  className?: string;
+}
+
+function TimeframeSelector({ selectedBucket, onChange, className }: TimeframeSelectorProps) {
+  return (
+    <div className={cn("flex gap-1 rounded-full bg-white/5 p-1", className)}>
+      <button
+        onClick={() => onChange('1d')}
+        className={cn(
+          "px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] rounded-full transition-all cursor-pointer",
+          selectedBucket === '1d'
+            ? "bg-[#c4f70e]/20 text-[#c4f70e] shadow-[0_0_12px_rgba(196,247,14,0.2)]"
+            : "text-white/50 hover:text-white/70 hover:bg-white/5"
+        )}
+      >
+        Daily
+      </button>
+      <button
+        onClick={() => onChange('3h')}
+        className={cn(
+          "px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] rounded-full transition-all cursor-pointer",
+          selectedBucket === '3h'
+            ? "bg-[#c4f70e]/20 text-[#c4f70e] shadow-[0_0_12px_rgba(196,247,14,0.2)]"
+            : "text-white/50 hover:text-white/70 hover:bg-white/5"
+        )}
+      >
+        3-Hour
+      </button>
+    </div>
+  );
+}
+
+// ============================================
 // MAIN CHART COMPONENT
 // ============================================
 
@@ -356,6 +395,7 @@ export function AnalyticsDashboard() {
   // State
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('winRate');
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [bucket, setBucket] = useState<'1d' | '3h'>('1d');
   const [dateRange] = useState({
     start: subDays(new Date(), 30).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0],
@@ -376,6 +416,7 @@ export function AnalyticsDashboard() {
     versionIds: versions.map((v) => v.id),
     selectedMetric,
     dateRange,
+    bucket,
   });
 
   // Auto-select active version or first version
@@ -426,12 +467,19 @@ export function AnalyticsDashboard() {
                 Agent Metrics
               </h3>
             </div>
-            <MetricSelector
-              selectedMetric={selectedMetric}
-              onChange={setSelectedMetric}
-              compact
-              className="shrink-0"
-            />
+            <div className="flex items-center gap-3">
+              <TimeframeSelector
+                selectedBucket={bucket}
+                onChange={setBucket}
+                className="shrink-0"
+              />
+              <MetricSelector
+                selectedMetric={selectedMetric}
+                onChange={setSelectedMetric}
+                compact
+                className="shrink-0"
+              />
+            </div>
           </div>
 
           <div className="h-px w-full bg-gradient-to-r from-white/0 via-white/15 to-white/0 md:hidden" />
@@ -451,7 +499,7 @@ export function AnalyticsDashboard() {
                       key={version.id}
                       onClick={() => setSelectedVersionId(version.id)}
                       className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition cursor-pointer md:px-4 md:py-1.5 md:text-[11px] md:border md:border-transparent md:bg-transparent md:text-white/60 md:hover:bg-white/5 md:hover:text-white/90 ${isSelected
-                        ? "bg-[#c4f70e]/25 text-[#c4f70e] shadow-[0_0_14px_rgba(196,247,14,0.2)] md:border-[#c4f70e]/40 md:text-[#c4f70e]"
+                        ? "bg-[#c4f70e]/30 text-[#c4f70e] shadow-[0_0_24px_rgba(196,247,14,0.55)] md:border-[#c4f70e]/80 md:text-[#c4f70e]"
                         : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80"
                         }`}
                     >

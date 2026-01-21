@@ -16,6 +16,7 @@ interface UseVersionComparisonOptions {
     start: string; // ISO date
     end: string;   // ISO date
   };
+  bucket?: '1d' | '3h'; // Timeframe bucket
   autoLoad?: boolean; // Default: true
 }
 
@@ -35,6 +36,7 @@ interface UseVersionComparisonReturn {
  *   versionIds: ['v1-uuid', 'v2-uuid'],
  *   selectedMetric: 'winRate',
  *   dateRange: { start: '2024-01-01', end: '2024-01-31' },
+ *   bucket: '3h', // Optional: '1d' (default) or '3h'
  * });
  *
  * if (loading) return <div>Loading comparison...</div>;
@@ -55,6 +57,7 @@ export function useVersionComparison({
   versionIds,
   selectedMetric,
   dateRange,
+  bucket = '1d',
   autoLoad = true,
 }: UseVersionComparisonOptions): UseVersionComparisonReturn {
   const [data, setData] = useState<VersionComparisonData | null>(null);
@@ -65,8 +68,8 @@ export function useVersionComparison({
   const versionIdsKey = versionIds.join('|');
   const stableVersionIds = useMemo(() => versionIds, [versionIdsKey]);
   const requestKey = useMemo(
-    () => `${versionIdsKey}|${selectedMetric}|${dateRange?.start ?? ''}|${dateRange?.end ?? ''}`,
-    [versionIdsKey, selectedMetric, dateRange?.start, dateRange?.end]
+    () => `${versionIdsKey}|${selectedMetric}|${dateRange?.start ?? ''}|${dateRange?.end ?? ''}|${bucket}`,
+    [versionIdsKey, selectedMetric, dateRange?.start, dateRange?.end, bucket]
   );
 
   const loadComparison = useCallback(async (force = false) => {
@@ -90,7 +93,8 @@ export function useVersionComparison({
         stableVersionIds,
         selectedMetric,
         dateRange?.start,
-        dateRange?.end
+        dateRange?.end,
+        bucket
       );
 
       setData(result);
@@ -101,7 +105,7 @@ export function useVersionComparison({
     } finally {
       setLoading(false);
     }
-  }, [requestKey, stableVersionIds, selectedMetric, dateRange?.start, dateRange?.end]);
+  }, [requestKey, stableVersionIds, selectedMetric, dateRange?.start, dateRange?.end, bucket]);
 
   useEffect(() => {
     if (autoLoad) {

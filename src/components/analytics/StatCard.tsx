@@ -99,12 +99,9 @@ export function StatCard({
                 <div className="relative z-10 flex flex-col gap-1">
                     {/* Label row with icon */}
                     <div className="flex items-center justify-between">
-                        <motion.span
-                            className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50 group-hover:text-[#c4f70e]/70 transition-colors duration-300"
-                            whileHover={{ letterSpacing: "0.25em" }}
-                        >
+                        <span className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50 group-hover:text-[#c4f70e]/70 transition-colors duration-300">
                             {label}
-                        </motion.span>
+                        </span>
                         {Icon && (
                             <motion.div
                                 className="text-white/30 group-hover:text-[#c4f70e] transition-colors duration-300"

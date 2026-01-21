@@ -27,11 +27,14 @@ All notable changes to Opus-X are documented here.
 - Analytics agent metrics chart now filters to the selected version data only.
 - Analytics agent metrics tooltip now includes per-date PnL, win rate, trades, multiplier, and hold time on a dark panel.
 - Analytics tooltip now omits avg multiplier and uses short version codes in the header.
+- Analytics agent version chips now glow brighter with stronger active borders.
+- Analytics stat card labels no longer animate on hover.
 - Analytics version chart now remounts on version changes and uses per-version line colors.
 - Analytics desktop metric selector now sits at the chart’s top-right edge.
 - Outcome Pulse overview rows now remove borders/icons, grow text, and only color the +/- signs.
 - Outcome Pulse overview now shows the three secondary metrics in a horizontal grid with stacked labels.
 - Outcome Pulse win-rate ring enlarged and metric labels increased.
+- Outcome Pulse container padding increased for more spacing.
 - AI analysis logging now reports Supabase error details for easier debugging.
 - Trade Outcomes mobile toggle buttons now use larger text and padding.
 - Analytics tab trigger now shows a small NEW badge.
