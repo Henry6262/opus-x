@@ -24,14 +24,35 @@ export function useTradingAnalytics(dateRange?: { start: string; end: string }) 
       setLoading(true);
       setError(null);
 
-      let data: TradingPosition[];
-      if (dateRange) {
-        data = await tradingApi.getPositionsByDateRange(dateRange.start, dateRange.end);
-      } else {
-        data = await tradingApi.getPositions();
+      // Fetch BOTH open positions AND history (closed positions)
+      // The API returns:
+      // - /api/trading/positions: open/partially_closed positions (in-memory)
+      // - /api/trading/history: closed positions (from database)
+      const [openPositions, historyPositions] = await Promise.all([
+        tradingApi.getPositions(),
+        tradingApi.getHistory(500), // Get last 500 closed positions
+      ]);
+
+      // Merge and deduplicate by position ID
+      const allPositions = [...openPositions];
+      const openIds = new Set(openPositions.map(p => p.id));
+
+      for (const pos of historyPositions) {
+        if (!openIds.has(pos.id)) {
+          allPositions.push(pos);
+        }
       }
 
-      setPositions(data);
+      // Apply date range filter if provided
+      let filteredPositions = allPositions;
+      if (dateRange) {
+        filteredPositions = allPositions.filter(p => {
+          const entryDate = new Date(p.entry_time).toISOString().split('T')[0];
+          return entryDate >= dateRange.start && entryDate <= dateRange.end;
+        });
+      }
+
+      setPositions(filteredPositions);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load positions');
     } finally {
@@ -70,10 +91,10 @@ export function useTradingAnalytics(dateRange?: { start: string; end: string }) 
     const closedWithTime = positions.filter(p => p.closed_at);
     const avgHoldTimeMinutes = closedWithTime.length > 0
       ? closedWithTime.reduce((sum, p) => {
-          const entryTime = new Date(p.entry_time).getTime();
-          const closeTime = new Date(p.closed_at!).getTime();
-          return sum + (closeTime - entryTime) / (1000 * 60);
-        }, 0) / closedWithTime.length
+        const entryTime = new Date(p.entry_time).getTime();
+        const closeTime = new Date(p.closed_at!).getTime();
+        return sum + (closeTime - entryTime) / (1000 * 60);
+      }, 0) / closedWithTime.length
       : 0;
 
     // Best and worst trades

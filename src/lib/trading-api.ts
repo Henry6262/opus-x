@@ -78,6 +78,14 @@ class TradingAPI {
       return entryDate >= startDate && entryDate <= endDate;
     });
   }
+
+  /**
+   * Get closed positions from history
+   * @param limit - Maximum number of positions to return (default: 50, max: 500)
+   */
+  async getHistory(limit: number = 50): Promise<TradingPosition[]> {
+    return this.fetch<TradingPosition[]>(`/api/trading/history?limit=${Math.min(limit, 500)}`);
+  }
 }
 
 // ============================================
