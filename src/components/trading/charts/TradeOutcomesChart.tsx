@@ -66,18 +66,18 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
         tp1: { label: 'TP1 Hit', color: BRAND_TONES[0] },
         tp2: { label: 'TP2 Hit', color: BRAND_TONES[1] },
         tp3: { label: 'TP3 Hit', color: BRAND_TONES[2] },
-      };
+      } as ChartConfig;
     }
     if (view === 'target-efficiency') {
       return {
         hit: { label: 'Target Hit', color: BRAND },
         miss: { label: 'Target Miss', color: MUTED },
-      };
+      } as ChartConfig;
     }
     return {
       wins: { label: 'Wins', color: BRAND },
       losses: { label: 'Losses', color: MUTED },
-    };
+    } as ChartConfig;
   }, [view]);
 
   const activeData = view === 'win-loss' ? winLossData : view === 'tp-hits' ? tpHitData : efficiencyData;
@@ -188,11 +188,10 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
             <button
               key={option.id}
               onClick={() => setView(option.id as OutcomeView)}
-              className={`rounded-full px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] transition whitespace-nowrap cursor-pointer md:px-4 md:py-2 md:text-[9px] ${
-                view === option.id
+              className={`rounded-full px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] transition whitespace-nowrap cursor-pointer md:px-4 md:py-2 md:text-[9px] ${view === option.id
                   ? 'bg-[#c4f70e]/25 text-[#c4f70e] shadow-[0_0_18px_rgba(196,247,14,0.2)]'
                   : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80'
-              }`}
+                }`}
             >
               {option.label}
             </button>

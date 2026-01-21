@@ -270,9 +270,10 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
               dataKey={version.id}
               type="monotone"
               stroke={lineColor}
-              strokeWidth={isSelected ? 2.5 : 1.5}
-              strokeOpacity={isSelected ? 1 : 0.4}
-              dot={false}
+              strokeWidth={isSelected ? 3 : 2}
+              strokeOpacity={isSelected ? 1 : 0.5}
+              dot={{ r: 2.5 }}
+              activeDot={{ r: 4 }}
             />
           );
         })}
@@ -514,12 +515,16 @@ export function AnalyticsDashboard() {
             />
             <div className="p-4">
               {comparisonLoading ? (
-                <div className="flex items-center justify-center h-[200px]">
+                <div className="relative flex items-center justify-center h-[200px] overflow-hidden rounded-xl">
                   <img
                     src="/videos/gif.gif"
                     alt="Loading"
-                    className="h-24 w-24 object-contain"
+                    className="absolute inset-0 h-full w-full object-cover opacity-70"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80" />
+                  <div className="relative z-10 text-sm font-semibold text-white/80 uppercase tracking-[0.2em]">
+                    Loading
+                  </div>
                 </div>
               ) : comparisonData && selectedVersionId ? (
                 <VersionChart

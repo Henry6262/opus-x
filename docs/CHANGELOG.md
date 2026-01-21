@@ -72,6 +72,8 @@ All notable changes to Opus-X are documented here.
 - Portfolio holdings now place entry/market cap info under the ticker with a full-width progress bar below.
 - Portfolio holdings now show Entry and MCap labels on the left under the ticker.
 - Outcome Pulse panel now only appears under the Analytics tab.
+- Analytics chart loading state now uses the gif as a full panel background with a dark overlay.
+- Analytics chart now uses thicker lines with visible data point dots.
 
 ## 2026-01-14
 - Transaction History now sits alongside Live Activity and Active Positions in the top desktop rail as its own collapsible column, eliminating the bottom-row copy.
