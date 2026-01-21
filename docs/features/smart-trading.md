@@ -22,6 +22,7 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - 2026-01-16: Outcome Pulse secondary metrics now sit in a single-row layout on mobile with tighter text.
 - 2026-01-16: Analytics tab badge now reads BETA instead of NEW.
 - 2026-01-16: Trading vs Analytics tab selection now persists after refresh using localStorage.
+- 2026-01-16: Restored AI analysis logging module to resolve missing build dependency.
 - 2026-01-16: Outcome Pulse overview now lays out the three secondary metrics in a horizontal grid with stacked labels.
 - 2026-01-16: Outcome Pulse overview now emphasizes a larger PnL row with bigger text, borderless rows, and sign-only green/red coloring.
 - 2026-01-16: AI analysis logging now reports Supabase error details for easier debugging.

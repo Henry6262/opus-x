@@ -197,6 +197,7 @@ Token → useRetracementAnalysis (algorithmic) → BUY/STRONG_BUY signal
 - **WebSocket**: New token notifications
 
 ## Changelog
+- 2026-01-16: Restored AI analysis logging module to resolve missing build dependency.
 - 2026-01-09: Added AI-powered entry reasoning system
 - 2026-01-09: Implemented retracement trading strategy with ATH tracking
 - 2026-01-09: Added token journey service with in-memory cache

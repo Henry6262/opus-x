@@ -17,3 +17,4 @@ Provide a desktop-only cursor overlay that highlights interactive elements with 
 ## Changelog
 - 2026-01-16: Added the GSAP-driven target cursor overlay for desktop hover targets.
 - 2026-01-16: Added cursor targeting to smart trading watchlist cards and transaction rows.
+- 2026-01-16: Disabled the target cursor overlay so the default cursor shows again.

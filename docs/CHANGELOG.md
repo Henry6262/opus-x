@@ -10,6 +10,8 @@ All notable changes to Opus-X are documented here.
 - Analytics tab badge now reads BETA instead of NEW.
 - Analytics timeframe selector now defaults to 3-hour and shows it first in the toggle.
 - Trading/Analytics tab selection now persists in localStorage across refreshes.
+- Disabled the target cursor overlay so default cursor behavior returns.
+- Restored the missing analysis logger module to fix build errors.
 - Analytics summary row now uses shorter labels, a Solana icon for PnL, and one-decimal precision.
 - Analytics summary row hides Avg Hold on mobile to keep spacing tight.
 - Analytics mobile metric selector now sits to the right of the version badges and uses a compact size.
