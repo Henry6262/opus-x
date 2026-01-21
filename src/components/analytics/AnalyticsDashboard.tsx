@@ -411,15 +411,12 @@ export function AnalyticsDashboard() {
               </div>
               <div className="p-3 md:p-4">
                 {comparisonLoading ? (
-                  <div className="relative flex items-center justify-center h-[200px] overflow-hidden rounded-xl md:h-[170px]">
-                    <img
-                      src="/videos/gif.gif"
-                      alt="Loading"
-                      className="absolute inset-0 h-full w-full object-cover opacity-70"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80" />
-                    <div className="relative z-10 text-sm font-semibold text-white/80 uppercase tracking-[0.2em]">
-                      Loading
+                  <div className="flex items-center justify-center h-[200px] rounded-xl bg-white/[0.02] md:h-[170px]">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="h-12 w-12 animate-spin rounded-full border-2 border-white/10 border-t-[#c4f70e]" />
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
+                        Loading
+                      </span>
                     </div>
                   </div>
                 ) : comparisonData && selectedVersionId ? (

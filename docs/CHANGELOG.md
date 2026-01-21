@@ -5,6 +5,7 @@ All notable changes to Opus-X are documented here.
 ## 2026-01-16
 - Added a desktop-only target cursor overlay that locks onto hoverable elements and hides the default cursor.
 - Target cursor now locks onto smart trading watchlist cards and transaction rows.
+- Analytics chart comparison loading now uses a spinner instead of the gif background.
 - Analytics summary row now uses shorter labels, a Solana icon for PnL, and one-decimal precision.
 - Analytics summary row hides Avg Hold on mobile to keep spacing tight.
 - Analytics mobile metric selector now sits to the right of the version badges and uses a compact size.
