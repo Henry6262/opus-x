@@ -42,3 +42,5 @@ Provide version-level analytics and comparisons for agent performance over time,
 - 2026-01-15: Outcome Pulse panel now renders within the Analytics tab only.
 - 2026-01-15: Loading state now uses the gif as a full panel background with a dark overlay.
 - 2026-01-15: Agent metrics chart now uses thicker lines with visible data point dots.
+- 2026-01-15: Agent metrics chart line thickness increased again and X-axis preserves the first/last date labels.
+- 2026-01-15: Agent metrics chart uses lighter brand green lines to keep dots prominent.

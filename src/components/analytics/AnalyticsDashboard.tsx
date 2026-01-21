@@ -207,15 +207,14 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
   // Build chart config
   const chartConfig = useMemo(() => {
     const config: ChartConfig = {};
-    versions.forEach((version, idx) => {
-      const isSelected = version.id === selectedVersionId;
+    versions.forEach((version) => {
       config[version.id] = {
         label: version.versionName || version.versionCode,
-        color: isSelected ? VERSION_COLORS[idx % VERSION_COLORS.length].stroke : "rgba(255,255,255,0.35)",
+        color: "#c4f70e",
       };
     });
     return config;
-  }, [versions, selectedVersionId]);
+  }, [versions]);
 
   if (chartData.length === 0) {
     return (
@@ -238,7 +237,8 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
           tickLine={false}
           axisLine={false}
           tickMargin={8}
-          minTickGap={32}
+          minTickGap={28}
+          interval="preserveStartEnd"
           tickFormatter={(value) => {
             const date = new Date(value);
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -258,11 +258,9 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
             />
           }
         />
-        {versions.map((version, idx) => {
+        {versions.map((version) => {
           const isSelected = version.id === selectedVersionId;
-          const lineColor = isSelected
-            ? VERSION_COLORS[idx % VERSION_COLORS.length].stroke
-            : "rgba(255,255,255,0.25)";
+          const lineColor = "#c4f70e";
 
           return (
             <Line
@@ -271,9 +269,9 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
               type="monotone"
               stroke={lineColor}
               strokeWidth={isSelected ? 3 : 2}
-              strokeOpacity={isSelected ? 1 : 0.5}
-              dot={{ r: 2.5 }}
-              activeDot={{ r: 4 }}
+              strokeOpacity={isSelected ? 0.75 : 0.35}
+              dot={{ r: 3 }}
+              activeDot={{ r: 5 }}
             />
           );
         })}
