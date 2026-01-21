@@ -216,6 +216,7 @@ export function useTradingAnalytics(dateRange?: { start: string; end: string }) 
         }
 
         return {
+          positionId: p.id,
           mint: p.mint,
           tokenName: p.token_name,
           ticker: p.ticker,
@@ -234,6 +235,8 @@ export function useTradingAnalytics(dateRange?: { start: string; end: string }) 
           tp1Hit: p.tp1_hit,
           tp2Hit: p.tp2_hit,
           tp3Hit: p.tp3_hit,
+          buySignature: p.buy_signature || null,
+          sellTransactions: p.sell_transactions || [],
         };
       })
       .sort((a, b) => b.totalPnlSol - a.totalPnlSol); // Sort by total P&L descending

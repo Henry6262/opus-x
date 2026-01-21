@@ -117,6 +117,7 @@ export interface DailyTradingMetrics {
 
 // Token performance ranking
 export interface TokenPerformance {
+  positionId: string;  // For TransactionDrawer lookup
   mint: string;
   tokenName: string;
   ticker: string;
@@ -135,4 +136,6 @@ export interface TokenPerformance {
   tp1Hit: boolean;
   tp2Hit: boolean;
   tp3Hit: boolean;
+  buySignature: string | null;  // For Solscan verification
+  sellTransactions: SellTransaction[];  // All sell tx signatures
 }

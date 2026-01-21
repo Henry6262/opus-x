@@ -6,23 +6,27 @@
  * - TP hit rate progress bars with shine effects
  * - Glassmorphic card design
  * - Staggered entrance animations
+ * - Top trades with TransactionDrawer for tx verification
  */
 
 'use client';
 
 import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Radar, Target, Trophy } from 'lucide-react';
+import { Radar, Target, Trophy, ExternalLink } from 'lucide-react';
 import { subDays } from 'date-fns';
 import { useTradingAnalytics } from '@/hooks/useTradingAnalytics';
 import { PulseRing, MetricBar, StatRow } from './OutcomePrimitives';
 import { CountUp } from '@/components/animations/CountUp';
+import { TransactionDrawer } from '@/features/smart-trading/components/TransactionDrawer';
 import { cn } from '@/lib/utils';
+import type { TokenPerformance } from '@/types/trading';
 
 type ViewMode = 'overview' | 'targets' | 'performance';
 
 export function TradingAnalyticsDashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
+  const [selectedToken, setSelectedToken] = useState<TokenPerformance | null>(null);
   const [dateRange] = useState({
     start: subDays(new Date(), 30).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0],
@@ -155,9 +159,9 @@ export function TradingAnalyticsDashboard() {
                 transition={{ delay: 0.2 }}
                 className="flex items-center justify-between gap-4 rounded-lg bg-white/[0.04] p-5 md:p-6"
               >
-                  <span className="text-base font-semibold uppercase tracking-[0.16em] text-white/60 flex-1 md:text-lg">
-                    Total PnL
-                  </span>
+                <span className="text-base font-semibold uppercase tracking-[0.16em] text-white/60 flex-1 md:text-lg">
+                  Total PnL
+                </span>
                 <div className="text-2xl font-bold text-white md:text-3xl">
                   <span className={analytics.totalPnlSol >= 0 ? "text-emerald-400" : "text-red-400"}>
                     {analytics.totalPnlSol >= 0 ? "+" : ""}
@@ -287,7 +291,8 @@ export function TradingAnalyticsDashboard() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 + idx * 0.1 }}
-                      className="flex items-center gap-4 rounded-xl bg-white/[0.03] border border-white/10 p-4"
+                      onClick={() => setSelectedToken(token)}
+                      className="flex items-center gap-4 rounded-xl bg-white/[0.03] border border-white/10 p-4 cursor-pointer hover:bg-white/[0.06] hover:border-white/20 transition-all group"
                     >
                       {/* Rank Badge */}
                       <div className={cn(
@@ -328,6 +333,11 @@ export function TradingAnalyticsDashboard() {
                           {token.pnlPct >= 0 ? "+" : ""}{token.pnlPct.toFixed(1)}%
                         </div>
                       </div>
+
+                      {/* View TX indicator */}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ExternalLink className="w-4 h-4 text-[#c4f70e]" />
+                      </div>
                     </motion.div>
                   ))}
                 </div>
@@ -355,6 +365,15 @@ export function TradingAnalyticsDashboard() {
         className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#c4f70e]/40 to-transparent"
         animate={{ opacity: [0.3, 0.6, 0.3] }}
         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+      />
+
+      {/* Transaction Drawer for Top Trades */}
+      <TransactionDrawer
+        isOpen={selectedToken !== null}
+        onClose={() => setSelectedToken(null)}
+        tokenSymbol={selectedToken?.ticker || ''}
+        tokenMint={selectedToken?.mint || ''}
+        positionId={selectedToken?.positionId}
       />
     </motion.div>
   );
