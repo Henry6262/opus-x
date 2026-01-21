@@ -188,7 +188,7 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
             <button
               key={option.id}
               onClick={() => setView(option.id as OutcomeView)}
-              className={`rounded-full px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] transition whitespace-nowrap cursor-pointer ${
+              className={`rounded-full px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] transition whitespace-nowrap cursor-pointer md:px-4 md:py-2 md:text-[9px] ${
                 view === option.id
                   ? 'bg-[#c4f70e]/25 text-[#c4f70e] shadow-[0_0_18px_rgba(196,247,14,0.2)]'
                   : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80'

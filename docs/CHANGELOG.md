@@ -8,6 +8,9 @@ All notable changes to Opus-X are documented here.
 - Analytics summary row now uses shorter labels, a Solana icon for PnL, and one-decimal precision.
 - Analytics summary row hides Avg Hold on mobile to keep spacing tight.
 - Analytics mobile metric selector now sits to the right of the version badges and uses a compact size.
+- Analytics mobile summary row text increased now that it shows three metrics.
+- Analytics mobile metric selector hides the label and uses a brand-green chevron.
+- Trade Outcomes mobile toggle buttons now use larger text and padding.
 
 ## 2026-01-15
 - Pump.fun wallet pill received a max z-index so the balance badge always floats above overlapping feeds on the dashboard.
@@ -60,6 +63,9 @@ All notable changes to Opus-X are documented here.
 - Trade Outcomes right-side metrics now use larger text and extra horizontal padding.
 - Trade Outcomes toggles stay on one row, "TP'S" label added, and mobile chart height increased.
 - Trade Outcomes radial chart now uses lighter text and tooltip tones to avoid black defaults.
+- Portfolio holdings now move the entry value to the top-right on mobile to free space for the progress bar.
+- Portfolio holdings now place entry/market cap info under the ticker with a full-width progress bar below.
+- Portfolio holdings now show Entry and MCap labels on the left under the ticker.
 
 ## 2026-01-14
 - Transaction History now sits alongside Live Activity and Active Positions in the top desktop rail as its own collapsible column, eliminating the bottom-row copy.

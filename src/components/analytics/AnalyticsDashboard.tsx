@@ -126,14 +126,16 @@ interface MetricSelectorProps {
 function MetricSelector({ selectedMetric, onChange, compact = false, className }: MetricSelectorProps) {
   return (
     <div className={cn("flex flex-col gap-2", compact && "gap-1", className)}>
-      <label
-        className={cn(
-          "font-semibold uppercase text-white/40",
-          compact ? "text-[9px] tracking-[0.25em]" : "text-xs tracking-widest"
-        )}
-      >
-        Metric
-      </label>
+      {!compact && (
+        <label
+          className={cn(
+            "font-semibold uppercase text-white/40",
+            compact ? "text-[9px] tracking-[0.25em]" : "text-xs tracking-widest"
+          )}
+        >
+          Metric
+        </label>
+      )}
       <div className="relative">
         <select
           value={selectedMetric}
@@ -154,8 +156,8 @@ function MetricSelector({ selectedMetric, onChange, compact = false, className }
         </select>
         <div
           className={cn(
-            "pointer-events-none absolute top-1/2 -translate-y-1/2 text-white/50",
-            compact ? "right-2 text-[10px]" : "right-3"
+            "pointer-events-none absolute top-1/2 -translate-y-1/2",
+            compact ? "right-2 text-[10px] text-[#c4f70e]" : "right-3 text-white/50"
           )}
         >
           ▾
@@ -443,30 +445,30 @@ export function AnalyticsDashboard() {
           <div className="h-px w-full bg-gradient-to-r from-white/0 via-white/15 to-white/0" />
 
           {selectedSummary && (
-            <div className="grid grid-cols-3 text-[10px] md:grid-cols-4 md:text-xs">
+            <div className="grid grid-cols-3 text-[11px] md:grid-cols-4 md:text-xs">
               <div className="px-2 py-2 text-center">
-                <p className="uppercase tracking-widest text-[9px] text-white/40 md:text-[10px]">PnL</p>
-                <p className="flex items-center justify-center gap-1 text-[11px] font-semibold text-white md:text-sm">
+                <p className="uppercase tracking-widest text-[10px] text-white/40 md:text-[10px]">PnL</p>
+                <p className="flex items-center justify-center gap-1 text-[13px] font-semibold text-white md:text-sm">
                   {selectedSummary.totalPnlSol >= 0 ? "+" : ""}
                   {selectedSummary.totalPnlSol.toFixed(1)}
                   <img
                     src="/logos/solana.png"
                     alt="Solana"
-                    className="h-3 w-3"
+                    className="h-3.5 w-3.5"
                   />
                 </p>
               </div>
               <div className="relative px-2 py-2 text-center">
                 <span className="pointer-events-none absolute left-0 top-1/2 h-6 -translate-y-1/2 w-px bg-white/15" />
-                <p className="uppercase tracking-widest text-[9px] text-white/40 md:text-[10px]">WR %</p>
-                <p className="text-[11px] font-semibold text-white md:text-sm">
+                <p className="uppercase tracking-widest text-[10px] text-white/40 md:text-[10px]">WR %</p>
+                <p className="text-[13px] font-semibold text-white md:text-sm">
                   {selectedSummary.winRate.toFixed(1)}%
                 </p>
               </div>
               <div className="relative px-2 py-2 text-center">
                 <span className="pointer-events-none absolute left-0 top-1/2 h-6 -translate-y-1/2 w-px bg-white/15" />
-                <p className="uppercase tracking-widest text-[9px] text-white/40 md:text-[10px]">Trades</p>
-                <p className="text-[11px] font-semibold text-white md:text-sm">
+                <p className="uppercase tracking-widest text-[10px] text-white/40 md:text-[10px]">Trades</p>
+                <p className="text-[13px] font-semibold text-white md:text-sm">
                   {selectedSummary.totalTrades}
                 </p>
               </div>

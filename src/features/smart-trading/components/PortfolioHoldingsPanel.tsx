@@ -262,10 +262,6 @@ function AnimatedProgressMarketCap({ value, className = "" }: AnimatedProgressMa
 }
 
 interface ProgressBarProps {
-    currentMarketCap?: number;
-    // Entry price and current price for calculating entry market cap
-    entryPrice?: number;
-    currentPrice?: number;
     // Current PnL percentage for progress calculation
     pnlPct?: number;
     // TP milestone tracking from WebSocket
@@ -289,9 +285,6 @@ const TP2_THRESHOLD = 100; // 100% gain = 2x
 const TP3_THRESHOLD = 200; // 200% gain = 3x
 
 function ProgressBar({
-    currentMarketCap,
-    entryPrice,
-    currentPrice,
     pnlPct = 0,
     tp1Hit = false,
     tp2Hit = false,
@@ -304,20 +297,6 @@ function ProgressBar({
         { label: "TP2", position: 66, isHit: tp2Hit, threshold: TP2_THRESHOLD },
         { label: "TP3", position: 95, isHit: tp3Hit, threshold: TP3_THRESHOLD },
     ];
-
-    // Find the next active target (first non-hit target)
-    const nextTarget = allTargets?.find(target => !target.is_hit);
-    const nextTargetMarketCap = nextTarget?.target_market_cap;
-
-    // Calculate entry market cap from entry price and current market cap
-    // Formula: entry_market_cap = entry_price * (current_market_cap / current_price)
-    // This works because: market_cap = price * total_supply, and total_supply is constant
-    const entryMarketCap = useMemo(() => {
-        if (!entryPrice || !currentPrice || !currentMarketCap || currentPrice === 0) {
-            return undefined;
-        }
-        return entryPrice * (currentMarketCap / currentPrice);
-    }, [entryPrice, currentPrice, currentMarketCap]);
 
     // Progress calculation based on current PnL percentage
     // Map PnL% to visual position: 0% -> 0, 50% -> 33%, 100% -> 66%, 200% -> 95%
@@ -350,50 +329,8 @@ function ProgressBar({
         progress = 0.33;
     }
 
-    // Show market cap badge if we have data
-    const showMcapBadge = currentMarketCap !== undefined && currentMarketCap > 0;
-    const showEntryMcap = entryMarketCap !== undefined && entryMarketCap > 0;
-    const showTargetMcap = nextTargetMarketCap !== undefined && nextTargetMarketCap !== null && nextTargetMarketCap > 0;
-
     return (
         <div className="relative py-1 overflow-visible">
-            {/* Market cap badges - ABOVE the progress bar, stacked vertically */}
-            {(showEntryMcap || showMcapBadge || showTargetMcap) && (
-                <div className="flex flex-col gap-0.5 mb-1 ml-[67px] md:ml-[77px]">
-                    {/* Entry Market Cap */}
-                    {showEntryMcap && (
-                        <div className="flex items-center gap-1">
-                            <span className="text-[9px] md:text-[10px] font-medium text-white/40 uppercase w-[52px] md:w-[58px]">entry:</span>
-                            <span className="text-[10px] md:text-[11px] font-mono font-bold tabular-nums text-white/60">
-                                {formatMarketCap(entryMarketCap!)}
-                            </span>
-                        </div>
-                    )}
-                    {/* Current Market Cap */}
-                    {showMcapBadge && (
-                        <div className="flex items-center gap-1">
-                            <span className="text-[9px] md:text-[10px] font-medium text-white/50 uppercase w-[52px] md:w-[58px]">current:</span>
-                            <AnimatedProgressMarketCap
-                                value={currentMarketCap!}
-                                className="text-[10px] md:text-[11px] font-mono font-bold tabular-nums text-white/90"
-                            />
-                        </div>
-                    )}
-                    {/* Target Market Cap (Next Active TP) */}
-                    {showTargetMcap && (
-                        <div className="flex items-center gap-1">
-                            <span className="text-[9px] md:text-[10px] font-medium text-[#c4f70e]/70 uppercase w-[52px] md:w-[58px]">
-                                TP{nextTarget?.target_level}:
-                            </span>
-                            <AnimatedProgressMarketCap
-                                value={nextTargetMarketCap!}
-                                className="text-[10px] md:text-[11px] font-mono font-bold tabular-nums text-[#c4f70e]"
-                            />
-                        </div>
-                    )}
-                </div>
-            )}
-
             {/* Progress Track with TP milestones - compact layout */}
             <div className="flex items-center gap-2 overflow-visible">
                 {/* TP's Label with target icon */}
@@ -608,6 +545,12 @@ function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
 
     // Market cap data for progress bar
     const currentMarketCap = holding.market_cap ?? undefined;
+    const entryMarketCap = useMemo(() => {
+        if (!holding.entry_price || !holding.current_price || !currentMarketCap || holding.current_price === 0) {
+            return undefined;
+        }
+        return holding.entry_price * (currentMarketCap / holding.current_price);
+    }, [holding.entry_price, holding.current_price, currentMarketCap]);
 
     // Always show progress bar (TP tracking)
     const showProgressBar = true;
@@ -703,6 +646,18 @@ function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
 
                         {/* PnL Percentage Section (right side) */}
                         <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-1 text-[11px] text-white/60 md:hidden">
+                                <span className="font-mono font-semibold tabular-nums">
+                                    {holding.entry_sol_value?.toFixed(2) ?? "0.00"}
+                                </span>
+                                <Image
+                                    src="/logos/solana.png"
+                                    alt="SOL"
+                                    width={12}
+                                    height={12}
+                                    className="opacity-80"
+                                />
+                            </div>
                             {/* PnL Percentage - Animated with flash on change */}
                             <div className="flex flex-col items-end">
                                 {pnlPct !== null ? (
@@ -725,54 +680,40 @@ function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
                         </div>
                     </div>
 
-                    {/* Row 2: Entry SOL + Progress Bar (full width) */}
-                    <div className="flex items-center gap-4 md:gap-6 -mt-0.5 overflow-visible">
-                        {/* Left side: SOL entry value */}
-                        <div className="flex flex-col gap-0.5 flex-shrink-0">
-                            {/* Entry Amount (SOL invested) + Unrealized PnL */}
-                            <div className="flex items-center gap-1.5">
-                                <div className="flex items-center gap-1 text-white">
-                                    <span className="font-mono font-bold tabular-nums text-sm md:text-base">
-                                        {holding.entry_sol_value?.toFixed(2) ?? "0.00"}
-                                    </span>
-                                    <Image
-                                        src="/logos/solana.png"
-                                        alt="SOL"
-                                        width={14}
-                                        height={14}
-                                        className="opacity-80 md:w-[16px] md:h-[16px]"
-                                    />
-                                </div>
-                                {/* Unrealized PnL - only show if >= 0.1 SOL */}
-                                {pnlSol !== null && Math.abs(pnlSol) >= 0.1 && (
-                                    <span className={`font-mono tabular-nums text-[10px] md:text-xs flex-shrink-0 tracking-tight ${pnlSol >= 0 ? "text-green-400" : "text-red-400"}`}>
-                                        ({pnlSol >= 0 ? "+" : ""}{pnlSol.toFixed(1)})
-                                    </span>
-                                )}
+                    {/* Entry + Market Cap (right aligned under ticker) */}
+                    <div className="flex items-center justify-start gap-3 text-[10px] md:text-xs font-mono text-white/60">
+                        {entryMarketCap !== undefined && entryMarketCap > 0 && (
+                            <div className="flex items-center gap-1">
+                                <span className="uppercase tracking-widest text-white/40 text-[9px] md:text-[10px]">Entry</span>
+                                <span className="font-semibold text-white/80 tabular-nums">
+                                    {formatMarketCap(entryMarketCap)}
+                                </span>
                             </div>
-                        </div>
-
-                        {/* Separator */}
-                        <div className="w-px h-8 bg-white/20 flex-shrink-0" />
-
-                        {/* Progress Bar with TP milestones + Market Cap badge inside */}
-                        {showProgressBar && (
-                            <div className="flex-1 min-w-0 overflow-visible">
-                                <ProgressBar
-                                    currentMarketCap={currentMarketCap}
-                                    entryPrice={holding.entry_price}
-                                    currentPrice={holding.current_price}
-                                    pnlPct={pnlPct ?? 0}
-                                    tp1Hit={holding.tp1_hit}
-                                    tp2Hit={holding.tp2_hit}
-                                    tp3Hit={holding.tp3_hit}
-                                    allTargets={holding.all_targets}
-                                />
+                        )}
+                        {currentMarketCap !== undefined && currentMarketCap > 0 && (
+                            <div className="flex items-center gap-1">
+                                <span className="uppercase tracking-widest text-white/40 text-[9px] md:text-[10px]">MCap</span>
+                                <span className="font-semibold text-white/90 tabular-nums">
+                                    {formatMarketCap(currentMarketCap)}
+                                </span>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* Progress Bar - full width */}
+            {showProgressBar && (
+                <div className="mt-2">
+                    <ProgressBar
+                        pnlPct={pnlPct ?? 0}
+                        tp1Hit={holding.tp1_hit}
+                        tp2Hit={holding.tp2_hit}
+                        tp3Hit={holding.tp3_hit}
+                        allTargets={holding.all_targets}
+                    />
+                </div>
+            )}
 
             {/* Fading separator line */}
             <div className="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />

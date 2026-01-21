@@ -12,6 +12,8 @@ Provide version-level analytics and comparisons for agent performance over time,
 - Performance comparison charts
 
 ## Changelog
+- 2026-01-16: Hid the mobile metric label and set the selector chevron to brand green.
+- 2026-01-16: Increased mobile summary row typography after trimming to three metrics.
 - 2026-01-16: Moved the mobile metric selector into the chart header, aligned right of the version badges, and reduced its size.
 - 2026-01-16: Hid the Avg Hold summary metric on mobile to free horizontal space.
 - 2026-01-16: Shortened summary labels, added a Solana icon for PnL, and tightened summary precision to one decimal.
