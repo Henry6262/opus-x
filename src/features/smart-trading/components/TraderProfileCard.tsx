@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Copy, Wallet } from "lucide-react";
 import { CountUp } from "@/components/animations/CountUp";
@@ -80,6 +81,7 @@ export function TraderProfileCard({
 }: TraderProfileCardProps) {
   const t = useTranslations();
   const tProfile = useTranslations("profile");
+  const [copied, setCopied] = useState(false);
 
   const streak = calculateStreak(history);
   const performance = stats?.performance;
@@ -106,6 +108,15 @@ export function TraderProfileCard({
       : walletAddress;
 
   const isHotStreak = streak.current >= 3 && streak.type === "win";
+  const handleCopyWallet = async () => {
+    try {
+      await navigator.clipboard.writeText(walletAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
 
   const StatStreak = () => (
     <div className="flex items-baseline gap-2 min-w-[90px]">
@@ -166,8 +177,9 @@ export function TraderProfileCard({
         transition={{ delay: 0.5, duration: 0.3 }}
       >
         {/* Wallet address */}
-        <div className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono text-white/60 min-w-[60px] md:min-w-[100px] cursor-pointer hover:text-white/80 transition-colors"
-          onClick={() => navigator.clipboard.writeText(walletAddress)}
+        <div
+          className="relative flex items-center gap-1.5 text-[11px] md:text-xs font-mono text-white/60 min-w-[60px] md:min-w-[100px] cursor-pointer hover:text-white/80 transition-colors"
+          onClick={handleCopyWallet}
         >
           <Wallet className="w-3 h-3 md:w-4 md:h-4 text-white/50" />
           <span className="hidden md:inline">{shortWallet}</span>
@@ -175,7 +187,7 @@ export function TraderProfileCard({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigator.clipboard.writeText(walletAddress);
+              handleCopyWallet();
             }}
             className="text-white/40 hover:text-white transition-colors cursor-pointer"
             aria-label="Copy wallet address"
@@ -183,6 +195,19 @@ export function TraderProfileCard({
           >
             <Copy className="w-3 h-3 md:w-4 md:h-4" />
           </button>
+          <AnimatePresence>
+            {copied && (
+              <motion.div
+                className="absolute -top-6 left-1/2 -translate-x-1/2 rounded-full bg-green-500 px-2 py-0.5 text-[9px] font-bold text-white shadow-lg"
+                initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.9 }}
+                transition={{ duration: 0.2 }}
+              >
+                Super Router trading address copied
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Divider */}

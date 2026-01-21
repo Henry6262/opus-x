@@ -266,6 +266,7 @@ export function WatchlistCard({ token, aiReasonings = [] }: WatchlistCardProps) 
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       className="relative flex-shrink-0 w-[280px] rounded-xl overflow-hidden"
+      data-cursor-target
     >
       {/* Glow border on hover */}
       <motion.div

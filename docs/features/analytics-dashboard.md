@@ -12,6 +12,9 @@ Provide version-level analytics and comparisons for agent performance over time,
 - Performance comparison charts
 
 ## Changelog
+- 2026-01-16: Moved the mobile metric selector into the chart header, aligned right of the version badges, and reduced its size.
+- 2026-01-16: Hid the Avg Hold summary metric on mobile to free horizontal space.
+- 2026-01-16: Shortened summary labels, added a Solana icon for PnL, and tightened summary precision to one decimal.
 - 2026-01-15: Stabilized version comparison loading to prevent repeated re-fetch loops when version IDs remain unchanged.
 - 2026-01-15: Compressed the versions rail to show only version names and give the main analytics content more width.
 - 2026-01-15: Removed the redundant top-level stat cards so the detailed section below is the primary summary.
@@ -28,3 +31,9 @@ Provide version-level analytics and comparisons for agent performance over time,
 - 2026-01-15: Reduced the agent metrics chart height for a tighter layout.
 - 2026-01-15: Replaced the chart loading spinner with the `gif.gif` asset at a larger size.
 - 2026-01-15: Reduced chart height further and removed the version details card under the chart.
+- 2026-01-15: Added pointer cursors to the version tabs and metric selector for clearer affordance.
+- 2026-01-15: Increased the Agent Metrics header icon and text size.
+- 2026-01-15: Mobile layout now hides the left rail and overlays version badges on the chart.
+- 2026-01-15: Mobile analytics content now uses the full available width with tighter horizontal padding.
+- 2026-01-15: Removed horizontal grid lines from the agent metrics chart.
+- 2026-01-15: Mobile summary row typography tightened and padding reduced to maximize width.

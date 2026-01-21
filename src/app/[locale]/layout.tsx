@@ -5,6 +5,7 @@ import { getMessages, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { locales, type Locale } from "@/i18n/config";
 import "../globals.css";
+import TargetCursor from "@/components/target-cursor/TargetCursor";
 
 // Font configurations
 const spaceGrotesk = Space_Grotesk({
@@ -134,6 +135,7 @@ export default async function LocaleLayout({ children, params }: Props) {
     >
       <body suppressHydrationWarning>
         <NextIntlClientProvider messages={messages}>
+          <TargetCursor spinDuration={2} hideDefaultCursor parallaxOn hoverDuration={0.2} />
           {children}
         </NextIntlClientProvider>
       </body>

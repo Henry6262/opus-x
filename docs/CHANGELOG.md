@@ -2,6 +2,13 @@
 
 All notable changes to Opus-X are documented here.
 
+## 2026-01-16
+- Added a desktop-only target cursor overlay that locks onto hoverable elements and hides the default cursor.
+- Target cursor now locks onto smart trading watchlist cards and transaction rows.
+- Analytics summary row now uses shorter labels, a Solana icon for PnL, and one-decimal precision.
+- Analytics summary row hides Avg Hold on mobile to keep spacing tight.
+- Analytics mobile metric selector now sits to the right of the version badges and uses a compact size.
+
 ## 2026-01-15
 - Pump.fun wallet pill received a max z-index so the balance badge always floats above overlapping feeds on the dashboard.
 - Analytics dashboard comparison loading no longer retriggers continuously when the selected version list is unchanged.
@@ -20,6 +27,12 @@ All notable changes to Opus-X are documented here.
 - Analytics dashboard chart height reduced for a tighter agent metrics panel.
 - Analytics dashboard loading state now uses the `gif.gif` asset instead of the spinning icon.
 - Analytics dashboard chart height reduced again and the version details card removed.
+- Analytics dashboard version tabs and metric selector now show pointer cursors on hover.
+- Analytics dashboard Agent Metrics header icon/text size increased.
+- Analytics dashboard mobile view now shows version badges over the chart instead of the left rail.
+- Analytics dashboard mobile content padding tightened to use the full width.
+- Analytics dashboard chart no longer shows horizontal grid lines.
+- Analytics dashboard summary row text reduced on mobile and padding tightened for full-width fit.
 - Overall Trading Analytics now uses a compact 4-up summary row with separators above the charts.
 - Overall Trading Analytics focuses on trade outcome panels while the P&L trend chart and summary metrics remain hidden.
 - Overall Trading Analytics panels now use transparent styling and TP hit-rate metrics sit above Trade Outcomes.
@@ -31,6 +44,20 @@ All notable changes to Opus-X are documented here.
 - Trade Outcomes controls and metric list restyled for stronger hierarchy and cleaner separators.
 - Trade Outcomes toggles now fit on a single row and the efficiency view is labeled Accuracy.
 - Trade Outcomes chart now uses a narrower chart column, centered chart, and brand-tinted muted tones.
+- Trade Outcomes toggles centered with no borders and a vertical separator added between chart and content.
+- Trade Outcomes accuracy chart now only shows Hit vs Miss (no buffer segment).
+- Trade Outcomes accuracy label now reflects the hit percentage instead of the full 100% total.
+- Trade Outcomes toggle buttons now show pointer cursors on hover.
+- CA copy toast now reads "$SR CA copied" instead of "Copied!".
+- Trader profile wallet copy now shows a “Super Router trading address copied” toast.
+- Trade Outcomes radial chart height reduced for a tighter layout.
+- Trade Outcomes radial chart height trimmed to remove extra bottom space.
+- Trade Outcomes radial chart centered within its container.
+- Trade Outcomes radial chart vertical alignment adjusted downward.
+- Trade Outcomes radial chart size increased for more visual weight.
+- Smart trading dashboard uses tighter mobile side padding to maximize width.
+- Overall trading analytics title now shows "Outcome Pulse" with a Radar icon.
+- Trade Outcomes right-side metrics now use larger text and extra horizontal padding.
 - Trade Outcomes radial chart now uses lighter text and tooltip tones to avoid black defaults.
 
 ## 2026-01-14

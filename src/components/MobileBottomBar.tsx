@@ -123,7 +123,7 @@ export function MobileBottomBar() {
                         exit={{ opacity: 0, y: -8, scale: 0.8 }}
                         transition={{ duration: 0.2 }}
                     >
-                        Copied!
+                        $SR CA copied
                     </motion.div>
                 )}
             </AnimatePresence>

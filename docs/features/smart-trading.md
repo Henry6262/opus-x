@@ -37,6 +37,20 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - 2026-01-15: Trade Outcomes controls and metrics restyled with bolder typography, separators, and brand-accented pills.
 - 2026-01-15: Trade Outcomes toggles now sit on one row and the efficiency view is labeled Accuracy.
 - 2026-01-15: Trade Outcomes chart now takes less width with a wider details column, centered chart, and brand-tinted muted tones.
+- 2026-01-15: Trade Outcomes toggles centered, borders removed, and a vertical separator added between chart and details.
+- 2026-01-15: Trade Outcomes toggle buttons now show pointer cursors on hover.
+- 2026-01-15: Removed the temporary accuracy buffer so the chart only shows Hit vs Miss.
+- 2026-01-15: Accuracy view now centers on the hit percentage (no 100% total label).
+- 2026-01-15: CA copy toast now reads "$SR CA copied" instead of "Copied!".
+- 2026-01-15: Wallet copy action now shows a “Super Router trading address copied” toast on the trader profile card.
+- 2026-01-15: Trade Outcomes radial chart height reduced again for a tighter layout.
+- 2026-01-15: Trade Outcomes radial chart height trimmed to remove extra bottom space.
+- 2026-01-15: Trade Outcomes radial chart centered within its container.
+- 2026-01-15: Trade Outcomes radial chart vertical alignment adjusted downward.
+- 2026-01-15: Trade Outcomes radial chart size increased for more visual weight.
+- 2026-01-15: Mobile smart trading dashboard now uses tighter side padding to free horizontal space.
+- 2026-01-15: Overall trading analytics title now uses the two-word "Outcome Pulse" label with a Radar icon.
+- 2026-01-15: Trade Outcomes right-hand metrics now use larger text and more side padding.
 - 2026-01-12: Mobile dashboard now swaps Live Activity, Migration Feed, and Positions with a dedicated three-button switcher (no more per-card collapse toggles on phones).
 - 2026-01-12: Migration cards replaced the token name row with a minimalist inline stat strip (MCap · Liq · Score) separated by subtle dividers directly beneath the ticker.
 - 2026-01-12: Tracked wallet presets now include Orange, Dior, Jack Duval, and POW Twitter handles, falling back to the SuperRouter avatar whenever a profile image is missing.

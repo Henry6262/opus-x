@@ -86,8 +86,14 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
     : activeData.reduce((sum, item) => sum + item.value, 0);
   const centerLabel = view === 'win-loss'
     ? `${analytics.totalTrades.toLocaleString()}`
-    : `${Math.round(totalValue)}%`;
-  const centerSubLabel = view === 'win-loss' ? 'Trades' : 'Target Efficiency';
+    : view === 'target-efficiency'
+      ? `${Math.round(avgTargetEfficiency)}%`
+      : `${Math.round(totalValue)}%`;
+  const centerSubLabel = view === 'win-loss'
+    ? 'Trades'
+    : view === 'target-efficiency'
+      ? 'Accuracy'
+      : 'Avg TP Hit';
 
   if (analytics.totalTrades === 0) {
     return (
@@ -98,7 +104,7 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-6 items-center">
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_2fr] gap-6 items-center">
       <motion.div
         key={view}
         initial={{ opacity: 0, y: 10 }}
@@ -106,10 +112,12 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
         transition={{ duration: 0.3 }}
         className="flex w-full items-center justify-center"
       >
-        <ChartContainer config={chartConfig} className="mx-auto h-[200px] w-full max-w-[320px]">
+        <ChartContainer config={chartConfig} className="mx-auto h-[175px] w-full max-w-[360px]">
           <RadialBarChart
             data={activeData}
             endAngle={180}
+            cx="50%"
+            cy="58%"
             innerRadius={80}
             outerRadius={125}
           >
@@ -162,6 +170,7 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
           </RadialBarChart>
         </ChartContainer>
       </motion.div>
+      <div className="hidden md:block h-[180px] w-px bg-gradient-to-b from-white/0 via-white/15 to-white/0" />
 
       <motion.div
         key={`${view}-details`}
@@ -170,7 +179,7 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
         transition={{ duration: 0.3 }}
         className="space-y-4"
       >
-        <div className="flex flex-wrap gap-2 md:flex-nowrap">
+        <div className="flex flex-wrap justify-center gap-2 md:flex-nowrap">
           {[
             { id: 'win-loss', label: 'Win/Loss' },
             { id: 'tp-hits', label: 'TP Hits' },
@@ -179,10 +188,10 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
             <button
               key={option.id}
               onClick={() => setView(option.id as OutcomeView)}
-              className={`rounded-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] transition whitespace-nowrap ${
+              className={`rounded-full px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] transition whitespace-nowrap cursor-pointer ${
                 view === option.id
-                  ? 'bg-[#c4f70e]/25 text-[#c4f70e] border border-[#c4f70e]/40 shadow-[0_0_18px_rgba(196,247,14,0.2)]'
-                  : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 hover:text-white/80'
+                  ? 'bg-[#c4f70e]/25 text-[#c4f70e] shadow-[0_0_18px_rgba(196,247,14,0.2)]'
+                  : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80'
               }`}
             >
               {option.label}
@@ -192,20 +201,20 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
 
         <div className="h-px w-full bg-gradient-to-r from-white/0 via-white/15 to-white/0" />
 
-        <div className="space-y-4">
+        <div className="space-y-4 px-2 md:px-4">
           {view === 'win-loss' && (
             <>
               {winLossData.map((item) => (
-                <div key={item.key} className="flex items-center justify-between text-sm">
-                  <span className="text-white/70 uppercase tracking-[0.2em] text-[11px]">
+                <div key={item.key} className="flex items-center justify-between text-base">
+                  <span className="text-white/70 uppercase tracking-[0.2em] text-[12px]">
                     {item.name}
                   </span>
-                  <span className="text-base font-semibold text-white">
-                    {item.value} <span className="text-white/50 text-xs">({Math.round(item.percentage)}%)</span>
+                  <span className="text-lg font-semibold text-white">
+                    {item.value} <span className="text-white/50 text-sm">({Math.round(item.percentage)}%)</span>
                   </span>
                 </div>
               ))}
-              <p className="text-xs text-white/40">
+              <p className="text-sm text-white/40">
                 {Math.round(analytics.winRate)}% win rate over {analytics.totalTrades} total trades.
               </p>
             </>
@@ -213,16 +222,16 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
           {view === 'tp-hits' && (
             <>
               {tpHitData.map((item, index) => (
-                <div key={item.key} className="flex items-center justify-between text-sm">
-                  <span className="text-white/70 uppercase tracking-[0.2em] text-[11px]">
+                <div key={item.key} className="flex items-center justify-between text-base">
+                  <span className="text-white/70 uppercase tracking-[0.2em] text-[12px]">
                     {item.name}
                   </span>
-                  <span className="text-base font-semibold" style={{ color: BRAND_TONES[index] }}>
+                  <span className="text-lg font-semibold" style={{ color: BRAND_TONES[index] }}>
                     {Math.round(item.value)}%
                   </span>
                 </div>
               ))}
-              <p className="text-xs text-white/40">
+              <p className="text-sm text-white/40">
                 Higher tiers use the same brand tone, just quieter.
               </p>
             </>
@@ -230,16 +239,16 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
           {view === 'target-efficiency' && (
             <>
               {efficiencyData.map((item) => (
-                <div key={item.key} className="flex items-center justify-between text-sm">
-                  <span className="text-white/70 uppercase tracking-[0.2em] text-[11px]">
+                <div key={item.key} className="flex items-center justify-between text-base">
+                  <span className="text-white/70 uppercase tracking-[0.2em] text-[12px]">
                     {item.name}
                   </span>
-                  <span className="text-base font-semibold text-white">
+                  <span className="text-lg font-semibold text-white">
                     {Math.round(item.value)}%
                   </span>
                 </div>
               ))}
-              <p className="text-xs text-white/40">
+              <p className="text-sm text-white/40">
                 Average efficiency across TP1, TP2, and TP3 hit rates.
               </p>
             </>

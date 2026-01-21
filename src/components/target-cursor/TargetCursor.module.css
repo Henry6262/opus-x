@@ -1,0 +1,57 @@
+.wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: var(--z-max);
+  mix-blend-mode: difference;
+  transform: translate(-50%, -50%);
+}
+
+.dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+}
+
+.corner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border: 3px solid #fff;
+  will-change: transform;
+}
+
+.cornerTl {
+  transform: translate(-150%, -150%);
+  border-right: none;
+  border-bottom: none;
+}
+
+.cornerTr {
+  transform: translate(50%, -150%);
+  border-left: none;
+  border-bottom: none;
+}
+
+.cornerBr {
+  transform: translate(50%, 50%);
+  border-left: none;
+  border-top: none;
+}
+
+.cornerBl {
+  transform: translate(-150%, 50%);
+  border-right: none;
+  border-top: none;
+}

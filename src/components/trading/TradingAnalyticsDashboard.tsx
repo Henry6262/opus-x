@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Radar } from 'lucide-react';
 import { subDays } from 'date-fns';
 import { useTradingAnalytics } from '@/hooks/useTradingAnalytics';
 import { TradeOutcomesChart } from './charts/TradeOutcomesChart';
@@ -44,7 +45,10 @@ export function TradingAnalyticsDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white">Overall Trading Analytics</h2>
+          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+            <Radar className="w-6 h-6 text-[#c4f70e]" />
+            Outcome Pulse
+          </h2>
         </div>
       </div>
 

@@ -86,7 +86,7 @@ function VersionTab({ version, isActive, isSelected, colorIndex, onClick }: Vers
     <motion.button
       onClick={onClick}
       className={cn(
-        "relative w-full text-left transition-all duration-200",
+        "relative w-full text-left transition-all duration-200 cursor-pointer",
         "rounded-r-lg border-l-4 px-3 py-2",
         "hover:bg-white/5",
         isSelected
@@ -119,12 +119,19 @@ function VersionTab({ version, isActive, isSelected, colorIndex, onClick }: Vers
 interface MetricSelectorProps {
   selectedMetric: MetricType;
   onChange: (metric: MetricType) => void;
+  compact?: boolean;
+  className?: string;
 }
 
-function MetricSelector({ selectedMetric, onChange }: MetricSelectorProps) {
+function MetricSelector({ selectedMetric, onChange, compact = false, className }: MetricSelectorProps) {
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-xs font-semibold uppercase tracking-widest text-white/40">
+    <div className={cn("flex flex-col gap-2", compact && "gap-1", className)}>
+      <label
+        className={cn(
+          "font-semibold uppercase text-white/40",
+          compact ? "text-[9px] tracking-[0.25em]" : "text-xs tracking-widest"
+        )}
+      >
         Metric
       </label>
       <div className="relative">
@@ -132,8 +139,9 @@ function MetricSelector({ selectedMetric, onChange }: MetricSelectorProps) {
           value={selectedMetric}
           onChange={(event) => onChange(event.target.value as MetricType)}
           className={cn(
-            "appearance-none rounded-lg border border-white/10 bg-black/40",
-            "px-3 py-2 pr-9 text-sm font-semibold text-white/80",
+            "appearance-none rounded-lg border border-white/10 bg-black/40 cursor-pointer",
+            compact ? "px-2 py-1 pr-7 text-[11px] font-semibold" : "px-3 py-2 pr-9 text-sm font-semibold",
+            "text-white/80",
             "shadow-[0_10px_20px_rgba(0,0,0,0.2)] transition",
             "focus:border-[#c4f70e]/40 focus:outline-none"
           )}
@@ -144,7 +152,12 @@ function MetricSelector({ selectedMetric, onChange }: MetricSelectorProps) {
             </option>
           ))}
         </select>
-        <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
+        <div
+          className={cn(
+            "pointer-events-none absolute top-1/2 -translate-y-1/2 text-white/50",
+            compact ? "right-2 text-[10px]" : "right-3"
+          )}
+        >
           ▾
         </div>
       </div>
@@ -216,7 +229,7 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
   return (
     <ChartContainer config={chartConfig} className="h-[200px] w-full">
       <LineChart data={chartData} margin={{ top: 10, right: 12, left: 12, bottom: 0 }}>
-        <CartesianGrid vertical={false} />
+        <CartesianGrid vertical={false} horizontal={false} />
         <XAxis
           dataKey="date"
           tickLine={false}
@@ -381,12 +394,12 @@ export function AnalyticsDashboard() {
   }
 
   return (
-    <div className="h-full flex">
+    <div className="h-full flex flex-col md:flex-row">
       {/* LEFT SIDEBAR - Version Tabs */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="relative w-40 flex-shrink-0 bg-white/[0.02] py-4"
+        className="relative hidden w-40 flex-shrink-0 bg-white/[0.02] py-4 md:block"
       >
         <div className="absolute right-0 top-6 h-[calc(100%-3rem)] w-px bg-gradient-to-b from-white/0 via-white/20 to-white/0" />
         <div className="px-4 mb-4">
@@ -410,51 +423,57 @@ export function AnalyticsDashboard() {
       </motion.div>
 
       {/* MAIN CONTENT */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto px-2 py-6 space-y-6 md:p-6">
         {/* Chart Section */}
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Activity className="w-5 h-5 text-[#c4f70e]" />
+              <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                <Activity className="w-6 h-6 text-[#c4f70e]" />
                 Agent Metrics
               </h3>
             </div>
             <MetricSelector
               selectedMetric={selectedMetric}
               onChange={setSelectedMetric}
+              className="hidden md:flex"
             />
           </div>
 
           <div className="h-px w-full bg-gradient-to-r from-white/0 via-white/15 to-white/0" />
 
           {selectedSummary && (
-            <div className="grid grid-cols-4 text-xs">
-              <div className="px-3 py-2 text-center">
-                <p className="uppercase tracking-widest text-[10px] text-white/40">Total P&L</p>
-                <p className="text-sm font-semibold text-white">
-                  {selectedSummary.totalPnlSol >= 0 ? '+' : ''}
-                  {selectedSummary.totalPnlSol.toFixed(2)} SOL
+            <div className="grid grid-cols-3 text-[10px] md:grid-cols-4 md:text-xs">
+              <div className="px-2 py-2 text-center">
+                <p className="uppercase tracking-widest text-[9px] text-white/40 md:text-[10px]">PnL</p>
+                <p className="flex items-center justify-center gap-1 text-[11px] font-semibold text-white md:text-sm">
+                  {selectedSummary.totalPnlSol >= 0 ? "+" : ""}
+                  {selectedSummary.totalPnlSol.toFixed(1)}
+                  <img
+                    src="/logos/solana.png"
+                    alt="Solana"
+                    className="h-3 w-3"
+                  />
                 </p>
               </div>
-              <div className="relative px-3 py-2 text-center">
+              <div className="relative px-2 py-2 text-center">
                 <span className="pointer-events-none absolute left-0 top-1/2 h-6 -translate-y-1/2 w-px bg-white/15" />
-                <p className="uppercase tracking-widest text-[10px] text-white/40">Win Rate</p>
-                <p className="text-sm font-semibold text-white">
-                  {Math.round(selectedSummary.winRate)}%
+                <p className="uppercase tracking-widest text-[9px] text-white/40 md:text-[10px]">WR %</p>
+                <p className="text-[11px] font-semibold text-white md:text-sm">
+                  {selectedSummary.winRate.toFixed(1)}%
                 </p>
               </div>
-              <div className="relative px-3 py-2 text-center">
+              <div className="relative px-2 py-2 text-center">
                 <span className="pointer-events-none absolute left-0 top-1/2 h-6 -translate-y-1/2 w-px bg-white/15" />
-                <p className="uppercase tracking-widest text-[10px] text-white/40">Trades</p>
-                <p className="text-sm font-semibold text-white">
+                <p className="uppercase tracking-widest text-[9px] text-white/40 md:text-[10px]">Trades</p>
+                <p className="text-[11px] font-semibold text-white md:text-sm">
                   {selectedSummary.totalTrades}
                 </p>
               </div>
-              <div className="relative px-3 py-2 text-center">
+              <div className="relative px-2 py-2 text-center md:block hidden">
                 <span className="pointer-events-none absolute left-0 top-1/2 h-6 -translate-y-1/2 w-px bg-white/15" />
-                <p className="uppercase tracking-widest text-[10px] text-white/40">Avg Hold</p>
-                <p className="text-sm font-semibold text-white">
+                <p className="uppercase tracking-widest text-[9px] text-white/40 md:text-[10px]">Avg Hold</p>
+                <p className="text-[11px] font-semibold text-white md:text-sm">
                   {Math.round(selectedSummary.avgHoldTimeMinutes)}m
                 </p>
               </div>
@@ -465,8 +484,32 @@ export function AnalyticsDashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm overflow-hidden"
+            className="relative rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm overflow-hidden"
           >
+            <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-2 md:hidden">
+              {versions.map((version) => {
+                const isSelected = version.id === selectedVersionId;
+                return (
+                  <button
+                    key={version.id}
+                    onClick={() => setSelectedVersionId(version.id)}
+                    className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition cursor-pointer ${
+                      isSelected
+                        ? "bg-[#c4f70e]/25 text-[#c4f70e] shadow-[0_0_14px_rgba(196,247,14,0.2)]"
+                        : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80"
+                    }`}
+                  >
+                    {(version.versionCode || version.versionName || "V?").toUpperCase()}
+                  </button>
+                );
+              })}
+            </div>
+            <MetricSelector
+              selectedMetric={selectedMetric}
+              onChange={setSelectedMetric}
+              compact
+              className="absolute right-4 top-4 z-10 md:hidden"
+            />
             <div className="p-4">
               {comparisonLoading ? (
                 <div className="flex items-center justify-center h-[200px]">

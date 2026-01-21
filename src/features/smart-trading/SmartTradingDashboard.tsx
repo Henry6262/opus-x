@@ -23,7 +23,7 @@ export function SmartTradingDashboard() {
   const [activeTab, setActiveTab] = useState("trading");
 
   return (
-    <div className="space-y-4 -mt-12 px-4 lg:px-8">
+    <div className="space-y-4 -mt-12 px-2 sm:px-4 lg:px-8">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex justify-center mb-6">
           <TabsList className="w-full md:w-auto bg-black/40 backdrop-blur-xl border border-white/10 rounded-full p-0 gap-0">
