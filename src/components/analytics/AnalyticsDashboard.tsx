@@ -139,17 +139,6 @@ function TimeframeSelector({ selectedBucket, onChange, className }: TimeframeSel
   return (
     <div className={cn("flex gap-1 rounded-full bg-white/5 p-1", className)}>
       <button
-        onClick={() => onChange('1d')}
-        className={cn(
-          "px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] rounded-full transition-all cursor-pointer",
-          selectedBucket === '1d'
-            ? "bg-[#c4f70e]/20 text-[#c4f70e] shadow-[0_0_12px_rgba(196,247,14,0.2)]"
-            : "text-white/50 hover:text-white/70 hover:bg-white/5"
-        )}
-      >
-        Daily
-      </button>
-      <button
         onClick={() => onChange('3h')}
         className={cn(
           "px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] rounded-full transition-all cursor-pointer",
@@ -159,6 +148,17 @@ function TimeframeSelector({ selectedBucket, onChange, className }: TimeframeSel
         )}
       >
         3-Hour
+      </button>
+      <button
+        onClick={() => onChange('1d')}
+        className={cn(
+          "px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] rounded-full transition-all cursor-pointer",
+          selectedBucket === '1d'
+            ? "bg-[#c4f70e]/20 text-[#c4f70e] shadow-[0_0_12px_rgba(196,247,14,0.2)]"
+            : "text-white/50 hover:text-white/70 hover:bg-white/5"
+        )}
+      >
+        Daily
       </button>
     </div>
   );
@@ -395,7 +395,7 @@ export function AnalyticsDashboard() {
   // State
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('winRate');
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
-  const [bucket, setBucket] = useState<'1d' | '3h'>('1d');
+  const [bucket, setBucket] = useState<'1d' | '3h'>('3h');
   const [dateRange] = useState({
     start: subDays(new Date(), 30).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0],

@@ -8,6 +8,8 @@ All notable changes to Opus-X are documented here.
 - Analytics chart comparison loading now uses a spinner instead of the gif background.
 - Outcome Pulse summary tiles now render in a single row on mobile with tighter typography.
 - Analytics tab badge now reads BETA instead of NEW.
+- Analytics timeframe selector now defaults to 3-hour and shows it first in the toggle.
+- Trading/Analytics tab selection now persists in localStorage across refreshes.
 - Analytics summary row now uses shorter labels, a Solana icon for PnL, and one-decimal precision.
 - Analytics summary row hides Avg Hold on mobile to keep spacing tight.
 - Analytics mobile metric selector now sits to the right of the version badges and uses a compact size.

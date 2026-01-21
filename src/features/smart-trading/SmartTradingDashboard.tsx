@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PortfolioHoldingsPanel } from "./components/PortfolioHoldingsPanel";
 import { WatchlistPanel } from "./components/WatchlistPanel";
 import { AiDecisionFeed } from "./components/AiDecisionFeed";
@@ -14,6 +14,7 @@ import ShinyText from "@/components/ShinyText";
 // Set NEXT_PUBLIC_ENABLE_ANALYTICS=true in .env.local to enable
 // ============================================
 const ANALYTICS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true";
+const STORAGE_KEY = "superrouter-dashboard-tab";
 
 // ============================================
 // Main Dashboard
@@ -22,9 +23,29 @@ const ANALYTICS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true";
 export function SmartTradingDashboard() {
   const [activeTab, setActiveTab] = useState("trading");
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const savedTab = window.localStorage.getItem(STORAGE_KEY);
+    if (savedTab === "analytics" && ANALYTICS_ENABLED) {
+      setActiveTab("analytics");
+      return;
+    }
+    if (savedTab === "trading") {
+      setActiveTab("trading");
+    }
+  }, []);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (typeof window === "undefined") return;
+    if (value === "trading" || value === "analytics") {
+      window.localStorage.setItem(STORAGE_KEY, value);
+    }
+  };
+
   return (
     <div className="space-y-4 -mt-12 px-2 sm:px-4 lg:px-8">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <div className="flex justify-center mb-6">
           <TabsList className="w-full md:w-auto bg-black/40 backdrop-blur-xl border border-white/10 rounded-full p-0 gap-0">
             <TabsTrigger
