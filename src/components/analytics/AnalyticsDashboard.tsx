@@ -571,6 +571,7 @@ export function AnalyticsDashboard() {
                   icon={Clock}
                   delay={0.15}
                   glowColor="rgba(139, 92, 246, 0.35)"
+                  tooltipText="We close positions in partials, so avoid rushing to fully exit on the first target."
                 />
               </div>
             )}

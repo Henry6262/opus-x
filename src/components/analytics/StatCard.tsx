@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { LucideIcon } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CountUp } from "@/components/animations/CountUp";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,7 @@ interface StatCardProps {
     className?: string;
     delay?: number;
     glowColor?: string;
+    tooltipText?: string;
 }
 
 export function StatCard({
@@ -32,6 +34,7 @@ export function StatCard({
     className,
     delay = 0,
     glowColor = "rgba(196, 247, 14, 0.4)",
+    tooltipText,
 }: StatCardProps) {
     const [isAnimating, setIsAnimating] = useState(false);
     const [isIncreasing, setIsIncreasing] = useState(false);
@@ -48,7 +51,7 @@ export function StatCard({
         prevValueRef.current = value;
     }, [value]);
 
-    return (
+    const card = (
         <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -170,6 +173,19 @@ export function StatCard({
                 />
             </div>
         </motion.div>
+    );
+
+    if (!tooltipText) {
+        return card;
+    }
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>{card}</TooltipTrigger>
+            <TooltipContent side="top" sideOffset={10} className="max-w-[220px] text-center">
+                {tooltipText}
+            </TooltipContent>
+        </Tooltip>
     );
 }
 
