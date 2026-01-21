@@ -12,7 +12,7 @@
 
 import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Radar, TrendingUp, Target, Zap, Clock, Trophy, Flame } from 'lucide-react';
+import { Radar, Target, Trophy } from 'lucide-react';
 import { subDays } from 'date-fns';
 import { useTradingAnalytics } from '@/hooks/useTradingAnalytics';
 import { PulseRing, MetricBar, StatRow } from './OutcomePrimitives';
@@ -133,80 +133,88 @@ export function TradingAnalyticsDashboard() {
 
         {/* Content based on view mode */}
         {viewMode === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-10 items-center">
             {/* Pulse Ring - Win Rate with padding */}
-            <div className="flex justify-center p-6">
+            <div className="flex justify-center p-8 md:p-12">
               <PulseRing
                 value={analytics.winRate}
                 label="Win Rate"
                 sublabel={`${analytics.totalTrades} trades`}
-                size={180}
-                strokeWidth={10}
+                size={210}
+                strokeWidth={12}
                 delay={0.1}
               />
             </div>
 
             {/* Stats - Vertical Stack with Horizontal Rows */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* PnL Row */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
-                className="flex items-center gap-4 rounded-xl bg-white/[0.03] border border-white/10 p-4"
+                className="flex items-center justify-between gap-4 rounded-lg bg-white/[0.04] p-5 md:p-6"
               >
-                <TrendingUp className="w-5 h-5 text-[#c4f70e] flex-shrink-0" />
-                <span className="text-xs font-semibold uppercase tracking-[0.15em] text-white/50 flex-1">Total PnL</span>
-                <div className={cn(
-                  "text-xl font-bold",
-                  analytics.totalPnlSol >= 0 ? "text-emerald-400" : "text-red-400"
-                )}>
-                  {analytics.totalPnlSol >= 0 ? "+" : ""}
+                  <span className="text-base font-semibold uppercase tracking-[0.16em] text-white/60 flex-1 md:text-lg">
+                    Total PnL
+                  </span>
+                <div className="text-2xl font-bold text-white md:text-3xl">
+                  <span className={analytics.totalPnlSol >= 0 ? "text-emerald-400" : "text-red-400"}>
+                    {analytics.totalPnlSol >= 0 ? "+" : ""}
+                  </span>
                   <CountUp to={analytics.totalPnlSol} decimals={3} duration={1.5} suffix=" SOL" />
                 </div>
               </motion.div>
 
-              {/* Multiplier Row */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.25 }}
-                className="flex items-center gap-4 rounded-xl bg-white/[0.03] border border-white/10 p-4"
-              >
-                <Zap className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-                <span className="text-xs font-semibold uppercase tracking-[0.15em] text-white/50 flex-1">Avg Multiplier</span>
-                <div className="text-xl font-bold text-white">
-                  <CountUp to={analytics.avgMultiplier} decimals={2} duration={1.5} suffix="x" />
-                </div>
-              </motion.div>
+              <div className="grid grid-cols-3 gap-2 md:grid-cols-3 md:gap-3">
+                {/* Multiplier */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                  className="rounded-lg bg-white/[0.03] p-2 md:p-4"
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/60 md:text-sm">
+                    Avg Multiplier
+                  </span>
+                  <div className="mt-1 text-base font-bold text-white md:text-xl">
+                    <CountUp to={analytics.avgMultiplier} decimals={2} duration={1.5} suffix="x" />
+                  </div>
+                </motion.div>
 
-              {/* Hold Time Row */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-                className="flex items-center gap-4 rounded-xl bg-white/[0.03] border border-white/10 p-4"
-              >
-                <Clock className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                <span className="text-xs font-semibold uppercase tracking-[0.15em] text-white/50 flex-1">Avg Hold</span>
-                <div className="text-xl font-bold text-white">
-                  <CountUp to={analytics.avgHoldTimeMinutes} decimals={0} duration={1.5} suffix="m" />
-                </div>
-              </motion.div>
+                {/* Hold Time */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="rounded-lg bg-white/[0.03] p-2 md:p-4"
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/60 md:text-sm">
+                    Avg Hold
+                  </span>
+                  <div className="mt-1 text-base font-bold text-white md:text-xl">
+                    <CountUp to={analytics.avgHoldTimeMinutes} decimals={0} duration={1.5} suffix="m" />
+                  </div>
+                </motion.div>
 
-              {/* Best Trade Row */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.35 }}
-                className="flex items-center gap-4 rounded-xl bg-white/[0.03] border border-white/10 p-4"
-              >
-                <Flame className="w-5 h-5 text-orange-400 flex-shrink-0" />
-                <span className="text-xs font-semibold uppercase tracking-[0.15em] text-white/50 flex-1">Best Trade</span>
-                <div className="text-xl font-bold text-emerald-400">
-                  +<CountUp to={analytics.bestTradePct} decimals={0} duration={1.5} suffix="%" />
-                </div>
-              </motion.div>
+                {/* Best Trade */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.35 }}
+                  className="rounded-lg bg-white/[0.03] p-2 md:p-4"
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/60 md:text-sm">
+                    Best Trade
+                  </span>
+                  <div className="mt-1 text-base font-bold text-white md:text-xl">
+                    <span className={analytics.bestTradePct >= 0 ? "text-emerald-400" : "text-red-400"}>
+                      {analytics.bestTradePct >= 0 ? "+" : ""}
+                    </span>
+                    <CountUp to={analytics.bestTradePct} decimals={0} duration={1.5} suffix="%" />
+                  </div>
+                </motion.div>
+              </div>
             </div>
           </div>
         )}

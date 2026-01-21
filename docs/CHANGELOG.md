@@ -6,6 +6,7 @@ All notable changes to Opus-X are documented here.
 - Added a desktop-only target cursor overlay that locks onto hoverable elements and hides the default cursor.
 - Target cursor now locks onto smart trading watchlist cards and transaction rows.
 - Analytics chart comparison loading now uses a spinner instead of the gif background.
+- Outcome Pulse summary tiles now render in a single row on mobile with tighter typography.
 - Analytics summary row now uses shorter labels, a Solana icon for PnL, and one-decimal precision.
 - Analytics summary row hides Avg Hold on mobile to keep spacing tight.
 - Analytics mobile metric selector now sits to the right of the version badges and uses a compact size.
@@ -24,8 +25,13 @@ All notable changes to Opus-X are documented here.
 - Analytics stat column width trimmed and the chart gained left/bottom borders plus extra height.
 - Analytics stat cards now use tighter corners and show a green arrow during count-up increases.
 - Analytics agent metrics chart now filters to the selected version data only.
+- Analytics agent metrics tooltip now includes per-date PnL, win rate, trades, multiplier, and hold time on a dark panel.
+- Analytics tooltip now omits avg multiplier and uses short version codes in the header.
 - Analytics version chart now remounts on version changes and uses per-version line colors.
 - Analytics desktop metric selector now sits at the chart’s top-right edge.
+- Outcome Pulse overview rows now remove borders/icons, grow text, and only color the +/- signs.
+- Outcome Pulse overview now shows the three secondary metrics in a horizontal grid with stacked labels.
+- Outcome Pulse win-rate ring enlarged and metric labels increased.
 - AI analysis logging now reports Supabase error details for easier debugging.
 - Trade Outcomes mobile toggle buttons now use larger text and padding.
 - Analytics tab trigger now shows a small NEW badge.

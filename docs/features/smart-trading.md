@@ -17,6 +17,10 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - Trading config summary (targets, stop loss, slippage, limits)
 
 ## Changelog
+- 2026-01-16: Outcome Pulse win-rate ring enlarged with stronger stroke, and metric labels increased in size.
+- 2026-01-16: Outcome Pulse secondary metrics now sit in a single-row layout on mobile with tighter text.
+- 2026-01-16: Outcome Pulse overview now lays out the three secondary metrics in a horizontal grid with stacked labels.
+- 2026-01-16: Outcome Pulse overview now emphasizes a larger PnL row with bigger text, borderless rows, and sign-only green/red coloring.
 - 2026-01-16: AI analysis logging now reports Supabase error details for easier debugging.
 - 2026-01-16: Removed the token performance rankings and summary stats blocks from Trading Analytics for the initial release.
 - 2026-01-16: Nudged the Analytics NEW badge further up and right again.

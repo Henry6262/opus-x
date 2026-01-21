@@ -12,6 +12,8 @@ Provide version-level analytics and comparisons for agent performance over time,
 - Performance comparison charts
 
 ## Changelog
+- 2026-01-16: Tooltip now omits avg multiplier and uses the short version code in the header.
+- 2026-01-16: Agent metrics chart tooltip now shows per-date PnL, win rate, trades, multiplier, and hold time on a dark panel.
 - 2026-01-16: Agent metrics chart now filters to the selected version data only.
 - 2026-01-16: Chart now remounts on version changes and uses per-version line colors with stronger selected emphasis.
 - 2026-01-16: Reduced stat card corner radius and added a green increase state during count-up animations.

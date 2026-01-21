@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'motion/react';
 import {
   TrendingUp,
@@ -36,7 +36,6 @@ import { cn } from '@/lib/utils';
 import {
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
 import { TradingAnalyticsDashboard } from '@/components/trading/TradingAnalyticsDashboard';
@@ -143,6 +142,71 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
     return versions.filter((version) => version.id === selectedVersionId);
   }, [versions, selectedVersionId]);
 
+  const metricsByDate = useMemo(() => {
+    if (!selectedVersionId) return new Map<string, VersionMetrics>();
+    const metrics = metricsByVersion[selectedVersionId] || [];
+    return new Map(metrics.map((metric) => [metric.date, metric]));
+  }, [metricsByVersion, selectedVersionId]);
+
+  const tooltipContent = useCallback(
+    ({
+      active,
+      payload,
+      label,
+    }: {
+      active?: boolean;
+      payload?: Array<{ value?: number } & { payload?: { date?: string } }>;
+      label?: string;
+    }) => {
+      if (!active || !payload?.length || !label) return null;
+      const metrics = metricsByDate.get(label);
+      const dateLabel = new Date(label).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      const formatNumber = (value?: number, decimals = 2) =>
+        typeof value === "number" ? value.toFixed(decimals) : "—";
+      const formatInt = (value?: number) =>
+        typeof value === "number" ? Math.round(value).toLocaleString() : "—";
+      const versionLabel = (displayVersions[0]?.versionCode || "Version").toString();
+
+      return (
+        <div className="min-w-[220px] rounded-lg border border-white/10 bg-black/90 px-3 py-2 text-xs text-white shadow-xl">
+          <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.2em] text-white/60">
+            <span>{versionLabel}</span>
+            <span>{dateLabel}</span>
+          </div>
+          <div className="mt-2 grid gap-1 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-white/60">PnL</span>
+              <span className="font-mono text-white">
+                {formatNumber(metrics?.totalPnlSol, 2)} SOL
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-white/60">Win Rate</span>
+              <span className="font-mono text-white">
+                {formatNumber(metrics?.winRate, 1)}%
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-white/60">Trades</span>
+              <span className="font-mono text-white">{formatInt(metrics?.totalTrades)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-white/60">Avg Hold</span>
+              <span className="font-mono text-white">
+                {formatInt(metrics?.avgHoldTimeMinutes)}m
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    },
+    [displayVersions, metricsByDate]
+  );
+
   // Build chart data - combine all version data by date
   const chartData = useMemo(() => {
     const dateMap = new Map<string, Record<string, number | string>>();
@@ -211,20 +275,7 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           }}
         />
-        <ChartTooltip
-          content={
-            <ChartTooltipContent
-              className="w-[160px]"
-              labelFormatter={(value) => {
-                return new Date(value).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                });
-              }}
-            />
-          }
-        />
+        <ChartTooltip content={tooltipContent} />
         {displayVersions.map((version, idx) => {
           const isSelected = version.id === selectedVersionId;
           const lineColor = VERSION_COLORS[idx % VERSION_COLORS.length].stroke;
