@@ -40,6 +40,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { TradingAnalyticsDashboard } from '@/components/trading/TradingAnalyticsDashboard';
+import { StatCard } from '@/components/analytics/StatCard';
 
 // ============================================
 // COLORS
@@ -65,53 +66,6 @@ const METRICS: { id: MetricType; label: string; icon: typeof TrendingUp; format:
   { id: 'tradeCount', label: 'Trades', icon: BarChart3, format: (v) => v.toString() },
   { id: 'avgHoldTime', label: 'Hold Time', icon: Clock, format: (v) => `${Math.round(v)}m` },
 ];
-
-// ============================================
-// VERSION TAB COMPONENT
-// ============================================
-
-interface VersionTabProps {
-  version: AgentVersion;
-  isActive: boolean;
-  isSelected: boolean;
-  colorIndex: number;
-  onClick: () => void;
-}
-
-function VersionTab({ version, isActive, isSelected, colorIndex, onClick }: VersionTabProps) {
-  const color = VERSION_COLORS[colorIndex % VERSION_COLORS.length];
-  const versionLabel = (version.versionCode || version.versionName || '').toUpperCase();
-  const displayLabel = versionLabel || 'V?';
-
-  return (
-    <motion.button
-      onClick={onClick}
-      className={cn(
-        "relative w-full text-left transition-all duration-200 cursor-pointer",
-        "rounded-r-lg border-l-4 px-3 py-2",
-        "hover:bg-white/5",
-        isSelected
-          ? "bg-white/10 border-l-[#c4f70e]"
-          : "border-l-transparent hover:border-l-white/20"
-      )}
-      style={{
-        borderLeftColor: isActive ? "#c4f70e" : isSelected ? "rgba(255,255,255,0.25)" : undefined,
-      }}
-      whileHover={{ x: 4 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      <p
-        className="text-xs font-semibold leading-snug text-white/80 line-clamp-2"
-        style={{
-          color: isActive ? "#c4f70e" : isSelected ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.55)",
-        }}
-        title={version.versionName || version.versionCode}
-      >
-        {displayLabel}
-      </p>
-    </motion.button>
-  );
-}
 
 // ============================================
 // METRIC SELECTOR
@@ -229,8 +183,8 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
   }
 
   return (
-    <ChartContainer config={chartConfig} className="h-[200px] w-full">
-      <LineChart data={chartData} margin={{ top: 10, right: 12, left: 12, bottom: 0 }}>
+    <ChartContainer config={chartConfig} className="h-[230px] w-full md:h-[190px]">
+      <LineChart data={chartData} margin={{ top: 6, right: 8, left: 8, bottom: 0 }}>
         <CartesianGrid vertical={false} horizontal={false} />
         <XAxis
           dataKey="date"
@@ -270,8 +224,8 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
               stroke={lineColor}
               strokeWidth={isSelected ? 3 : 2}
               strokeOpacity={isSelected ? 0.75 : 0.35}
-              dot={{ r: 3 }}
-              activeDot={{ r: 5 }}
+              dot={{ r: 4 }}
+              activeDot={{ r: 6 }}
             />
           );
         })}
@@ -396,36 +350,9 @@ export function AnalyticsDashboard() {
   }
 
   return (
-    <div className="h-full flex flex-col md:flex-row">
-      {/* LEFT SIDEBAR - Version Tabs */}
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="relative hidden w-40 flex-shrink-0 bg-white/[0.02] py-4 md:block"
-      >
-        <div className="absolute right-0 top-6 h-[calc(100%-3rem)] w-px bg-gradient-to-b from-white/0 via-white/20 to-white/0" />
-        <div className="px-4 mb-4">
-          <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider">
-            Versions
-          </h3>
-        </div>
-
-        <div className="space-y-1">
-          {versions.map((version, idx) => (
-            <VersionTab
-              key={version.id}
-              version={version}
-              isActive={version.id === activeVersion?.id}
-              isSelected={version.id === selectedVersionId}
-              colorIndex={idx}
-              onClick={() => setSelectedVersionId(version.id)}
-            />
-          ))}
-        </div>
-      </motion.div>
-
+    <div className="h-full">
       {/* MAIN CONTENT */}
-      <div className="flex-1 overflow-y-auto px-2 py-6 space-y-6 md:p-6">
+      <div className="w-full overflow-y-auto px-2 py-6 space-y-6 md:p-6">
         {/* Chart Section */}
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -442,102 +369,108 @@ export function AnalyticsDashboard() {
             />
           </div>
 
-          <div className="h-px w-full bg-gradient-to-r from-white/0 via-white/15 to-white/0" />
+          <div className="h-px w-full bg-gradient-to-r from-white/0 via-white/15 to-white/0 md:hidden" />
 
-          {selectedSummary && (
-            <div className="grid grid-cols-3 text-[11px] md:grid-cols-4 md:text-xs">
-              <div className="px-2 py-2 text-center">
-                <p className="uppercase tracking-widest text-[10px] text-white/40 md:text-[10px]">PnL</p>
-                <p className="flex items-center justify-center gap-1 text-[13px] font-semibold text-white md:text-sm">
-                  {selectedSummary.totalPnlSol >= 0 ? "+" : ""}
-                  {selectedSummary.totalPnlSol.toFixed(1)}
-                  <img
-                    src="/logos/solana.png"
-                    alt="Solana"
-                    className="h-3.5 w-3.5"
-                  />
-                </p>
+          <div className="flex flex-col gap-4 md:flex-row md:items-stretch">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="relative flex-1 rounded-2xl bg-white/[0.02] backdrop-blur-sm overflow-hidden md:w-3/4"
+            >
+              <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-2">
+                {versions.map((version) => {
+                  const isSelected = version.id === selectedVersionId;
+                  return (
+                    <button
+                      key={version.id}
+                      onClick={() => setSelectedVersionId(version.id)}
+                      className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition cursor-pointer md:px-4 md:py-1.5 md:text-[11px] md:border md:border-transparent md:bg-transparent md:text-white/60 md:hover:bg-white/5 md:hover:text-white/90 ${isSelected
+                        ? "bg-[#c4f70e]/25 text-[#c4f70e] shadow-[0_0_14px_rgba(196,247,14,0.2)] md:border-[#c4f70e]/40 md:text-[#c4f70e]"
+                        : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80"
+                        }`}
+                    >
+                      {(version.versionCode || version.versionName || "V?").toUpperCase()}
+                    </button>
+                  );
+                })}
               </div>
-              <div className="relative px-2 py-2 text-center">
-                <span className="pointer-events-none absolute left-0 top-1/2 h-6 -translate-y-1/2 w-px bg-white/15" />
-                <p className="uppercase tracking-widest text-[10px] text-white/40 md:text-[10px]">WR %</p>
-                <p className="text-[13px] font-semibold text-white md:text-sm">
-                  {selectedSummary.winRate.toFixed(1)}%
-                </p>
-              </div>
-              <div className="relative px-2 py-2 text-center">
-                <span className="pointer-events-none absolute left-0 top-1/2 h-6 -translate-y-1/2 w-px bg-white/15" />
-                <p className="uppercase tracking-widest text-[10px] text-white/40 md:text-[10px]">Trades</p>
-                <p className="text-[13px] font-semibold text-white md:text-sm">
-                  {selectedSummary.totalTrades}
-                </p>
-              </div>
-              <div className="relative px-2 py-2 text-center md:block hidden">
-                <span className="pointer-events-none absolute left-0 top-1/2 h-6 -translate-y-1/2 w-px bg-white/15" />
-                <p className="uppercase tracking-widest text-[9px] text-white/40 md:text-[10px]">Avg Hold</p>
-                <p className="text-[11px] font-semibold text-white md:text-sm">
-                  {Math.round(selectedSummary.avgHoldTimeMinutes)}m
-                </p>
-              </div>
-            </div>
-          )}
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="relative rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm overflow-hidden"
-          >
-            <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-2 md:hidden">
-              {versions.map((version) => {
-                const isSelected = version.id === selectedVersionId;
-                return (
-                  <button
-                    key={version.id}
-                    onClick={() => setSelectedVersionId(version.id)}
-                    className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition cursor-pointer ${isSelected
-                      ? "bg-[#c4f70e]/25 text-[#c4f70e] shadow-[0_0_14px_rgba(196,247,14,0.2)]"
-                      : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80"
-                      }`}
-                  >
-                    {(version.versionCode || version.versionName || "V?").toUpperCase()}
-                  </button>
-                );
-              })}
-            </div>
-            <MetricSelector
-              selectedMetric={selectedMetric}
-              onChange={setSelectedMetric}
-              compact
-              className="absolute right-4 top-4 z-10 md:hidden"
-            />
-            <div className="p-4">
-              {comparisonLoading ? (
-                <div className="relative flex items-center justify-center h-[200px] overflow-hidden rounded-xl">
-                  <img
-                    src="/videos/gif.gif"
-                    alt="Loading"
-                    className="absolute inset-0 h-full w-full object-cover opacity-70"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80" />
-                  <div className="relative z-10 text-sm font-semibold text-white/80 uppercase tracking-[0.2em]">
-                    Loading
+              <MetricSelector
+                selectedMetric={selectedMetric}
+                onChange={setSelectedMetric}
+                compact
+                className="absolute right-4 top-4 z-10 md:hidden"
+              />
+              <div className="p-3 md:p-4">
+                {comparisonLoading ? (
+                  <div className="relative flex items-center justify-center h-[200px] overflow-hidden rounded-xl md:h-[170px]">
+                    <img
+                      src="/videos/gif.gif"
+                      alt="Loading"
+                      className="absolute inset-0 h-full w-full object-cover opacity-70"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80" />
+                    <div className="relative z-10 text-sm font-semibold text-white/80 uppercase tracking-[0.2em]">
+                      Loading
+                    </div>
                   </div>
-                </div>
-              ) : comparisonData && selectedVersionId ? (
-                <VersionChart
-                  versions={versions}
-                  selectedVersionId={selectedVersionId}
-                  metricsByVersion={comparisonData.metricsByVersion}
-                  selectedMetric={selectedMetric}
+                ) : comparisonData && selectedVersionId ? (
+                  <VersionChart
+                    versions={versions}
+                    selectedVersionId={selectedVersionId}
+                    metricsByVersion={comparisonData.metricsByVersion}
+                    selectedMetric={selectedMetric}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-[200px] md:h-[170px]">
+                    <p className="text-white/40">Select a version to view metrics</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Stats Cards - Animated Glassmorphic Design */}
+            {selectedSummary && (
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+                <StatCard
+                  label="Total PnL"
+                  value={selectedSummary.totalPnlSol}
+                  prefix={selectedSummary.totalPnlSol >= 0 ? "+" : ""}
+                  suffix=" SOL"
+                  decimals={2}
+                  icon={TrendingUp}
+                  delay={0}
+                  glowColor={selectedSummary.totalPnlSol >= 0 ? "rgba(34, 197, 94, 0.35)" : "rgba(239, 68, 68, 0.35)"}
                 />
-              ) : (
-                <div className="flex items-center justify-center h-[200px]">
-                  <p className="text-white/40">Select a version to view metrics</p>
-                </div>
-              )}
-            </div>
-          </motion.div>
+                <StatCard
+                  label="Win Rate"
+                  value={selectedSummary.winRate}
+                  suffix="%"
+                  decimals={1}
+                  icon={Target}
+                  delay={0.05}
+                  glowColor="rgba(196, 247, 14, 0.35)"
+                />
+                <StatCard
+                  label="Trades"
+                  value={selectedSummary.totalTrades}
+                  decimals={0}
+                  icon={BarChart3}
+                  delay={0.1}
+                  glowColor="rgba(59, 130, 246, 0.35)"
+                />
+                <StatCard
+                  label="Avg Hold"
+                  value={selectedSummary.avgHoldTimeMinutes}
+                  suffix="m"
+                  decimals={0}
+                  icon={Clock}
+                  delay={0.15}
+                  glowColor="rgba(139, 92, 246, 0.35)"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <TradingAnalyticsDashboard />

@@ -10,6 +10,12 @@ All notable changes to Opus-X are documented here.
 - Analytics mobile metric selector now sits to the right of the version badges and uses a compact size.
 - Analytics mobile summary row text increased now that it shows three metrics.
 - Analytics mobile metric selector hides the label and uses a brand-green chevron.
+- Analytics agent version chart now uses a borderless container, more height, and larger dots.
+- Analytics desktop version chips now live inside the chart header and the chart spans full width with a shorter desktop height.
+- Analytics desktop summary values and chart version chips now render larger.
+- Analytics desktop summary metrics now stack to the right of the chart and use about a quarter of the width.
+- Analytics summary column now uses single-line label/value rows with larger text.
+- Analytics summary labels now use a brighter gray and heavier weight.
 - Trade Outcomes mobile toggle buttons now use larger text and padding.
 - Analytics tab trigger now shows a small NEW badge.
 - Analytics NEW badge shifted further right.

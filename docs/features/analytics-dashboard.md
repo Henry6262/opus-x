@@ -12,6 +12,12 @@ Provide version-level analytics and comparisons for agent performance over time,
 - Performance comparison charts
 
 ## Changelog
+- 2026-01-16: Summary labels now use brighter gray and heavier weight.
+- 2026-01-16: Summary column now shows label + value on one line with larger typography.
+- 2026-01-16: Stacked the summary metrics to the right of the chart on desktop, giving them a quarter of the width.
+- 2026-01-16: Increased desktop summary values and version chip sizing for better readability.
+- 2026-01-16: Removed the desktop versions sidebar and moved version chips into the chart header with a transparent style; chart now spans full width with a shorter desktop height.
+- 2026-01-16: Removed the chart container border, increased chart height, and boosted line dots for denser readability.
 - 2026-01-16: Hid the mobile metric label and set the selector chevron to brand green.
 - 2026-01-16: Increased mobile summary row typography after trimming to three metrics.
 - 2026-01-16: Moved the mobile metric selector into the chart header, aligned right of the version badges, and reduced its size.
