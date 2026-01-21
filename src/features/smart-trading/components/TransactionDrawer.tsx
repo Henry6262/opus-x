@@ -426,53 +426,39 @@ export function TransactionDrawer({
                     });
                 });
             } else if (position.status === "closed" && tokenMint) {
-                // FALLBACK: If position is closed but no sell_transactions, fetch from Birdeye
-                // This handles positions closed via reconciliation_zero_balance
+                // FALLBACK: If position is closed but no sell_transactions, fetch from backend API
+                // The backend has access to Helius and can look up the actual sell transaction
                 try {
-                    console.log("[TransactionDrawer] No sell txs in DB, fetching from Birdeye...");
-                    const birdeyeUrl = `https://public-api.birdeye.so/defi/txs/token?address=${tokenMint}&tx_type=swap&sort_type=desc&limit=50`;
-                    const birdeyeResponse = await fetch(birdeyeUrl, {
-                        headers: {
-                            'X-API-KEY': 'public', // Public endpoint, no key needed
-                        },
-                    });
+                    console.log("[TransactionDrawer] No sell txs in DB, fetching from backend...");
+                    const API_BASE = process.env.NEXT_PUBLIC_DEVPRINT_API_URL || 'https://devprint-v2-production.up.railway.app';
+                    const txResponse = await fetch(`${API_BASE}/api/trading/position-txs/${tokenMint}`);
 
-                    if (birdeyeResponse.ok) {
-                        const birdeyeData = await birdeyeResponse.json();
-                        const swaps = birdeyeData?.data?.items || [];
-
-                        // Find sells that happened after our buy (entry_time)
-                        const entryTimestamp = new Date(position.entry_time).getTime();
-                        const closedTimestamp = position.closed_at ? new Date(position.closed_at).getTime() : Date.now();
-
-                        // Get our wallet address from the buy signature if possible
-                        // For now, look for sells in the time window
-                        swaps.forEach((swap: any) => {
-                            const swapTime = swap.blockUnixTime * 1000;
-                            // Only include swaps between entry and close time
-                            if (swapTime > entryTimestamp && swapTime <= closedTimestamp + 60000) {
-                                // Check if it's a sell (receiving SOL)
-                                if (swap.side === 'sell' || swap.to?.symbol === 'SOL') {
-                                    const solAmount = swap.to?.uiAmount || swap.volume || 0;
-                                    // Avoid duplicates
-                                    if (!mappedTransactions.find(t => t.signature === swap.txHash)) {
-                                        mappedTransactions.push({
-                                            signature: swap.txHash,
-                                            type: position.realized_pnl_sol > 0 ? "tp1" : "stop_loss",
-                                            timestamp: swapTime,
-                                            solAmount: solAmount,
-                                            tokenAmount: swap.from?.uiAmount || 0,
-                                            priceUsd: swap.price || 0,
-                                            status: "confirmed",
-                                        });
-                                    }
+                    if (txResponse.ok) {
+                        const txData = await txResponse.json();
+                        if (txData.success && Array.isArray(txData.data)) {
+                            // Add transactions from the backend
+                            txData.data.forEach((tx: { signature: string; tx_type: string; sol_amount: number; timestamp?: number }) => {
+                                // Skip if we already have this transaction
+                                if (mappedTransactions.find(t => t.signature === tx.signature)) {
+                                    return;
                                 }
-                            }
-                        });
-                        console.log(`[TransactionDrawer] Found ${mappedTransactions.length - 1} sell txs from Birdeye`);
+
+                                mappedTransactions.push({
+                                    signature: tx.signature,
+                                    type: tx.tx_type === "buy" ? "entry" :
+                                        (position.realized_pnl_sol > 0 ? "tp1" : "stop_loss"),
+                                    timestamp: tx.timestamp ? tx.timestamp * 1000 : Date.now(),
+                                    solAmount: tx.sol_amount || 0,
+                                    tokenAmount: 0,
+                                    priceUsd: 0,
+                                    status: "confirmed",
+                                });
+                            });
+                            console.log(`[TransactionDrawer] Found ${txData.data.length} txs from backend`);
+                        }
                     }
-                } catch (birdeyeErr) {
-                    console.warn("[TransactionDrawer] Birdeye fallback failed:", birdeyeErr);
+                } catch (backendErr) {
+                    console.warn("[TransactionDrawer] Backend fallback failed:", backendErr);
                 }
             }
 
