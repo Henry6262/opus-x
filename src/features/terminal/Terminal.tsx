@@ -62,10 +62,12 @@ function TerminalIcon({ type, className }: { type: TerminalIconType; className?:
   return <IconComponent className={className} />;
 }
 
-function MatrixRain() {
+function MatrixRain({ enabled = true }: { enabled?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    if (!enabled) return; // Don't run when disabled
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -101,14 +103,17 @@ function MatrixRain() {
       }
     };
 
-    const interval = setInterval(draw, 50);
+    // Reduced from 50ms (20fps) to 80ms (12.5fps) for better performance
+    const interval = setInterval(draw, 80);
     window.addEventListener('resize', resizeCanvas);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('resize', resizeCanvas);
     };
-  }, []);
+  }, [enabled]);
+
+  if (!enabled) return null;
 
   return (
     <canvas
@@ -542,7 +547,7 @@ export function Terminal() {
         className={`terminal terminal-glass ${animationComplete ? 'animation-complete' : ''} ${!isBootComplete ? 'terminal-booting' : ''}`}
         onScroll={handleScroll}
       >
-        <MatrixRain />
+        <MatrixRain enabled={!isCollapsed} />
         <TerminalNoise />
         <ScanlineOverlay />
 

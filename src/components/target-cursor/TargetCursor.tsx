@@ -54,8 +54,15 @@ const TargetCursor = ({
     []
   );
 
+  // Throttle mouse movement to ~60fps max (16ms)
+  const lastMoveRef = useRef(0);
   const moveCursor = useCallback((x: number, y: number) => {
     if (!cursorRef.current) return;
+
+    const now = performance.now();
+    if (now - lastMoveRef.current < 16) return; // Skip if less than 16ms since last move
+    lastMoveRef.current = now;
+
     gsap.to(cursorRef.current, {
       x,
       y,
