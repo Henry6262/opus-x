@@ -15,6 +15,7 @@ import { TerminalProvider, useTerminal, useTerminalNarrator, useAiReasoningStrea
 import { useAiMood } from "@/hooks/useAiMood";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MobileBottomBar } from "@/components/MobileBottomBar";
+import { TradingAnalyticsDashboard } from "@/components/trading/TradingAnalyticsDashboard";
 
 // Lazy load heavy components for better initial load performance
 const VibrCoder = lazy(() => import("@/components/VibrCoder").then(m => ({ default: m.VibrCoder })));
@@ -153,8 +154,9 @@ function DashboardContent() {
   });
 
   // AI Mood System - dynamically calculates mood based on migration data
+  const emptyTokens = useMemo(() => [], []);
   const { mood: aiMood, pnl, reason } = useAiMood({
-    tokens: [], // No longer using pump-history tokens
+    tokens: emptyTokens, // No longer using pump-history tokens
     isActive: true,
     isExecuting: false,
   });
@@ -200,6 +202,13 @@ function DashboardContent() {
               dashboardInView ? (
                 <div className="space-y-4">
                   <SmartTradingDashboard />
+
+                  {/* Analytics Dashboards */}
+                  {process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true" && (
+                    <div className="mt-8 space-y-8">
+                      <TradingAnalyticsDashboard />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <DashboardSkeleton />

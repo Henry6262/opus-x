@@ -45,6 +45,16 @@ interface OnChainHolding {
     // TP milestone tracking (from backend WebSocket)
     tp1_hit?: boolean;
     tp2_hit?: boolean;
+    tp3_hit?: boolean;
+    // All configured TP targets with market caps
+    all_targets?: Array<{
+        target_level: number;          // 1, 2, 3
+        target_multiplier: number;     // 1.5, 2.0, 3.0
+        target_price: number;
+        target_market_cap: number | null;
+        is_hit: boolean;
+        progress: number;              // 0.0 to 1.0
+    }>;
     buy_count?: number;               // Number of buy transactions
     sell_count?: number;              // Number of sell transactions
     sell_transactions?: Array<{
@@ -253,11 +263,24 @@ function AnimatedProgressMarketCap({ value, className = "" }: AnimatedProgressMa
 
 interface ProgressBarProps {
     currentMarketCap?: number;
+    // Entry price and current price for calculating entry market cap
+    entryPrice?: number;
+    currentPrice?: number;
     // Current PnL percentage for progress calculation
     pnlPct?: number;
     // TP milestone tracking from WebSocket
     tp1Hit?: boolean;
     tp2Hit?: boolean;
+    tp3Hit?: boolean;
+    // All configured TP targets (for displaying target market cap)
+    allTargets?: Array<{
+        target_level: number;
+        target_multiplier: number;
+        target_price: number;
+        target_market_cap: number | null;
+        is_hit: boolean;
+        progress: number;
+    }>;
 }
 
 // TP target thresholds (percentage gain)
@@ -267,16 +290,34 @@ const TP3_THRESHOLD = 200; // 200% gain = 3x
 
 function ProgressBar({
     currentMarketCap,
+    entryPrice,
+    currentPrice,
     pnlPct = 0,
     tp1Hit = false,
     tp2Hit = false,
+    tp3Hit = false,
+    allTargets,
 }: ProgressBarProps) {
     // TP Visual positioning: evenly spread across the bar
     const tpPositions = [
         { label: "TP1", position: 33, isHit: tp1Hit, threshold: TP1_THRESHOLD },
         { label: "TP2", position: 66, isHit: tp2Hit, threshold: TP2_THRESHOLD },
-        { label: "TP3", position: 95, isHit: false, threshold: TP3_THRESHOLD },
+        { label: "TP3", position: 95, isHit: tp3Hit, threshold: TP3_THRESHOLD },
     ];
+
+    // Find the next active target (first non-hit target)
+    const nextTarget = allTargets?.find(target => !target.is_hit);
+    const nextTargetMarketCap = nextTarget?.target_market_cap;
+
+    // Calculate entry market cap from entry price and current market cap
+    // Formula: entry_market_cap = entry_price * (current_market_cap / current_price)
+    // This works because: market_cap = price * total_supply, and total_supply is constant
+    const entryMarketCap = useMemo(() => {
+        if (!entryPrice || !currentPrice || !currentMarketCap || currentPrice === 0) {
+            return undefined;
+        }
+        return entryPrice * (currentMarketCap / currentPrice);
+    }, [entryPrice, currentPrice, currentMarketCap]);
 
     // Progress calculation based on current PnL percentage
     // Map PnL% to visual position: 0% -> 0, 50% -> 33%, 100% -> 66%, 200% -> 95%
@@ -311,17 +352,45 @@ function ProgressBar({
 
     // Show market cap badge if we have data
     const showMcapBadge = currentMarketCap !== undefined && currentMarketCap > 0;
+    const showEntryMcap = entryMarketCap !== undefined && entryMarketCap > 0;
+    const showTargetMcap = nextTargetMarketCap !== undefined && nextTargetMarketCap !== null && nextTargetMarketCap > 0;
 
     return (
         <div className="relative py-1 overflow-visible">
-            {/* Market cap badge - ABOVE the progress bar, aligned with it */}
-            {showMcapBadge && (
-                <div className="flex items-center gap-1 mb-1 ml-[67px] md:ml-[77px]">
-                    <span className="text-[9px] md:text-[10px] font-medium text-white/50 uppercase">mcap:</span>
-                    <AnimatedProgressMarketCap
-                        value={currentMarketCap!}
-                        className="text-[10px] md:text-[11px] font-mono font-bold tabular-nums text-white/90"
-                    />
+            {/* Market cap badges - ABOVE the progress bar, stacked vertically */}
+            {(showEntryMcap || showMcapBadge || showTargetMcap) && (
+                <div className="flex flex-col gap-0.5 mb-1 ml-[67px] md:ml-[77px]">
+                    {/* Entry Market Cap */}
+                    {showEntryMcap && (
+                        <div className="flex items-center gap-1">
+                            <span className="text-[9px] md:text-[10px] font-medium text-white/40 uppercase w-[52px] md:w-[58px]">entry:</span>
+                            <span className="text-[10px] md:text-[11px] font-mono font-bold tabular-nums text-white/60">
+                                {formatMarketCap(entryMarketCap!)}
+                            </span>
+                        </div>
+                    )}
+                    {/* Current Market Cap */}
+                    {showMcapBadge && (
+                        <div className="flex items-center gap-1">
+                            <span className="text-[9px] md:text-[10px] font-medium text-white/50 uppercase w-[52px] md:w-[58px]">current:</span>
+                            <AnimatedProgressMarketCap
+                                value={currentMarketCap!}
+                                className="text-[10px] md:text-[11px] font-mono font-bold tabular-nums text-white/90"
+                            />
+                        </div>
+                    )}
+                    {/* Target Market Cap (Next Active TP) */}
+                    {showTargetMcap && (
+                        <div className="flex items-center gap-1">
+                            <span className="text-[9px] md:text-[10px] font-medium text-[#c4f70e]/70 uppercase w-[52px] md:w-[58px]">
+                                TP{nextTarget?.target_level}:
+                            </span>
+                            <AnimatedProgressMarketCap
+                                value={nextTargetMarketCap!}
+                                className="text-[10px] md:text-[11px] font-mono font-bold tabular-nums text-[#c4f70e]"
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -691,9 +760,13 @@ function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
                             <div className="flex-1 min-w-0 overflow-visible">
                                 <ProgressBar
                                     currentMarketCap={currentMarketCap}
+                                    entryPrice={holding.entry_price}
+                                    currentPrice={holding.current_price}
                                     pnlPct={pnlPct ?? 0}
                                     tp1Hit={holding.tp1_hit}
                                     tp2Hit={holding.tp2_hit}
+                                    tp3Hit={holding.tp3_hit}
+                                    allTargets={holding.all_targets}
                                 />
                             </div>
                         )}

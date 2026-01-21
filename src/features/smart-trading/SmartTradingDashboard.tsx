@@ -6,7 +6,7 @@ import { WatchlistPanel } from "./components/WatchlistPanel";
 import { AiDecisionFeed } from "./components/AiDecisionFeed";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AnalyticsPanel } from "@/components/analytics/AnalyticsPanel";
+import { AnalyticsDashboard } from "@/components/analytics/AnalyticsDashboard";
 import ShinyText from "@/components/ShinyText";
 
 // ============================================
@@ -92,7 +92,7 @@ export function SmartTradingDashboard() {
 
         {ANALYTICS_ENABLED && (
           <TabsContent value="analytics">
-            <AnalyticsPanel />
+            <AnalyticsDashboard />
           </TabsContent>
         )}
       </Tabs>

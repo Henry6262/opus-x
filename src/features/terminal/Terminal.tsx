@@ -455,6 +455,40 @@ export function Terminal() {
     }
   }, []); // Only run once on mount
 
+  // Ctrl+C Double-Press Handling
+  const [showExitHint, setShowExitHint] = useState(false);
+  const lastCtrlCRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (isCollapsed) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Ctrl+C or Ctrl+D
+      if (e.ctrlKey && (e.key === 'c' || e.key === 'd')) {
+        e.preventDefault();
+        const now = Date.now();
+        const timeSinceLastPress = now - lastCtrlCRef.current;
+
+        if (timeSinceLastPress < 1000) {
+          // Double press detected within 1s -> Collapse
+          setIsCollapsed(true);
+          setShowExitHint(false);
+          lastCtrlCRef.current = 0; // Reset
+        } else {
+          // First press -> Show hint
+          setShowExitHint(true);
+          lastCtrlCRef.current = now;
+
+          // Hide hint after 2s if no second press
+          setTimeout(() => setShowExitHint(false), 2000);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isCollapsed]);
+
   return (
     <div className={`terminal-drawer ${isCollapsed ? 'collapsed' : ''}`}>
       {isCollapsed && (
@@ -511,6 +545,16 @@ export function Terminal() {
         <MatrixRain />
         <TerminalNoise />
         <ScanlineOverlay />
+
+        {/* Exit Hint Overlay */}
+        <div
+          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none transition-opacity duration-200 ${showExitHint ? 'opacity-100' : 'opacity-0'}`}
+        >
+          <div className="bg-black/80 text-[#c4f70e] border border-[#c4f70e]/50 px-4 py-2 rounded font-mono text-sm shadow-[0_0_20px_rgba(196,247,14,0.3)] backdrop-blur-sm">
+            Press Ctrl+C again to quit
+          </div>
+        </div>
+
         <div className="terminal-header">
           <div className={`terminal-status-indicator ${!isBootComplete ? 'terminal-status-booting' : ''}`}>
             <span className={`terminal-status-dot ${!isBootComplete ? 'terminal-status-dot--booting' : ''}`} />

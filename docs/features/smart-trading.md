@@ -24,6 +24,19 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - 2026-01-14: On-chain holdings now auto-uses the trading wallet (or ?wallet= query param) so the panel no longer throws missing-wallet errors.
 - 2026-01-14: Trading config now falls back to public wallet `FXP5NMdrC4qHQbtBy8dduLbryVmevCkjd25mmLBKVA7x` when none is returned from the backend.
 - 2026-01-14: Trading Configuration card removed from the dashboard.
+- 2026-01-15: Overall Trading Analytics removed the large top metric cards to keep focus on the charts and outcome panels.
+- 2026-01-15: Overall Trading Analytics now mirrors the compact 4-up summary row with separators above the charts.
+- 2026-01-15: Overall Trading Analytics now focuses on trade outcomes, efficiency, and rankings without the P&L trend chart or summary row.
+- 2026-01-15: Overall Trading Analytics now uses transparent panels with light borders and positions the TP hit-rate metrics above Trade Outcomes.
+- 2026-01-15: TP hit-rate metrics now match the minimal separator style used in the analytics summary row.
+- 2026-01-15: Trade Outcomes chart swapped to a radial stacked view with win/loss, TP hits, and target efficiency toggles.
+- 2026-01-15: Removed the standalone TP hit-rate strip since the radial chart covers those metrics.
+- 2026-01-15: Overall Trading Analytics header now omits the subtitle and date-range tag for a cleaner top line.
+- 2026-01-15: Trade Outcomes chart text and tooltip now use light-on-dark slate tones instead of black defaults.
+- 2026-01-15: Trade Outcomes header removed and the radial chart resized to a wider, shorter layout.
+- 2026-01-15: Trade Outcomes controls and metrics restyled with bolder typography, separators, and brand-accented pills.
+- 2026-01-15: Trade Outcomes toggles now sit on one row and the efficiency view is labeled Accuracy.
+- 2026-01-15: Trade Outcomes chart now takes less width with a wider details column, centered chart, and brand-tinted muted tones.
 - 2026-01-12: Mobile dashboard now swaps Live Activity, Migration Feed, and Positions with a dedicated three-button switcher (no more per-card collapse toggles on phones).
 - 2026-01-12: Migration cards replaced the token name row with a minimalist inline stat strip (MCap · Liq · Score) separated by subtle dividers directly beneath the ticker.
 - 2026-01-12: Tracked wallet presets now include Orange, Dior, Jack Duval, and POW Twitter handles, falling back to the SuperRouter avatar whenever a profile image is missing.

@@ -1,0 +1,87 @@
+/**
+ * Trading Analytics API Client
+ *
+ * Fetches real trading position data from devprint backend.
+ * Powers the "Overall Trading Analytics" dashboard.
+ */
+
+import type { TradingPosition } from '@/types/trading';
+
+// ============================================
+// CONFIGURATION
+// ============================================
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_DEVPRINT_API_URL || 'https://devprint-v2-production.up.railway.app';
+
+// ============================================
+// API RESPONSE FORMAT
+// ============================================
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  error: string | null;
+}
+
+// ============================================
+// TRADING API CLIENT
+// ============================================
+
+class TradingAPI {
+  private async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const url = `${API_BASE_URL}${endpoint}`;
+
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API Error ${response.status}: ${errorText}`);
+    }
+
+    const apiResponse: ApiResponse<T> = await response.json();
+
+    if (!apiResponse.success) {
+      throw new Error(apiResponse.error || 'Unknown API error');
+    }
+
+    return apiResponse.data;
+  }
+
+  /**
+   * Get all trading positions (open, partially_closed, closed)
+   */
+  async getPositions(): Promise<TradingPosition[]> {
+    return this.fetch<TradingPosition[]>('/api/trading/positions');
+  }
+
+  /**
+   * Get positions filtered by status
+   */
+  async getPositionsByStatus(status: 'open' | 'partially_closed' | 'closed'): Promise<TradingPosition[]> {
+    const allPositions = await this.getPositions();
+    return allPositions.filter(p => p.status === status);
+  }
+
+  /**
+   * Get positions within a date range
+   */
+  async getPositionsByDateRange(startDate: string, endDate: string): Promise<TradingPosition[]> {
+    const allPositions = await this.getPositions();
+    return allPositions.filter(p => {
+      const entryDate = new Date(p.entry_time).toISOString().split('T')[0];
+      return entryDate >= startDate && entryDate <= endDate;
+    });
+  }
+}
+
+// ============================================
+// EXPORT API CLIENT
+// ============================================
+
+export const tradingApi = new TradingAPI();

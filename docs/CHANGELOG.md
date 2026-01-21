@@ -4,6 +4,34 @@ All notable changes to Opus-X are documented here.
 
 ## 2026-01-15
 - Pump.fun wallet pill received a max z-index so the balance badge always floats above overlapping feeds on the dashboard.
+- Analytics dashboard comparison loading no longer retriggers continuously when the selected version list is unchanged.
+- Analytics dashboard versions rail now shows just the version name and takes up less width.
+- Analytics dashboard removed the redundant top metric card row to keep the focus on the detailed panels.
+- Analytics dashboard now shows readable version names and uses line chart styling with chart-config labels.
+- Analytics dashboard now maps versioning API responses to camelCase so version names and metrics display instead of blank fields.
+- Analytics dashboard metric choice is now a single selector and the performance header sits above the chart container.
+- Analytics dashboard versions now show V1/V2 codes with inactive styling muted to light grey across tabs and chart lines.
+- Analytics dashboard header now reads Agent Metrics and the metric label sits above the selector.
+- Analytics dashboard versions rail separator now fades with a gradient for a cleaner edge.
+- Analytics dashboard now shows a compact 4-up summary row under Agent Metrics, and the overall trading analytics view drops the oversized metric cards.
+- Analytics dashboard summary row now centers values, rounds percentages, uses two-decimal SOL, and labels Trades instead of Total Trades.
+- Analytics dashboard header description removed and summary row uses separators instead of individual cards.
+- Analytics dashboard summary separators are now shorter and a soft divider separates the header from the metrics row.
+- Analytics dashboard chart height reduced for a tighter agent metrics panel.
+- Analytics dashboard loading state now uses the `gif.gif` asset instead of the spinning icon.
+- Analytics dashboard chart height reduced again and the version details card removed.
+- Overall Trading Analytics now uses a compact 4-up summary row with separators above the charts.
+- Overall Trading Analytics focuses on trade outcome panels while the P&L trend chart and summary metrics remain hidden.
+- Overall Trading Analytics panels now use transparent styling and TP hit-rate metrics sit above Trade Outcomes.
+- Overall Trading Analytics TP hit-rate metrics now use the same minimal separator styling as the analytics summary row.
+- Trade Outcomes now uses a radial stacked chart with toggles for win/loss, TP hits, and target efficiency.
+- Overall Trading Analytics no longer shows the redundant TP hit-rate strip.
+- Overall Trading Analytics header removed the subtitle and date-range tag.
+- Trade Outcomes header removed and the radial chart resized to a wider, shorter layout.
+- Trade Outcomes controls and metric list restyled for stronger hierarchy and cleaner separators.
+- Trade Outcomes toggles now fit on a single row and the efficiency view is labeled Accuracy.
+- Trade Outcomes chart now uses a narrower chart column, centered chart, and brand-tinted muted tones.
+- Trade Outcomes radial chart now uses lighter text and tooltip tones to avoid black defaults.
 
 ## 2026-01-14
 - Transaction History now sits alongside Live Activity and Active Positions in the top desktop rail as its own collapsible column, eliminating the bottom-row copy.
