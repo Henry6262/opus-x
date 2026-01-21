@@ -49,10 +49,14 @@ class ProductionVersioningAPI {
   }
 
   private mapVersionMetrics(raw: any): VersionMetrics {
+    // For 3-hour buckets, backend returns bucket_start (full timestamp) instead of date
+    // We use bucket_start directly to preserve the time component for charting
+    const date = raw.date || raw.bucket_start || '';
+
     return {
-      id: raw.id,
+      id: raw.id || `${raw.version_id}-${raw.bucket_start || raw.date}`,
       versionId: raw.versionId ?? raw.version_id ?? '',
-      date: raw.date,
+      date,
       totalTrades: raw.totalTrades ?? raw.total_trades ?? 0,
       winningTrades: raw.winningTrades ?? raw.winning_trades ?? 0,
       losingTrades: raw.losingTrades ?? raw.losing_trades ?? 0,
@@ -64,7 +68,7 @@ class ProductionVersioningAPI {
       avgHoldTimeMinutes: raw.avgHoldTimeMinutes ?? raw.avg_hold_time_minutes ?? undefined,
       avgMultiplier: raw.avgMultiplier ?? raw.avg_multiplier ?? undefined,
       medianMultiplier: raw.medianMultiplier ?? raw.median_multiplier ?? undefined,
-      updatedAt: raw.updatedAt ?? raw.updated_at ?? '',
+      updatedAt: raw.updatedAt ?? raw.updated_at ?? new Date().toISOString(),
     };
   }
 
