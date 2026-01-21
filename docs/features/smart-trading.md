@@ -20,6 +20,7 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - 2026-01-16: Outcome Pulse container padding increased for more breathing room.
 - 2026-01-16: Outcome Pulse win-rate ring enlarged with stronger stroke, and metric labels increased in size.
 - 2026-01-16: Outcome Pulse secondary metrics now sit in a single-row layout on mobile with tighter text.
+- 2026-01-16: Analytics tab badge now reads BETA instead of NEW.
 - 2026-01-16: Outcome Pulse overview now lays out the three secondary metrics in a horizontal grid with stacked labels.
 - 2026-01-16: Outcome Pulse overview now emphasizes a larger PnL row with bigger text, borderless rows, and sign-only green/red coloring.
 - 2026-01-16: AI analysis logging now reports Supabase error details for easier debugging.

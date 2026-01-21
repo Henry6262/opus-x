@@ -61,7 +61,7 @@ export function SmartTradingDashboard() {
                     "Analytics"
                   )}
                   <span className="absolute -top-4 -right-10 rounded-full bg-[#c4f70e] px-2 py-0.5 text-[9px] font-bold tracking-[0.2em] text-black shadow-[0_0_12px_rgba(196,247,14,0.35)]">
-                    NEW
+                    BETA
                   </span>
                 </span>
               </TabsTrigger>
