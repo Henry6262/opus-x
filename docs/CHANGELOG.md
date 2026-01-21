@@ -58,6 +58,7 @@ All notable changes to Opus-X are documented here.
 - Smart trading dashboard uses tighter mobile side padding to maximize width.
 - Overall trading analytics title now shows "Outcome Pulse" with a Radar icon.
 - Trade Outcomes right-side metrics now use larger text and extra horizontal padding.
+- Trade Outcomes toggles stay on one row, "TP'S" label added, and mobile chart height increased.
 - Trade Outcomes radial chart now uses lighter text and tooltip tones to avoid black defaults.
 
 ## 2026-01-14

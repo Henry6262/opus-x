@@ -36,7 +36,7 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
     const losses = totalTrades - wins;
 
     return [
-      { key: 'wins', name: 'Wins', value: wins, percentage: analytics.winRate },
+      { key: 'wins', name: 'WR %', value: wins, percentage: analytics.winRate },
       { key: 'losses', name: 'Losses', value: losses, percentage: 100 - analytics.winRate },
     ];
   }, [analytics]);
@@ -112,7 +112,7 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
         transition={{ duration: 0.3 }}
         className="flex w-full items-center justify-center"
       >
-        <ChartContainer config={chartConfig} className="mx-auto h-[175px] w-full max-w-[360px]">
+        <ChartContainer config={chartConfig} className="mx-auto h-[210px] w-full max-w-[360px] md:h-[175px]">
           <RadialBarChart
             data={activeData}
             endAngle={180}
@@ -179,16 +179,16 @@ export function TradeOutcomesChart({ analytics }: TradeOutcomesChartProps) {
         transition={{ duration: 0.3 }}
         className="space-y-4"
       >
-        <div className="flex flex-wrap justify-center gap-2 md:flex-nowrap">
+        <div className="flex flex-nowrap justify-center gap-2">
           {[
             { id: 'win-loss', label: 'Win/Loss' },
-            { id: 'tp-hits', label: 'TP Hits' },
+            { id: 'tp-hits', label: "TP'S" },
             { id: 'target-efficiency', label: 'Accuracy' },
           ].map((option) => (
             <button
               key={option.id}
               onClick={() => setView(option.id as OutcomeView)}
-              className={`rounded-full px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] transition whitespace-nowrap cursor-pointer ${
+              className={`rounded-full px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] transition whitespace-nowrap cursor-pointer ${
                 view === option.id
                   ? 'bg-[#c4f70e]/25 text-[#c4f70e] shadow-[0_0_18px_rgba(196,247,14,0.2)]'
                   : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80'

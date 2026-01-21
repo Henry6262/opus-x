@@ -31,7 +31,7 @@ import {
 
 import { useVersions } from '@/hooks/useVersions';
 import { useVersionComparison } from '@/hooks/useVersionComparison';
-import type { MetricType, AgentVersion, VersionSummary } from '@/types/versioning';
+import type { MetricType, AgentVersion, VersionSummary, VersionMetrics } from '@/types/versioning';
 import { cn } from '@/lib/utils';
 import {
   ChartContainer,
@@ -172,7 +172,7 @@ function MetricSelector({ selectedMetric, onChange, compact = false, className }
 interface VersionChartProps {
   versions: AgentVersion[];
   selectedVersionId: string;
-  metricsByVersion: Record<string, Array<{ date: string; [key: string]: number | string }>>;
+  metricsByVersion: Record<string, VersionMetrics[]>;
   selectedMetric: MetricType;
 }
 
@@ -188,9 +188,9 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
         // Extract the metric value
         const metricValue = selectedMetric === 'winRate' ? m.winRate
           : selectedMetric === 'totalPnl' ? m.totalPnlSol
-          : selectedMetric === 'avgMultiplier' ? m.avgMultiplier
-          : selectedMetric === 'avgHoldTime' ? m.avgHoldTimeMinutes
-          : m.totalTrades;
+            : selectedMetric === 'avgMultiplier' ? m.avgMultiplier
+              : selectedMetric === 'avgHoldTime' ? m.avgHoldTimeMinutes
+                : m.totalTrades;
         existing[version.id] = typeof metricValue === 'number' ? metricValue : 0;
         dateMap.set(m.date, existing);
       });
@@ -493,11 +493,10 @@ export function AnalyticsDashboard() {
                   <button
                     key={version.id}
                     onClick={() => setSelectedVersionId(version.id)}
-                    className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition cursor-pointer ${
-                      isSelected
-                        ? "bg-[#c4f70e]/25 text-[#c4f70e] shadow-[0_0_14px_rgba(196,247,14,0.2)]"
-                        : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80"
-                    }`}
+                    className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition cursor-pointer ${isSelected
+                      ? "bg-[#c4f70e]/25 text-[#c4f70e] shadow-[0_0_14px_rgba(196,247,14,0.2)]"
+                      : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80"
+                      }`}
                   >
                     {(version.versionCode || version.versionName || "V?").toUpperCase()}
                   </button>

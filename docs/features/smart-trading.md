@@ -51,6 +51,7 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - 2026-01-15: Mobile smart trading dashboard now uses tighter side padding to free horizontal space.
 - 2026-01-15: Overall trading analytics title now uses the two-word "Outcome Pulse" label with a Radar icon.
 - 2026-01-15: Trade Outcomes right-hand metrics now use larger text and more side padding.
+- 2026-01-15: Trade Outcomes toggles now stay on a single row, with "TP'S" label and a larger mobile chart.
 - 2026-01-12: Mobile dashboard now swaps Live Activity, Migration Feed, and Positions with a dedicated three-button switcher (no more per-card collapse toggles on phones).
 - 2026-01-12: Migration cards replaced the token name row with a minimalist inline stat strip (MCap · Liq · Score) separated by subtle dividers directly beneath the ticker.
 - 2026-01-12: Tracked wallet presets now include Orange, Dior, Jack Duval, and POW Twitter handles, falling back to the SuperRouter avatar whenever a profile image is missing.
