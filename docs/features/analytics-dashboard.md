@@ -68,3 +68,4 @@ Provide version-level analytics and comparisons for agent performance over time,
 - 2026-01-16: Chart comparison loading now uses a spinner instead of the gif background.
 - 2026-01-16: Timeframe selector now defaults to 3-hour and places it first in the toggle.
 - 2026-01-16: Avg Hold stat now includes a tooltip explaining partial exits.
+- 2026-01-16: Added more spacing between the timeframe and metric selectors in the header.

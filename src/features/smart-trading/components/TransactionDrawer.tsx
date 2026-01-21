@@ -398,7 +398,7 @@ export function TransactionDrawer({
             }
 
             // Add sell transactions with proper exit types based on close_reason
-            if (position.sell_transactions && Array.isArray(position.sell_transactions)) {
+            if (position.sell_transactions && Array.isArray(position.sell_transactions) && position.sell_transactions.length > 0) {
                 position.sell_transactions.forEach((sell: any) => {
                     let exitType: Transaction["type"] = "manual_sell";
 
@@ -425,6 +425,55 @@ export function TransactionDrawer({
                         status: "confirmed",
                     });
                 });
+            } else if (position.status === "closed" && tokenMint) {
+                // FALLBACK: If position is closed but no sell_transactions, fetch from Birdeye
+                // This handles positions closed via reconciliation_zero_balance
+                try {
+                    console.log("[TransactionDrawer] No sell txs in DB, fetching from Birdeye...");
+                    const birdeyeUrl = `https://public-api.birdeye.so/defi/txs/token?address=${tokenMint}&tx_type=swap&sort_type=desc&limit=50`;
+                    const birdeyeResponse = await fetch(birdeyeUrl, {
+                        headers: {
+                            'X-API-KEY': 'public', // Public endpoint, no key needed
+                        },
+                    });
+
+                    if (birdeyeResponse.ok) {
+                        const birdeyeData = await birdeyeResponse.json();
+                        const swaps = birdeyeData?.data?.items || [];
+
+                        // Find sells that happened after our buy (entry_time)
+                        const entryTimestamp = new Date(position.entry_time).getTime();
+                        const closedTimestamp = position.closed_at ? new Date(position.closed_at).getTime() : Date.now();
+
+                        // Get our wallet address from the buy signature if possible
+                        // For now, look for sells in the time window
+                        swaps.forEach((swap: any) => {
+                            const swapTime = swap.blockUnixTime * 1000;
+                            // Only include swaps between entry and close time
+                            if (swapTime > entryTimestamp && swapTime <= closedTimestamp + 60000) {
+                                // Check if it's a sell (receiving SOL)
+                                if (swap.side === 'sell' || swap.to?.symbol === 'SOL') {
+                                    const solAmount = swap.to?.uiAmount || swap.volume || 0;
+                                    // Avoid duplicates
+                                    if (!mappedTransactions.find(t => t.signature === swap.txHash)) {
+                                        mappedTransactions.push({
+                                            signature: swap.txHash,
+                                            type: position.realized_pnl_sol > 0 ? "tp1" : "stop_loss",
+                                            timestamp: swapTime,
+                                            solAmount: solAmount,
+                                            tokenAmount: swap.from?.uiAmount || 0,
+                                            priceUsd: swap.price || 0,
+                                            status: "confirmed",
+                                        });
+                                    }
+                                }
+                            }
+                        });
+                        console.log(`[TransactionDrawer] Found ${mappedTransactions.length - 1} sell txs from Birdeye`);
+                    }
+                } catch (birdeyeErr) {
+                    console.warn("[TransactionDrawer] Birdeye fallback failed:", birdeyeErr);
+                }
             }
 
             mappedTransactions.sort((a, b) => b.timestamp - a.timestamp);

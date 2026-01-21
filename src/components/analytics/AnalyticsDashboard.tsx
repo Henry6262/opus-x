@@ -467,7 +467,7 @@ export function AnalyticsDashboard() {
                 Agent Metrics
               </h3>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <TimeframeSelector
                 selectedBucket={bucket}
                 onChange={setBucket}

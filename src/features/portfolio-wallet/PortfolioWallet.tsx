@@ -111,6 +111,12 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   const [isTimeFilterOpen, setIsTimeFilterOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  useEffect(() => {
+    if (activeView === "positions") {
+      setActiveView("overview");
+    }
+  }, [activeView]);
+
   // Detect mobile viewport
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -189,7 +195,12 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   const uiPositions: UiPosition[] = useMemo(() => {
     // Use API holdings (same source as main dashboard's PortfolioHoldingsPanel)
     if (fetchedHoldings.length > 0) {
-      return fetchedHoldings.map(h => ({
+      return fetchedHoldings.map(h => {
+        const pnlSol = h.unrealized_pnl_sol || 0;
+        const entrySolValue = typeof h.entry_sol_value === "number" ? h.entry_sol_value : undefined;
+        const currentSolValue =
+          entrySolValue !== undefined ? entrySolValue + pnlSol : h.current_quantity * h.current_price;
+        return ({
         id: h.id,
         mint: h.mint,
         symbol: h.symbol || "TOKEN",
@@ -197,13 +208,13 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
         entryPrice: h.entry_price,
         currentPrice: h.current_price,
         quantity: h.current_quantity,
-        value: h.current_quantity * h.current_price,
-        pnl: h.unrealized_pnl_sol || 0,
+        value: currentSolValue,
+        pnl: pnlSol,
         pnlPercent: h.unrealized_pnl_pct || 0,
         entryTime: new Date(h.entry_time),
         isValidated: true,
         birdeyeValueUsd: null,
-      }));
+      })});
     }
 
     // Fallback to context positions - also sort by PnL% to match portfolio panel
@@ -633,14 +644,6 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                 <span>Overview</span>
               </button>
               <button
-                onClick={() => setActiveView("positions")}
-                className={`portfolio-wallet-tab ${activeView === "positions" ? "active" : ""}`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Positions</span>
-                <span className="portfolio-wallet-tab-count">{uiPositions.length}</span>
-              </button>
-              <button
                 onClick={() => setActiveView("history")}
                 className={`portfolio-wallet-tab ${activeView === "history" ? "active" : ""}`}
               >
@@ -771,72 +774,6 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                   </div>
                 </div>
               </>
-            )}
-
-            {/* Positions View */}
-            {activeView === "positions" && (
-              <div className="portfolio-wallet-positions">
-                {isLoadingHoldingsApi && uiPositions.length === 0 ? (
-                  <div className="portfolio-wallet-empty">
-                    <Layers className="w-8 h-8 text-white/20 animate-pulse" />
-                    <span>Loading positions...</span>
-                  </div>
-                ) : holdingsApiError && uiPositions.length === 0 ? (
-                  <div className="portfolio-wallet-empty">
-                    <AlertCircle className="w-8 h-8 text-red-400/60" />
-                    <span className="text-red-400/80">{holdingsApiError}</span>
-                  </div>
-                ) : uiPositions.length === 0 ? (
-                  <div className="portfolio-wallet-empty">
-                    <Layers className="w-8 h-8 text-white/20" />
-                    <span>No active positions</span>
-                  </div>
-                ) : (
-                  <div className="portfolio-wallet-positions-list">
-                    {uiPositions.map((position) => (
-                      <div key={position.id} className="portfolio-wallet-position">
-                        <div className="portfolio-wallet-position-header">
-                          <div className="portfolio-wallet-position-symbol">
-                            <Image
-                              src={`https://dd.dexscreener.com/ds-data/tokens/solana/${position.mint}.png`}
-                              alt={position.symbol}
-                              width={28}
-                              height={28}
-                              className="rounded-lg flex-shrink-0"
-                              unoptimized
-                            />
-                            <div className="flex flex-col">
-                              <span className="portfolio-wallet-position-ticker">{position.symbol}</span>
-                              <span className="portfolio-wallet-position-name text-[10px] text-white/40">{position.name}</span>
-                            </div>
-                          </div>
-                          <div className={`portfolio-wallet-position-pnl tabular-nums min-w-[4ch] ${position.pnlPercent >= 0 ? "positive" : "negative"}`}>
-                            {position.pnlPercent >= 0 ? "+" : ""}{position.pnlPercent.toFixed(0)}%
-                          </div>
-                        </div>
-                        <div className="portfolio-wallet-position-details">
-                          <div className="portfolio-wallet-position-detail">
-                            <span className="label">Value</span>
-                            <span className="value tabular-nums">
-                              {position.value.toFixed(2)} SOL
-                            </span>
-                          </div>
-                          <div className="portfolio-wallet-position-detail">
-                            <span className="label">PnL</span>
-                            <span className={`value tabular-nums ${position.pnl >= 0 ? "text-matrix-green" : "text-terminal-red"}`}>
-                              {position.pnl >= 0 ? "+" : ""}{position.pnl.toFixed(4)} SOL
-                            </span>
-                          </div>
-                          <div className="portfolio-wallet-position-detail">
-                            <span className="label">Entry</span>
-                            <span className="value text-white/50">{formatTimeAgo(position.entryTime)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             )}
 
             {/* History View */}

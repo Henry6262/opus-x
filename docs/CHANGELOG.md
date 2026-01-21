@@ -13,6 +13,9 @@ All notable changes to Opus-X are documented here.
 - Disabled the target cursor overlay so default cursor behavior returns.
 - Restored the missing analysis logger module to fix build errors.
 - Analytics Avg Hold stat now shows a tooltip about partial exits.
+- Portfolio Wallet positions now compute SOL values from entry cost + unrealized PnL to match portfolio data.
+- Portfolio Wallet positions tab is hidden for now.
+- Added more spacing between the timeframe and metric selectors in the analytics header.
 - Analytics summary row now uses shorter labels, a Solana icon for PnL, and one-decimal precision.
 - Analytics summary row hides Avg Hold on mobile to keep spacing tight.
 - Analytics mobile metric selector now sits to the right of the version badges and uses a compact size.
