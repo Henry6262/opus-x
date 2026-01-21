@@ -41,8 +41,9 @@ const TargetCursor = ({
       return () => media.removeEventListener("change", update);
     }
 
-    media.addListener(update);
-    return () => media.removeListener(update);
+    // Fallback for older browsers
+    (media as any).addListener(update);
+    return () => (media as any).removeListener(update);
   }, []);
 
   const constants = useMemo(
@@ -104,7 +105,8 @@ const TargetCursor = ({
     createSpinTimeline();
 
     const tickerFn = () => {
-      if (!targetCornerPositionsRef.current || !cursorRef.current || !cornersRef.current) {
+      const targetPositions = targetCornerPositionsRef.current;
+      if (!targetPositions || !cursorRef.current || !cornersRef.current) {
         return;
       }
 
@@ -119,8 +121,8 @@ const TargetCursor = ({
         const currentX = Number(gsap.getProperty(corner, "x"));
         const currentY = Number(gsap.getProperty(corner, "y"));
 
-        const targetX = targetCornerPositionsRef.current[i].x - cursorX;
-        const targetY = targetCornerPositionsRef.current[i].y - cursorY;
+        const targetX = targetPositions[i].x - cursorX;
+        const targetY = targetPositions[i].y - cursorY;
 
         const finalX = currentX + (targetX - currentX) * strength;
         const finalY = currentY + (targetY - currentY) * strength;
@@ -206,12 +208,13 @@ const TargetCursor = ({
       const cursorX = Number(gsap.getProperty(cursorRef.current, "x"));
       const cursorY = Number(gsap.getProperty(cursorRef.current, "y"));
 
-      targetCornerPositionsRef.current = [
+      const targetPositions = [
         { x: rect.left - borderWidth, y: rect.top - borderWidth },
         { x: rect.right + borderWidth - cornerSize, y: rect.top - borderWidth },
         { x: rect.right + borderWidth - cornerSize, y: rect.bottom + borderWidth - cornerSize },
         { x: rect.left - borderWidth, y: rect.bottom + borderWidth - cornerSize },
       ];
+      targetCornerPositionsRef.current = targetPositions;
 
       isActiveRef.current = true;
       if (tickerFnRef.current) {
@@ -226,8 +229,8 @@ const TargetCursor = ({
 
       corners.forEach((corner, i) => {
         gsap.to(corner, {
-          x: targetCornerPositionsRef.current[i].x - cursorX,
-          y: targetCornerPositionsRef.current[i].y - cursorY,
+          x: targetPositions[i].x - cursorX,
+          y: targetPositions[i].y - cursorY,
           duration: 0.2,
           ease: "power2.out",
         });

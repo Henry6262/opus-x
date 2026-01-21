@@ -17,6 +17,11 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - Trading config summary (targets, stop loss, slippage, limits)
 
 ## Changelog
+- 2026-01-16: Removed the token performance rankings and summary stats blocks from Trading Analytics for the initial release.
+- 2026-01-16: Nudged the Analytics NEW badge further up and right again.
+- 2026-01-16: Shifted the Analytics NEW badge up and further right.
+- 2026-01-16: Nudged the Analytics NEW badge further right for clearer separation.
+- 2026-01-16: Added a small NEW badge to the Analytics tab trigger.
 - 2026-01-16: Increased mobile Trade Outcomes toggle button sizing for better readability.
 - 2026-01-14: Transaction History now lives beside Live Activity and Active Positions as a collapsible rail on desktop, removing the bottom-row duplication.
 - 2026-01-14: Smart Money panel now sits at half-screen height with a single-column list so each wallet spans the full width vertically.
@@ -56,6 +61,7 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - 2026-01-15: Portfolio holdings move entry value to the top-right on mobile and free full-width space for the progress bar.
 - 2026-01-15: Portfolio holdings now place entry + market cap details under the ticker and run the progress bar full width.
 - 2026-01-15: Market cap labels now read Entry and MCap and align to the left under the ticker.
+- 2026-01-15: Outcome Pulse panel now only appears under the Analytics tab (removed from the trading view).
 - 2026-01-12: Mobile dashboard now swaps Live Activity, Migration Feed, and Positions with a dedicated three-button switcher (no more per-card collapse toggles on phones).
 - 2026-01-12: Migration cards replaced the token name row with a minimalist inline stat strip (MCap · Liq · Score) separated by subtle dividers directly beneath the ticker.
 - 2026-01-12: Tracked wallet presets now include Orange, Dior, Jack Duval, and POW Twitter handles, falling back to the SuperRouter avatar whenever a profile image is missing.

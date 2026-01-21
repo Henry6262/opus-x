@@ -39,6 +39,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
+import { TradingAnalyticsDashboard } from '@/components/trading/TradingAnalyticsDashboard';
 
 // ============================================
 // COLORS
@@ -536,7 +537,7 @@ export function AnalyticsDashboard() {
           </motion.div>
         </div>
 
-        {/* Version Details Card removed */}
+        <TradingAnalyticsDashboard />
       </div>
     </div>
   );

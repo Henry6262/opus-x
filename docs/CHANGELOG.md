@@ -11,6 +11,11 @@ All notable changes to Opus-X are documented here.
 - Analytics mobile summary row text increased now that it shows three metrics.
 - Analytics mobile metric selector hides the label and uses a brand-green chevron.
 - Trade Outcomes mobile toggle buttons now use larger text and padding.
+- Analytics tab trigger now shows a small NEW badge.
+- Analytics NEW badge shifted further right.
+- Analytics NEW badge moved slightly upward and further right.
+- Analytics NEW badge nudged further upward and right.
+- Trading Analytics initial release hides token performance rankings and summary stats.
 
 ## 2026-01-15
 - Pump.fun wallet pill received a max z-index so the balance badge always floats above overlapping feeds on the dashboard.
@@ -66,6 +71,7 @@ All notable changes to Opus-X are documented here.
 - Portfolio holdings now move the entry value to the top-right on mobile to free space for the progress bar.
 - Portfolio holdings now place entry/market cap info under the ticker with a full-width progress bar below.
 - Portfolio holdings now show Entry and MCap labels on the left under the ticker.
+- Outcome Pulse panel now only appears under the Analytics tab.
 
 ## 2026-01-14
 - Transaction History now sits alongside Live Activity and Active Positions in the top desktop rail as its own collapsible column, eliminating the bottom-row copy.

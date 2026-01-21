@@ -39,3 +39,4 @@ Provide version-level analytics and comparisons for agent performance over time,
 - 2026-01-15: Mobile analytics content now uses the full available width with tighter horizontal padding.
 - 2026-01-15: Removed horizontal grid lines from the agent metrics chart.
 - 2026-01-15: Mobile summary row typography tightened and padding reduced to maximize width.
+- 2026-01-15: Outcome Pulse panel now renders within the Analytics tab only.

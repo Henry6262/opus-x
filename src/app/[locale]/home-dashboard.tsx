@@ -15,7 +15,6 @@ import { TerminalProvider, useTerminal, useTerminalNarrator, useAiReasoningStrea
 import { useAiMood } from "@/hooks/useAiMood";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MobileBottomBar } from "@/components/MobileBottomBar";
-import { TradingAnalyticsDashboard } from "@/components/trading/TradingAnalyticsDashboard";
 
 // Lazy load heavy components for better initial load performance
 const VibrCoder = lazy(() => import("@/components/VibrCoder").then(m => ({ default: m.VibrCoder })));
@@ -205,9 +204,7 @@ function DashboardContent() {
 
                   {/* Analytics Dashboards */}
                   {process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true" && (
-                    <div className="mt-8 space-y-8">
-                      <TradingAnalyticsDashboard />
-                    </div>
+                    <div className="mt-8 space-y-8" />
                   )}
                 </div>
               ) : (

@@ -46,19 +46,24 @@ export function SmartTradingDashboard() {
             {ANALYTICS_ENABLED && (
               <TabsTrigger
                 value="analytics"
-                className="flex-1 md:flex-none rounded-full px-10 md:px-12 py-3 md:py-4 text-base md:text-lg font-bold uppercase tracking-widest text-white/40 transition-all duration-300 data-[state=active]:text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#c4f70e]/20 data-[state=active]:to-cyan-500/10 data-[state=active]:shadow-[inset_0_0_20px_rgba(196,247,14,0.3),0_0_30px_rgba(196,247,14,0.15)] data-[state=active]:border data-[state=active]:border-[#c4f70e]/30 hover:text-white/60 hover:bg-white/5"
+                className="relative flex-1 md:flex-none rounded-full px-10 md:px-12 py-3 md:py-4 text-base md:text-lg font-bold uppercase tracking-widest text-white/40 transition-all duration-300 data-[state=active]:text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#c4f70e]/20 data-[state=active]:to-cyan-500/10 data-[state=active]:shadow-[inset_0_0_20px_rgba(196,247,14,0.3),0_0_30px_rgba(196,247,14,0.15)] data-[state=active]:border data-[state=active]:border-[#c4f70e]/30 hover:text-white/60 hover:bg-white/5"
               >
-                {activeTab === "analytics" ? (
-                  <ShinyText
-                    text="Analytics"
-                    speed={3}
-                    color="#c4f70e"
-                    shineColor="#ffffff"
-                    className="font-bold"
-                  />
-                ) : (
-                  "Analytics"
-                )}
+                <span className="relative inline-flex items-center justify-center">
+                  {activeTab === "analytics" ? (
+                    <ShinyText
+                      text="Analytics"
+                      speed={3}
+                      color="#c4f70e"
+                      shineColor="#ffffff"
+                      className="font-bold"
+                    />
+                  ) : (
+                    "Analytics"
+                  )}
+                  <span className="absolute -top-4 -right-10 rounded-full bg-[#c4f70e] px-2 py-0.5 text-[9px] font-bold tracking-[0.2em] text-black shadow-[0_0_12px_rgba(196,247,14,0.35)]">
+                    NEW
+                  </span>
+                </span>
               </TabsTrigger>
             )}
           </TabsList>
