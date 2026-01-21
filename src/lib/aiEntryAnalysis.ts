@@ -7,7 +7,6 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { TokenJourney, EntryAnalysis } from './tokenJourney';
-import { logAiAnalysis, logMarketSnapshot } from './analysisLogger';
 
 // ============================================
 // TYPES
@@ -126,46 +125,6 @@ export async function generateAiEntryAnalysis(input: AiAnalysisInput): Promise<A
       strategy: parsed.strategy || undefined,
       _raw: text,
     };
-
-    // Log AI analysis to database
-    const decision = analysis.signal === 'strong_buy' || analysis.signal === 'buy' ? 'ENTER' :
-                     analysis.signal === 'watch' ? 'WATCH' : 'PASS';
-    const confidence = analysis.score / 100;
-
-    logAiAnalysis({
-      mint: journey.mint,
-      symbol: journey.symbol,
-      triggerType: 'RETRACEMENT',
-      decision: decision as 'ENTER' | 'PASS' | 'WAIT' | 'WATCH',
-      confidence,
-      reasoning: aiResult.reasoning,
-      marketData: {
-        price: journey.currentPrice,
-        marketCap: journey.currentMcap,
-        liquidity: journey.currentLiquidity ?? undefined,
-      },
-      scoreBreakdown: {
-        entry_score: analysis.score,
-        reasons: analysis.reasons,
-        warnings: analysis.warnings,
-      },
-      journeyMetrics: {
-        pump_multiple: journey.signals.pumpMultiple,
-        drawdown_percent: journey.signals.drawdownPercent,
-      },
-    }).catch(err => console.error('[AI] Failed to log analysis:', err));
-
-    // Also log market snapshot at analysis time
-    logMarketSnapshot({
-      mint: journey.mint,
-      symbol: journey.symbol,
-      snapshotType: 'AI_ANALYSIS',
-      marketData: {
-        price: journey.currentPrice,
-        marketCap: journey.currentMcap,
-        liquidity: journey.currentLiquidity ?? undefined,
-      },
-    }).catch(err => console.error('[AI] Failed to log market snapshot:', err));
 
     return aiResult;
   } catch (error) {
