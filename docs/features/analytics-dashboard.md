@@ -12,6 +12,15 @@ Provide version-level analytics and comparisons for agent performance over time,
 - Performance comparison charts
 
 ## Changelog
+- 2026-01-16: Agent metrics chart now filters to the selected version data only.
+- 2026-01-16: Chart now remounts on version changes and uses per-version line colors with stronger selected emphasis.
+- 2026-01-16: Reduced stat card corner radius and added a green increase state during count-up animations.
+- 2026-01-16: Moved the desktop metric selector into the chart header at the top-right edge.
+- 2026-01-16: Shifted the stat column to 28% width, increased chart height, and added left/bottom chart borders.
+- 2026-01-16: Removed stat card borders and shifted the chart to two-thirds width so the stat column has more space.
+- 2026-01-16: Tightened stat card padding and gaps while increasing chart height.
+- 2026-01-16: Stacked stat cards vertically and tightened padding with smaller values.
+- 2026-01-16: Tightened stat card height, reduced glow overflow, and scaled down value text.
 - 2026-01-16: Summary labels now use brighter gray and heavier weight.
 - 2026-01-16: Summary column now shows label + value on one line with larger typography.
 - 2026-01-16: Stacked the summary metrics to the right of the chart on desktop, giving them a quarter of the width.
@@ -50,3 +59,5 @@ Provide version-level analytics and comparisons for agent performance over time,
 - 2026-01-15: Agent metrics chart now uses thicker lines with visible data point dots.
 - 2026-01-15: Agent metrics chart line thickness increased again and X-axis preserves the first/last date labels.
 - 2026-01-15: Agent metrics chart uses lighter brand green lines to keep dots prominent.
+- 2026-01-15: Mobile summary stats now render two per row instead of a single column.
+- 2026-01-15: Metric selector now sits on the Agent Metrics title row instead of overlaying the chart.

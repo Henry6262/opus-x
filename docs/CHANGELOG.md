@@ -16,6 +16,16 @@ All notable changes to Opus-X are documented here.
 - Analytics desktop summary metrics now stack to the right of the chart and use about a quarter of the width.
 - Analytics summary column now uses single-line label/value rows with larger text.
 - Analytics summary labels now use a brighter gray and heavier weight.
+- Analytics stat cards now use smaller values with reduced glow overflow and tighter height.
+- Analytics stat cards now stack vertically with tighter padding and smaller values.
+- Analytics stat cards now use tighter gaps and padding, with a taller chart.
+- Analytics stat cards are now borderless and the chart shrank to give them more space.
+- Analytics stat column width trimmed and the chart gained left/bottom borders plus extra height.
+- Analytics stat cards now use tighter corners and show a green arrow during count-up increases.
+- Analytics agent metrics chart now filters to the selected version data only.
+- Analytics version chart now remounts on version changes and uses per-version line colors.
+- Analytics desktop metric selector now sits at the chart’s top-right edge.
+- AI analysis logging now reports Supabase error details for easier debugging.
 - Trade Outcomes mobile toggle buttons now use larger text and padding.
 - Analytics tab trigger now shows a small NEW badge.
 - Analytics NEW badge shifted further right.
@@ -82,6 +92,8 @@ All notable changes to Opus-X are documented here.
 - Analytics chart now uses thicker lines with visible data point dots.
 - Analytics chart now uses thicker lines and preserves the first/last date labels on the X-axis.
 - Analytics chart line weight reduced and brand green toned down to let dots pop.
+- Analytics summary stats now render two per row on mobile.
+- Analytics metric selector now sits on the Agent Metrics title row.
 
 ## 2026-01-14
 - Transaction History now sits alongside Live Activity and Active Positions in the top desktop rail as its own collapsible column, eliminating the bottom-row copy.

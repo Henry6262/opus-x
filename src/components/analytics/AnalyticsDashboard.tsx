@@ -80,17 +80,21 @@ interface MetricSelectorProps {
 
 function MetricSelector({ selectedMetric, onChange, compact = false, className }: MetricSelectorProps) {
   return (
-    <div className={cn("flex flex-col gap-2", compact && "gap-1", className)}>
-      {!compact && (
-        <label
-          className={cn(
-            "font-semibold uppercase text-white/40",
-            compact ? "text-[9px] tracking-[0.25em]" : "text-xs tracking-widest"
-          )}
-        >
-          Metric
-        </label>
+    <div
+      className={cn(
+        "flex flex-col gap-2",
+        compact && "flex-row items-center gap-2",
+        className
       )}
+    >
+      <label
+        className={cn(
+          "font-semibold uppercase text-white/40",
+          compact ? "text-[9px] tracking-[0.25em]" : "text-xs tracking-widest"
+        )}
+      >
+        Metric
+      </label>
       <div className="relative">
         <select
           value={selectedMetric}
@@ -134,11 +138,16 @@ interface VersionChartProps {
 }
 
 function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedMetric }: VersionChartProps) {
+  const displayVersions = useMemo(() => {
+    if (!selectedVersionId) return versions;
+    return versions.filter((version) => version.id === selectedVersionId);
+  }, [versions, selectedVersionId]);
+
   // Build chart data - combine all version data by date
   const chartData = useMemo(() => {
     const dateMap = new Map<string, Record<string, number | string>>();
 
-    versions.forEach((version, idx) => {
+    displayVersions.forEach((version) => {
       const metrics = metricsByVersion[version.id] || [];
       metrics.forEach((m) => {
         const existing = dateMap.get(m.date) || { date: m.date };
@@ -156,19 +165,19 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
     return Array.from(dateMap.values()).sort((a, b) =>
       new Date(a.date as string).getTime() - new Date(b.date as string).getTime()
     );
-  }, [versions, metricsByVersion, selectedMetric]);
+  }, [displayVersions, metricsByVersion, selectedMetric]);
 
   // Build chart config
   const chartConfig = useMemo(() => {
     const config: ChartConfig = {};
-    versions.forEach((version) => {
+    displayVersions.forEach((version, idx) => {
       config[version.id] = {
         label: version.versionName || version.versionCode,
-        color: "#c4f70e",
+        color: VERSION_COLORS[idx % VERSION_COLORS.length].stroke,
       };
     });
     return config;
-  }, [versions]);
+  }, [displayVersions]);
 
   if (chartData.length === 0) {
     return (
@@ -183,8 +192,12 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
   }
 
   return (
-    <ChartContainer config={chartConfig} className="h-[230px] w-full md:h-[190px]">
-      <LineChart data={chartData} margin={{ top: 6, right: 8, left: 8, bottom: 0 }}>
+    <ChartContainer config={chartConfig} className="h-[230px] w-full md:h-[250px]">
+      <LineChart
+        key={`${selectedVersionId ?? "all"}-${selectedMetric}`}
+        data={chartData}
+        margin={{ top: 6, right: 8, left: 8, bottom: 0 }}
+      >
         <CartesianGrid vertical={false} horizontal={false} />
         <XAxis
           dataKey="date"
@@ -212,9 +225,9 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
             />
           }
         />
-        {versions.map((version) => {
+        {displayVersions.map((version, idx) => {
           const isSelected = version.id === selectedVersionId;
-          const lineColor = "#c4f70e";
+          const lineColor = VERSION_COLORS[idx % VERSION_COLORS.length].stroke;
 
           return (
             <Line
@@ -223,7 +236,7 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
               type="monotone"
               stroke={lineColor}
               strokeWidth={isSelected ? 3 : 2}
-              strokeOpacity={isSelected ? 0.75 : 0.35}
+              strokeOpacity={isSelected ? 0.9 : 0.2}
               dot={{ r: 4 }}
               activeDot={{ r: 6 }}
             />
@@ -355,7 +368,7 @@ export function AnalyticsDashboard() {
       <div className="w-full overflow-y-auto px-2 py-6 space-y-6 md:p-6">
         {/* Chart Section */}
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-xl font-bold text-white flex items-center gap-3">
                 <Activity className="w-6 h-6 text-[#c4f70e]" />
@@ -365,7 +378,8 @@ export function AnalyticsDashboard() {
             <MetricSelector
               selectedMetric={selectedMetric}
               onChange={setSelectedMetric}
-              className="hidden md:flex"
+              compact
+              className="shrink-0"
             />
           </div>
 
@@ -376,7 +390,7 @@ export function AnalyticsDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="relative flex-1 rounded-2xl bg-white/[0.02] backdrop-blur-sm overflow-hidden md:w-3/4"
+              className="relative flex-1 rounded-2xl bg-white/[0.02] backdrop-blur-sm overflow-hidden md:w-[72%] md:border-l md:border-b md:border-white/10"
             >
               <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-2">
                 {versions.map((version) => {
@@ -395,12 +409,6 @@ export function AnalyticsDashboard() {
                   );
                 })}
               </div>
-              <MetricSelector
-                selectedMetric={selectedMetric}
-                onChange={setSelectedMetric}
-                compact
-                className="absolute right-4 top-4 z-10 md:hidden"
-              />
               <div className="p-3 md:p-4">
                 {comparisonLoading ? (
                   <div className="relative flex items-center justify-center h-[200px] overflow-hidden rounded-xl md:h-[170px]">
@@ -431,7 +439,7 @@ export function AnalyticsDashboard() {
 
             {/* Stats Cards - Animated Glassmorphic Design */}
             {selectedSummary && (
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+              <div className="grid grid-cols-2 gap-2 md:flex md:flex-col md:gap-2 md:w-[28%]">
                 <StatCard
                   label="Total PnL"
                   value={selectedSummary.totalPnlSol}

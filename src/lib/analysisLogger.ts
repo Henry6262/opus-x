@@ -53,7 +53,12 @@ export async function logAiAnalysis(params: AiAnalysisLog) {
         });
 
         if (error) {
-            console.error('Error logging AI analysis:', error);
+            console.error('Error logging AI analysis:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code,
+            });
         }
     } catch (err) {
         console.error('Exception logging AI analysis:', err);
@@ -99,7 +104,12 @@ export async function logMarketSnapshot(params: {
         });
 
         if (error) {
-            console.error('Error logging market snapshot:', error);
+            console.error('Error logging market snapshot:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code,
+            });
         }
     } catch (err) {
         console.error('Exception logging market snapshot:', err);

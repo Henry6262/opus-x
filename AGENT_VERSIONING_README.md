@@ -230,7 +230,8 @@ GET    /api/versions                    - List all versions
 GET    /api/versions/active             - Get active version
 POST   /api/versions                    - Create new version
 PUT    /api/versions/:id/activate       - Activate a version
-GET    /api/versions/:id/metrics        - Get metrics for version
+GET    /api/versions/:id/metrics        - Get metrics for version (bucket=1d|3h)
+GET    /api/versions/summary            - Get summary totals for versions
 GET    /api/versions/compare            - Compare multiple versions (optional)
 ```
 
@@ -279,6 +280,21 @@ await versioningApi.activateVersion(versionId);
 // Get metrics
 const metrics = await versioningApi.getVersionMetrics(
   versionId,
+  '2024-01-01',
+  '2024-01-31'
+);
+
+// Optional: request 3-hour buckets
+const metrics3h = await versioningApi.getVersionMetrics(
+  versionId,
+  '2024-01-01',
+  '2024-01-31',
+  '3h'
+);
+
+// Summary totals for multiple versions
+const summary = await versioningApi.getVersionSummary(
+  ['uuid1', 'uuid2'],
   '2024-01-01',
   '2024-01-31'
 );

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { LucideIcon } from "lucide-react";
 import { CountUp } from "@/components/animations/CountUp";
 import { cn } from "@/lib/utils";
@@ -32,20 +33,35 @@ export function StatCard({
     delay = 0,
     glowColor = "rgba(196, 247, 14, 0.4)",
 }: StatCardProps) {
+    const [isAnimating, setIsAnimating] = useState(false);
+    const [isIncreasing, setIsIncreasing] = useState(false);
+    const prevValueRef = useRef(value);
+    const isInitialRef = useRef(true);
+
+    useEffect(() => {
+        if (isInitialRef.current) {
+            isInitialRef.current = false;
+            setIsIncreasing(value > 0);
+        } else if (value !== prevValueRef.current) {
+            setIsIncreasing(value > prevValueRef.current);
+        }
+        prevValueRef.current = value;
+    }, [value]);
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ delay, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-            whileHover={{ scale: 1.02, y: -2 }}
+            whileHover={{ scale: 1.015, y: -1 }}
             className={cn(
-                "group relative overflow-hidden rounded-2xl cursor-default",
+                "group relative overflow-hidden rounded-xl cursor-default",
                 className
             )}
         >
             {/* Animated gradient border */}
             <motion.div
-                className="absolute -inset-[1px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                className="absolute -inset-[1px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                 style={{
                     background: `linear-gradient(135deg, ${glowColor}, transparent 40%, transparent 60%, ${glowColor})`,
                 }}
@@ -61,7 +77,7 @@ export function StatCard({
 
             {/* Pulse glow effect */}
             <motion.div
-                className="absolute -inset-4 rounded-3xl blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-700"
+                className="absolute -inset-2 rounded-2xl blur-lg opacity-0 group-hover:opacity-50 transition-opacity duration-700"
                 style={{ background: glowColor }}
                 animate={{
                     scale: [1, 1.1, 1],
@@ -75,12 +91,12 @@ export function StatCard({
             />
 
             {/* Card content */}
-            <div className="relative bg-black/60 backdrop-blur-xl rounded-2xl border border-white/10 group-hover:border-white/20 transition-colors duration-300 p-4 md:p-5">
+            <div className="relative bg-black/60 backdrop-blur-xl rounded-xl transition-colors duration-300 p-2 md:p-2.5">
                 {/* Inner gradient overlay */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/[0.03] via-transparent to-white/[0.01] pointer-events-none" />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/[0.03] via-transparent to-white/[0.01] pointer-events-none" />
 
                 {/* Content */}
-                <div className="relative z-10 flex flex-col gap-2">
+                <div className="relative z-10 flex flex-col gap-1">
                     {/* Label row with icon */}
                     <div className="flex items-center justify-between">
                         <motion.span
@@ -102,11 +118,25 @@ export function StatCard({
 
                     {/* Value */}
                     <div className="flex items-baseline gap-2">
-                        <span className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+                        <span
+                            className={cn(
+                                "text-lg md:text-xl font-bold tracking-tight transition-colors duration-200",
+                                isAnimating && isIncreasing ? "text-emerald-400" : "text-white"
+                            )}
+                        >
                             {prefix}
-                            <CountUp to={value} decimals={decimals} duration={1.5} />
+                            <CountUp
+                                to={value}
+                                decimals={decimals}
+                                duration={1.5}
+                                onStart={() => setIsAnimating(true)}
+                                onEnd={() => setIsAnimating(false)}
+                            />
                             {suffix}
                         </span>
+                        {isAnimating && isIncreasing && (
+                            <span className="text-xs font-semibold text-emerald-400">▲</span>
+                        )}
 
                         {/* Trend indicator */}
                         {trend && trendValue && (

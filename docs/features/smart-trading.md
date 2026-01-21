@@ -17,6 +17,7 @@ Mirror trades from curated "smart money" wallets on Solana, managing entries, po
 - Trading config summary (targets, stop loss, slippage, limits)
 
 ## Changelog
+- 2026-01-16: AI analysis logging now reports Supabase error details for easier debugging.
 - 2026-01-16: Removed the token performance rankings and summary stats blocks from Trading Analytics for the initial release.
 - 2026-01-16: Nudged the Analytics NEW badge further up and right again.
 - 2026-01-16: Shifted the Analytics NEW badge up and further right.
