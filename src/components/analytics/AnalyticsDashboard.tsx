@@ -75,22 +75,24 @@ interface MetricSelectorProps {
   selectedMetric: MetricType;
   onChange: (metric: MetricType) => void;
   compact?: boolean;
+  labelOnTop?: boolean;
   className?: string;
 }
 
-function MetricSelector({ selectedMetric, onChange, compact = false, className }: MetricSelectorProps) {
+function MetricSelector({ selectedMetric, onChange, compact = false, labelOnTop = false, className }: MetricSelectorProps) {
   return (
     <div
       className={cn(
         "flex flex-col gap-2",
-        compact && "flex-row items-center gap-2",
+        compact && !labelOnTop && "flex-row items-center gap-2",
         className
       )}
     >
       <label
         className={cn(
           "font-semibold uppercase text-white/40",
-          compact ? "text-[9px] tracking-[0.25em]" : "text-xs tracking-widest"
+          compact ? "text-[9px] tracking-[0.25em]" : "text-xs tracking-widest",
+          labelOnTop && "text-center"
         )}
       >
         Metric
@@ -520,7 +522,7 @@ export function AnalyticsDashboard() {
               <Activity className="w-5 h-5 text-[#c4f70e]" />
               Agent Metrics
             </h3>
-            <div className="flex items-end justify-center gap-3">
+            <div className="flex items-end justify-center gap-4">
               <TimeframeSelector
                 selectedBucket={bucket}
                 onChange={setBucket}
@@ -530,6 +532,7 @@ export function AnalyticsDashboard() {
                 selectedMetric={selectedMetric}
                 onChange={setSelectedMetric}
                 compact
+                labelOnTop
               />
             </div>
           </div>

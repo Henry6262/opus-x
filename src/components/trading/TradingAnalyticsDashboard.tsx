@@ -14,7 +14,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Radar, Target, Trophy, ExternalLink, TrendingUp, TrendingDown, Clock, Coins, ArrowDownRight, ArrowUpRight, CheckCircle2 } from 'lucide-react';
-import { usePositions } from '@/features/smart-trading/context';
+import { usePositions, useDashboardStats } from '@/features/smart-trading/context';
 import { PulseRing, MetricBar, StatRow } from './OutcomePrimitives';
 import { CountUp } from '@/components/animations/CountUp';
 import { TransactionDrawer } from '@/features/smart-trading/components/TransactionDrawer';
@@ -62,23 +62,32 @@ export function TradingAnalyticsDashboard() {
   // Use the same data source as HistoryPanel for consistency
   const { positions, history, isLoading } = usePositions();
 
+  // Use backend stats as SINGLE SOURCE OF TRUTH for PnL (Birdeye cache)
+  const { dashboardStats } = useDashboardStats();
+
   // Cast to extended type since WebSocket context adds extra fields
   const allPositions = useMemo(() => [...positions, ...history] as ExtendedPosition[], [positions, history]);
 
-  // Calculate analytics from combined position data
+  // Calculate analytics - use backend stats for authoritative PnL values
   const analytics = useMemo(() => {
     const totalTrades = allPositions.length;
-    const openPositions = positions.length;
+    const openPositionsCount = positions.length;
     const closedPositions = history.length;
 
     const totalInvestedSol = allPositions.reduce((sum, p) => sum + (p.entryAmountSol || 0), 0);
-    const totalPnlSol = allPositions.reduce((sum, p) => sum + (p.realizedPnlSol || 0), 0);
+
+    // USE BACKEND STATS for Total PnL (single source of truth from Birdeye cache)
+    // This ensures consistency with TraderProfileCard which also uses backend stats
+    const totalPnlSol = dashboardStats?.performance?.netPnlSol ??
+      allPositions.reduce((sum, p) => sum + (p.realizedPnlSol || 0), 0);
     const totalPnlPct = totalInvestedSol > 0 ? (totalPnlSol / totalInvestedSol) * 100 : 0;
 
-    // Win rate - only count closed positions
-    const closedWithPnl = history.filter(p => p.realizedPnlSol !== undefined);
-    const profitableTrades = closedWithPnl.filter(p => (p.realizedPnlSol || 0) > 0);
-    const winRate = closedWithPnl.length > 0 ? (profitableTrades.length / closedWithPnl.length) * 100 : 0;
+    // USE BACKEND STATS for Win Rate (single source of truth)
+    const winRate = dashboardStats?.performance?.winRate ?? (() => {
+      const closedWithPnl = history.filter(p => p.realizedPnlSol !== undefined);
+      const profitableTrades = closedWithPnl.filter(p => (p.realizedPnlSol || 0) > 0);
+      return closedWithPnl.length > 0 ? (profitableTrades.length / closedWithPnl.length) * 100 : 0;
+    })();
 
     // Average multiplier (from peak P&L)
     const avgMultiplier = totalTrades > 0
@@ -95,10 +104,12 @@ export function TradingAnalyticsDashboard() {
         }, 0) / closedWithTime.length
       : 0;
 
-    // Best and worst trades
-    const bestTradePct = allPositions.length > 0
-      ? Math.max(...allPositions.map(p => p.peakPnlPct || 0))
-      : 0;
+    // Best trade from backend stats or fallback to local calculation
+    const bestTradePct = dashboardStats?.performance?.largestWin ?? (
+      allPositions.length > 0
+        ? Math.max(...allPositions.map(p => p.peakPnlPct || 0))
+        : 0
+    );
 
     // TP hit rates - only from closed positions
     const tp1HitRate = closedPositions > 0
@@ -110,8 +121,8 @@ export function TradingAnalyticsDashboard() {
     const tp3HitRate = 0; // Position type doesn't have target3
 
     return {
-      totalTrades,
-      openPositions,
+      totalTrades: dashboardStats?.performance?.totalTrades ?? totalTrades,
+      openPositions: openPositionsCount,
       closedPositions,
       totalInvestedSol,
       totalPnlSol,
@@ -124,7 +135,7 @@ export function TradingAnalyticsDashboard() {
       tp2HitRate,
       tp3HitRate,
     };
-  }, [allPositions, positions, history]);
+  }, [allPositions, positions, history, dashboardStats]);
 
   // Transform positions to TokenPerformance format for top trades display
   const tokenPerformance: TokenPerformance[] = useMemo(() => {

@@ -5283,7 +5283,8 @@ button:focus-visible {
   .transaction-drawer:not(.collapsed) {
     top: auto;
     bottom: 0;
-    height: 80vh;
+    height: auto;
+    max-height: 80vh;
     animation: tx-drawer-slide-up 400ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
