@@ -143,7 +143,10 @@ interface DevprintHistoryItem {
   unrealized_pnl_pct: number;
   peak_price: number;
   peak_pnl_pct: number;
-  targets_hit: string[];
+  targets_hit: unknown[]; // Array of target hit objects
+  tp1_hit: boolean;
+  tp2_hit: boolean;
+  tp3_hit: boolean;
   realized_pnl_sol: number;
   status: "open" | "closed" | "pending";
   closed_at: string | null;
@@ -443,11 +446,11 @@ function mapDevprintHistoryItem(h: DevprintHistoryItem): Position & { peakPnlPct
 
     target1Price: h.entry_price * 2,
     target1Percent: 100,
-    target1Hit: h.targets_hit.includes("TP1"),
+    target1Hit: h.tp1_hit,
     target1TxSig: null,
 
     target2Price: h.entry_price * 3,
-    target2Hit: h.targets_hit.includes("TP2"),
+    target2Hit: h.tp2_hit,
     target2TxSig: null,
 
     stopLossPrice: h.entry_price * 0.5,
