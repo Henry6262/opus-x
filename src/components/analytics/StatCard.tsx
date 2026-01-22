@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, ReactNode } from "react";
 import { LucideIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CountUp } from "@/components/animations/CountUp";
@@ -12,6 +12,7 @@ interface StatCardProps {
     value: number;
     prefix?: string;
     suffix?: string;
+    suffixIcon?: ReactNode;
     decimals?: number;
     icon?: LucideIcon;
     trend?: "up" | "down" | "neutral";
@@ -27,6 +28,7 @@ export function StatCard({
     value,
     prefix = "",
     suffix = "",
+    suffixIcon,
     decimals = 1,
     icon: Icon,
     trend,
@@ -133,6 +135,7 @@ export function StatCard({
                                 onEnd={() => setIsAnimating(false)}
                             />
                             {suffix}
+                            {suffixIcon}
                         </span>
                         {isAnimating && isIncreasing && (
                             <span className="text-xs font-semibold text-emerald-400">▲</span>
@@ -190,13 +193,15 @@ export function StatCard({
 }
 
 // Preset variants for common metric types
-export function PnLStatCard({ value, ...props }: Omit<StatCardProps, "label" | "prefix" | "suffix" | "decimals">) {
+import { SolIcon } from "@/components/SolIcon";
+
+export function PnLStatCard({ value, ...props }: Omit<StatCardProps, "label" | "prefix" | "suffix" | "suffixIcon" | "decimals">) {
     return (
         <StatCard
             label="Total PnL"
             value={value}
             prefix={value >= 0 ? "+" : ""}
-            suffix=" SOL"
+            suffixIcon={<SolIcon size={16} className="ml-1.5" />}
             decimals={2}
             glowColor={value >= 0 ? "rgba(34, 197, 94, 0.4)" : "rgba(239, 68, 68, 0.4)"}
             {...props}
