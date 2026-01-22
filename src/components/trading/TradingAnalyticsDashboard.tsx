@@ -13,12 +13,13 @@
 
 import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Radar, Target, Trophy, ExternalLink } from 'lucide-react';
+import { Radar, Target, Trophy, ExternalLink, TrendingUp, TrendingDown, Clock, Coins } from 'lucide-react';
 import { subDays } from 'date-fns';
 import { useTradingAnalytics } from '@/hooks/useTradingAnalytics';
 import { PulseRing, MetricBar, StatRow } from './OutcomePrimitives';
 import { CountUp } from '@/components/animations/CountUp';
 import { TransactionDrawer } from '@/features/smart-trading/components/TransactionDrawer';
+import { TokenAvatar } from './TokenAvatar';
 import { cn } from '@/lib/utils';
 import type { TokenPerformance } from '@/types/trading';
 
@@ -283,63 +284,110 @@ export function TradingAnalyticsDashboard() {
               </div>
             ) : (
               <>
-                {/* Top Performers List */}
-                <div className="space-y-3">
-                  {topPerformers.map((token, idx) => (
-                    <motion.div
-                      key={token.mint}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 + idx * 0.1 }}
-                      onClick={() => setSelectedToken(token)}
-                      className="flex items-center gap-4 rounded-xl bg-white/[0.03] border border-white/10 p-4 cursor-pointer hover:bg-white/[0.06] hover:border-white/20 transition-all group"
-                    >
-                      {/* Rank Badge */}
-                      <div className={cn(
-                        "flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm",
-                        idx === 0 && "bg-yellow-500/20 text-yellow-400",
-                        idx === 1 && "bg-gray-400/20 text-gray-300",
-                        idx === 2 && "bg-orange-600/20 text-orange-400"
-                      )}>
-                        {idx === 0 ? <Trophy className="w-4 h-4" /> : `#${idx + 1}`}
-                      </div>
+                {/* Top Performers Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {topPerformers.map((token, idx) => {
+                    const isProfit = token.totalPnlSol >= 0;
+                    const rankColors = [
+                      { bg: 'from-yellow-500/20 to-amber-600/10', border: 'border-yellow-500/30', badge: 'bg-yellow-500/20 text-yellow-400' },
+                      { bg: 'from-gray-400/15 to-slate-500/10', border: 'border-gray-400/25', badge: 'bg-gray-400/20 text-gray-300' },
+                      { bg: 'from-orange-600/15 to-amber-700/10', border: 'border-orange-500/25', badge: 'bg-orange-600/20 text-orange-400' },
+                    ];
+                    const rankStyle = rankColors[idx] || rankColors[2];
 
-                      {/* Token Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-white truncate">${token.ticker}</span>
-                          <span className="text-xs text-white/40 truncate">{token.tokenName}</span>
+                    return (
+                      <motion.div
+                        key={token.mint}
+                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ delay: 0.1 + idx * 0.1, type: 'spring', stiffness: 200 }}
+                        onClick={() => setSelectedToken(token)}
+                        className={cn(
+                          "relative overflow-hidden rounded-2xl border p-4 cursor-pointer transition-all duration-300",
+                          "bg-gradient-to-br hover:scale-[1.02] hover:shadow-xl",
+                          rankStyle.bg,
+                          rankStyle.border,
+                          "hover:border-white/30 group"
+                        )}
+                      >
+                        {/* Rank Badge - Top Right */}
+                        <div className={cn(
+                          "absolute top-3 right-3 flex items-center justify-center w-7 h-7 rounded-full font-bold text-xs",
+                          rankStyle.badge
+                        )}>
+                          {idx === 0 ? <Trophy className="w-3.5 h-3.5" /> : `#${idx + 1}`}
                         </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-white/50">
-                          <span>Invested: {token.investedSol.toFixed(3)} SOL</span>
-                          {token.holdTimeMinutes && (
-                            <span>Hold: {Math.round(token.holdTimeMinutes)}m</span>
+
+                        {/* Token Image & Name Row */}
+                        <div className="flex items-center gap-3 mb-4">
+                          <TokenAvatar
+                            symbol={token.ticker}
+                            mint={token.mint}
+                            size={52}
+                            rounded="xl"
+                            className="ring-2 ring-white/10"
+                          />
+                          <div className="flex-1 min-w-0 pr-8">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-white text-base truncate">${token.ticker}</span>
+                            </div>
+                            <p className="text-xs text-white/40 truncate mt-0.5">{token.tokenName}</p>
+                          </div>
+                        </div>
+
+                        {/* PnL Display - Prominent */}
+                        <div className={cn(
+                          "rounded-xl p-3 mb-3",
+                          isProfit ? "bg-emerald-500/10" : "bg-red-500/10"
+                        )}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              {isProfit ? (
+                                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                              ) : (
+                                <TrendingDown className="w-4 h-4 text-red-400" />
+                              )}
+                              <span className="text-xs font-medium text-white/50">P&L</span>
+                            </div>
+                            <div className={cn(
+                              "text-lg font-bold",
+                              isProfit ? "text-emerald-400" : "text-red-400"
+                            )}>
+                              {isProfit ? "+" : ""}{token.totalPnlSol.toFixed(4)} SOL
+                            </div>
+                          </div>
+                          <div className={cn(
+                            "text-right text-sm font-semibold mt-0.5",
+                            isProfit ? "text-emerald-400/80" : "text-red-400/80"
+                          )}>
+                            {isProfit ? "+" : ""}{token.pnlPct.toFixed(1)}%
+                          </div>
+                        </div>
+
+                        {/* Stats Row */}
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1 text-white/50">
+                            <Coins className="w-3 h-3" />
+                            <span>{token.investedSol.toFixed(3)} SOL</span>
+                          </div>
+                          {token.holdTimeMinutes !== null && (
+                            <div className="flex items-center gap-1 text-white/50">
+                              <Clock className="w-3 h-3" />
+                              <span>{Math.round(token.holdTimeMinutes)}m</span>
+                            </div>
                           )}
                         </div>
-                      </div>
 
-                      {/* PnL */}
-                      <div className="text-right">
-                        <div className={cn(
-                          "text-lg font-bold",
-                          token.totalPnlSol >= 0 ? "text-emerald-400" : "text-red-400"
-                        )}>
-                          {token.totalPnlSol >= 0 ? "+" : ""}{token.totalPnlSol.toFixed(4)} SOL
+                        {/* Hover indicator */}
+                        <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ExternalLink className="w-4 h-4 text-[#c4f70e]" />
                         </div>
-                        <div className={cn(
-                          "text-xs font-medium",
-                          token.pnlPct >= 0 ? "text-emerald-400/70" : "text-red-400/70"
-                        )}>
-                          {token.pnlPct >= 0 ? "+" : ""}{token.pnlPct.toFixed(1)}%
-                        </div>
-                      </div>
 
-                      {/* View TX indicator */}
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ExternalLink className="w-4 h-4 text-[#c4f70e]" />
-                      </div>
-                    </motion.div>
-                  ))}
+                        {/* Subtle shine effect on hover */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 pointer-events-none" />
+                      </motion.div>
+                    );
+                  })}
                 </div>
 
                 {/* Stats Summary */}

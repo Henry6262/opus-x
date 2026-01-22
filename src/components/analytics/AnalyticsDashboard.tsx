@@ -133,9 +133,39 @@ interface TimeframeSelectorProps {
   selectedBucket: '1d' | '3h';
   onChange: (bucket: '1d' | '3h') => void;
   className?: string;
+  mobileDropdown?: boolean;
 }
 
-function TimeframeSelector({ selectedBucket, onChange, className }: TimeframeSelectorProps) {
+function TimeframeSelector({ selectedBucket, onChange, className, mobileDropdown = false }: TimeframeSelectorProps) {
+  if (mobileDropdown) {
+    return (
+      <div className={cn("flex flex-col gap-2", className)}>
+        <label className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/40">
+          Timeframe
+        </label>
+        <div className="relative">
+          <select
+            value={selectedBucket}
+            onChange={(event) => onChange(event.target.value as '1d' | '3h')}
+            className={cn(
+              "appearance-none rounded-lg border border-white/10 bg-black/40 cursor-pointer",
+              "px-2 py-1 pr-7 text-[11px] font-semibold",
+              "text-white/80",
+              "shadow-[0_10px_20px_rgba(0,0,0,0.2)] transition",
+              "focus:border-[#c4f70e]/40 focus:outline-none"
+            )}
+          >
+            <option value="3h" className="bg-black text-white">3-Hour</option>
+            <option value="1d" className="bg-black text-white">Daily</option>
+          </select>
+          <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#c4f70e]">
+            ▾
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("flex gap-1 rounded-full bg-white/5 p-1", className)}>
       <button
@@ -460,7 +490,8 @@ export function AnalyticsDashboard() {
       <div className="w-full overflow-y-auto px-2 py-6 space-y-6 md:p-6">
         {/* Chart Section */}
         <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
+          {/* Desktop Header */}
+          <div className="hidden md:flex items-center justify-between gap-3">
             <div>
               <h3 className="text-xl font-bold text-white flex items-center gap-3">
                 <Activity className="w-6 h-6 text-[#c4f70e]" />
@@ -478,6 +509,26 @@ export function AnalyticsDashboard() {
                 onChange={setSelectedMetric}
                 compact
                 className="shrink-0"
+              />
+            </div>
+          </div>
+
+          {/* Mobile Header - Title and dropdown selectors */}
+          <div className="flex flex-col gap-3 md:hidden">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Activity className="w-5 h-5 text-[#c4f70e]" />
+              Agent Metrics
+            </h3>
+            <div className="flex items-end gap-3">
+              <TimeframeSelector
+                selectedBucket={bucket}
+                onChange={setBucket}
+                mobileDropdown
+              />
+              <MetricSelector
+                selectedMetric={selectedMetric}
+                onChange={setSelectedMetric}
+                compact
               />
             </div>
           </div>
