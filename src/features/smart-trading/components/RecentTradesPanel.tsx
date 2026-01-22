@@ -36,6 +36,7 @@ interface SelectedTrade {
 
 export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
     const t = useTranslations("dashboard");
+    const tHistory = useTranslations("history");
     const { history } = usePositions();
     const [isExpanded, setIsExpanded] = useState(true);
     const [selectedTrade, setSelectedTrade] = useState<SelectedTrade | null>(null);
@@ -80,7 +81,7 @@ export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
                     className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                 >
                     <Trophy className="w-7 h-7 text-[#c4f70e]" />
-                    <span className="text-lg font-semibold text-white">Trades</span>
+                    <span className="text-lg font-semibold text-white">{tHistory("trades")}</span>
                     <span className="px-2 py-0.5 text-[11px] font-bold tabular-nums rounded-full bg-[#c4f70e]/20 text-[#c4f70e]">
                         {closedTrades.length}
                     </span>
@@ -88,10 +89,10 @@ export function RecentTradesPanel({ maxTrades = 10 }: RecentTradesProps) {
                     {closedTrades.length > 0 && (
                         <div className="flex items-center gap-1.5 ml-1">
                             <span className="text-[10px] font-bold tabular-nums text-green-400">
-                                {wins}W
+                                {wins}{tHistory("winsAbbrev")}
                             </span>
                             <span className="text-[10px] font-bold tabular-nums text-red-400">
-                                {losses}L
+                                {losses}{tHistory("lossesAbbrev")}
                             </span>
                         </div>
                     )}

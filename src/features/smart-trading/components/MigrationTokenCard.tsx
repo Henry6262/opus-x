@@ -222,23 +222,23 @@ interface MigrationTokenCardProps {
   ranked: RankedMigration;
 }
 
-const AI_DECISION_CONFIG: Record<AiDecision, { color: string; bg: string; label: string; tone: "live" | "warn" | "neutral" }> = {
+const AI_DECISION_CONFIG: Record<AiDecision, { color: string; bg: string; labelKey: "enter" | "wait" | "pass"; tone: "live" | "warn" | "neutral" }> = {
   ENTER: {
     color: "text-green-400",
     bg: "bg-green-500/20",
-    label: "ENTER",
+    labelKey: "enter",
     tone: "live",
   },
   WAIT: {
     color: "text-amber-400",
     bg: "bg-amber-500/20",
-    label: "WAIT",
+    labelKey: "wait",
     tone: "warn",
   },
   PASS: {
     color: "text-white/40",
     bg: "bg-white/10",
-    label: "PASS",
+    labelKey: "pass",
     tone: "neutral",
   },
 };
@@ -246,6 +246,7 @@ const AI_DECISION_CONFIG: Record<AiDecision, { color: string; bg: string; label:
 export function MigrationTokenCard({ ranked }: MigrationTokenCardProps) {
   const t = useTranslations("migration");
   const tTime = useTranslations("time");
+  const tAi = useTranslations("ai");
 
   const [copied, setCopied] = useState(false);
 
@@ -370,7 +371,7 @@ export function MigrationTokenCard({ ranked }: MigrationTokenCardProps) {
               <div className={`px-3 py-1.5 rounded-lg ${decisionConfig.bg} flex items-center gap-2`}>
                 <Brain className={`w-4 h-4 ${decisionConfig.color}`} />
                 <span className={`text-sm font-bold ${decisionConfig.color}`}>
-                  {decisionConfig.label}
+                  {tAi(`decisions.${decisionConfig.labelKey}`)}
                 </span>
                 {ranked.lastAiConfidence && (
                   <span className="text-xs text-white/40">

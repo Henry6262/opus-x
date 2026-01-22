@@ -415,11 +415,19 @@ export function TransactionDrawer({
 
             const historyItems = result?.data || [];
 
-            // Find the position by mint or positionId
+            // Find the position - PRIORITIZE positionId over mint
+            // (There can be multiple positions for the same token/mint)
+            console.log(`[TransactionDrawer] Looking for position - positionId: ${positionId}, tokenMint: ${tokenMint}`);
+            console.log(`[TransactionDrawer] History items count: ${historyItems.length}`);
+
             let position = historyItems.find((item: any) =>
-                (tokenMint && item.mint === tokenMint) ||
-                (positionId && item.id === positionId)
+                // First try exact positionId match
+                (positionId && item.id === positionId) ||
+                // Fall back to mint match only if no positionId provided
+                (!positionId && tokenMint && item.mint === tokenMint)
             );
+
+            console.log(`[TransactionDrawer] Found position in history: ${position ? 'YES' : 'NO'} (id: ${position?.id})`);
 
             // If not found in history, try fetching from positions endpoint (for open positions)
             if (!position && (tokenMint || positionId)) {
@@ -430,8 +438,10 @@ export function TransactionDrawer({
                         const positionsResult = await positionsResponse.json();
                         const positions = positionsResult?.data || [];
                         position = positions.find((item: any) =>
-                            (tokenMint && item.mint === tokenMint) ||
-                            (positionId && item.id === positionId)
+                            // First try exact positionId match
+                            (positionId && item.id === positionId) ||
+                            // Fall back to mint match only if no positionId provided
+                            (!positionId && tokenMint && item.mint === tokenMint)
                         );
                     }
                 } catch (err) {
@@ -575,7 +585,10 @@ export function TransactionDrawer({
     // Calculate totals
     const entryTxs = transactions.filter(tx => tx.type === "entry");
     const sellTxs = transactions.filter(tx => tx.type !== "entry" && tx.type !== "unknown");
-    const totalInvested = entryTxs.reduce((sum, tx) => sum + tx.solAmount, 0);
+    // Use entry transactions if available, otherwise fall back to prop (for positions without buy_signature)
+    const totalInvested = entryTxs.length > 0
+        ? entryTxs.reduce((sum, tx) => sum + tx.solAmount, 0)
+        : (propEntrySolValue || 0);
     const totalReturned = sellTxs.reduce((sum, tx) => sum + tx.solAmount, 0);
 
     // Simple PnL: what we got back minus what we put in

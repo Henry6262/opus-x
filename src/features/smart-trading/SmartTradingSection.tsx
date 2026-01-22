@@ -346,7 +346,7 @@ export function SmartTradingSection() {
                 <div className="text-center py-12">
                   <Zap className="w-12 h-12 mx-auto mb-3 text-white/20" />
                   <p className="text-sm text-white/40">{t("noRecentSignals")}</p>
-                  <p className="text-xs text-white/30 mt-1">Signals will appear when wallets make trades</p>
+                  <p className="text-xs text-white/30 mt-1">{t("signalsWillAppear")}</p>
                 </div>
               ) : (
                 signals.map((signal) => <SignalRow key={signal.id} signal={signal} t={tSignals} />)

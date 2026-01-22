@@ -3536,6 +3536,17 @@ button:focus-visible {
   border-radius: 50%;
 }
 
+/* Total portfolio value pill */
+.portfolio-wallet.collapsed.variant-pump .portfolio-wallet-total-pill {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: #fafafa;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
 /* PnL percentage - compact, secondary */
 .portfolio-wallet.collapsed.variant-pump .portfolio-wallet-pnl {
   font-size: 12px;
@@ -3774,6 +3785,10 @@ button:focus-visible {
     height: 20px !important;
   }
 
+  .portfolio-wallet.collapsed.variant-pump .portfolio-wallet-total-pill {
+    font-size: 11px;
+  }
+
   .portfolio-wallet.collapsed.variant-pump .portfolio-wallet-pnl-animated {
     font-size: 10px;
     padding: 3px 8px;
@@ -3986,6 +4001,10 @@ button:focus-visible {
 }
 
 .portfolio-wallet-total {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
   padding: var(--space-3) 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -3995,13 +4014,15 @@ button:focus-visible {
   font-weight: 700;
   color: white;
   letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
 }
 
 .portfolio-wallet-total-pnl {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-1);
+  margin-top: 0;
   font-size: 14px;
   font-weight: 600;
 }

@@ -279,13 +279,22 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   }, [uiPositions, positionSortBy]);
 
   // Calculate total SOL invested in active positions (entry values)
+  // This matches PortfolioHoldingsPanel calculation exactly
   const totalActiveExposure = useMemo(() => {
-    // Use entry value (value - pnl) for exposure calculation
+    // Use fetchedHoldings entry_sol_value (same as PortfolioHoldingsPanel)
+    if (fetchedHoldings.length > 0) {
+      return fetchedHoldings.reduce((sum, h) => sum + (h.entry_sol_value ?? 0), 0);
+    }
+    // Fallback to uiPositions calculation
     return uiPositions.reduce((sum, p) => {
       const entryValue = p.value - p.pnl;
       return sum + Math.max(0, entryValue);
     }, 0);
-  }, [uiPositions]);
+  }, [fetchedHoldings, uiPositions]);
+
+  // Total portfolio value = wallet balance + positions entry value
+  // This is what should be displayed in the collapsed pill "Total"
+  const totalPortfolioValue = walletBalance + totalActiveExposure;
 
   // Fetch holdings from API (IDENTICAL to PortfolioHoldingsPanel)
   const fetchHoldings = useCallback(async () => {
@@ -527,29 +536,22 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                 className="portfolio-wallet-sol-logo"
               />
             </div>
-            <div className={`portfolio-wallet-pnl-animated ${isProfitable ? "positive" : "negative"}`}>
+            <div className="portfolio-wallet-total-pill">
+              <span className="text-[10px] text-white/50 mr-1">Total:</span>
               <CountUp
-                from={!hasInitialAnimated ? 0 : shouldAnimate ? prevPnlPercent : displayedPnlPercent}
-                to={displayedPnlPercent}
-                duration={!hasInitialAnimated ? 1.2 : shouldAnimate ? 1.2 : 0}
-                prefix={isProfitable ? "+" : ""}
-                suffix="%"
+                from={0}
+                to={totalPortfolioValue}
+                duration={1.5}
                 decimals={2}
-                className="portfolio-wallet-pnl-value"
-                onEnd={() => {
-                  if (!hasInitialAnimated) setHasInitialAnimated(true);
-                  if (shouldAnimate) setShouldAnimate(false);
-                }}
+                className="text-white font-bold"
               />
-              {showArrow && pnlDirection && (
-                <span className={`portfolio-wallet-pnl-arrow ${pnlDirection}`}>
-                  {pnlDirection === "up" ? (
-                    <ChevronUp className="w-2.5 h-2.5" />
-                  ) : (
-                    <ChevronDown className="w-2.5 h-2.5" />
-                  )}
-                </span>
-              )}
+              <Image
+                src="/logos/solana.png"
+                alt="SOL"
+                width={12}
+                height={12}
+                className="ml-0.5 opacity-70"
+              />
             </div>
           </button>
         </div>
@@ -588,26 +590,20 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
             {/* Overview Content */}
             {(
               <>
-                {/* SOL Balance Section */}
+                {/* SOL Balance Section - Horizontal layout */}
                 <div className="portfolio-wallet-total">
                   <div className="portfolio-wallet-total-value">
                     <span className="tabular-nums">{formatSolValue(walletBalance)}</span>
                     <Image src="/logos/solana.png" alt="SOL" width={24} height={24} className="inline-block ml-2" />
                   </div>
-                  <div className={`portfolio-wallet-total-pnl ${isProfitable ? "positive" : "negative"}`}>
-                    {isProfitable ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                    <span>{isProfitable ? "+" : ""}{portfolioStats.totalPnLPercent.toFixed(1)}%</span>
-                    <span className="portfolio-wallet-period">({timeFilter})</span>
+                  {/* Active Positions - vertical layout: label on top, value below */}
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] text-white/50 uppercase tracking-wider">In Active Positions</span>
+                    <span className="text-white font-bold tabular-nums">
+                      {formatSolValue(totalActiveExposure)} SOL
+                      <span className="text-white/40 font-normal ml-1 text-xs">({sortedPositions.length})</span>
+                    </span>
                   </div>
-                </div>
-
-                {/* Active Exposure Info */}
-                <div className="flex items-center justify-between px-1 py-2 text-xs">
-                  <span className="text-white/50">In Active Positions:</span>
-                  <span className="text-white/80 font-medium tabular-nums">
-                    {formatSolValue(totalActiveExposure)} SOL
-                    <span className="text-white/40 ml-1">({sortedPositions.length} tokens)</span>
-                  </span>
                 </div>
 
                 {/* Chart */}

@@ -26,17 +26,25 @@ function calculateStreak(history: Position[]): { current: number; best: number; 
 
   if (sorted.length === 0) return { current: 0, best: 0, type: "win" };
 
-  let currentStreak = 0;
-  let bestStreak = 0;
-  let tempStreak = 0;
+  // Determine if most recent trade was a win or loss
   const firstTradeWin = sorted[0].realizedPnlSol >= 0;
 
+  // Calculate current streak (consecutive same results from most recent)
+  let currentStreak = 0;
   for (let i = 0; i < sorted.length; i++) {
     const isWin = sorted[i].realizedPnlSol >= 0;
-    if (i === 0 || isWin === firstTradeWin) {
-      if (isWin === firstTradeWin) currentStreak++;
-      else break;
+    if (isWin === firstTradeWin) {
+      currentStreak++;
+    } else {
+      break; // Streak ends when result differs
     }
+  }
+
+  // Calculate best winning streak ever
+  let bestStreak = 0;
+  let tempStreak = 0;
+  for (const position of sorted) {
+    const isWin = position.realizedPnlSol >= 0;
     if (isWin) {
       tempStreak++;
       bestStreak = Math.max(bestStreak, tempStreak);
@@ -120,7 +128,7 @@ export function TraderProfileCard({
 
   const StatStreak = () => (
     <div className="flex items-baseline gap-2 min-w-[90px]">
-      <span className="text-[10px] md:text-xs text-white/40 uppercase tracking-wider">Streak:</span>
+      <span className="text-[10px] md:text-xs text-white/40 uppercase tracking-wider">{tProfile("streak")}:</span>
       {isLoading ? (
         <Skeleton className="h-5 w-12" />
       ) : (
@@ -147,7 +155,7 @@ export function TraderProfileCard({
       ) : (
         <>
           <span className="text-sm md:text-lg font-bold font-mono tabular-nums text-white">{totalTrades}</span>
-          <span className="text-[10px] md:text-xs text-green-400/70 tabular-nums">({winningTrades}W)</span>
+          <span className="text-[10px] md:text-xs text-green-400/70 tabular-nums">({winningTrades}{tProfile("winsAbbrev")})</span>
         </>
       )}
     </div>
@@ -204,7 +212,7 @@ export function TraderProfileCard({
                 exit={{ opacity: 0, y: -6, scale: 0.9 }}
                 transition={{ duration: 0.2 }}
               >
-                Super Router trading address copied
+                {tProfile("copied")}
               </motion.div>
             )}
           </AnimatePresence>
@@ -258,7 +266,7 @@ export function TraderProfileCard({
             {/* Daily P&L - Desktop only */}
             {!isLoading && (
               <div className="hidden md:flex items-center gap-1 mt-1">
-                <span className="text-[8px] text-white/30 uppercase">Today:</span>
+                <span className="text-[8px] text-white/30 uppercase">{tProfile("today")}:</span>
                 <span className={`text-xs font-mono tabular-nums ${dailyPnL >= 0 ? "text-green-400/70" : "text-red-400/70"}`}>
                   {dailyPnL >= 0 ? "+" : ""}{dailyPnL.toFixed(3)}
                 </span>

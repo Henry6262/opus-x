@@ -73,6 +73,8 @@ const TRADES_VIEW_ENABLED = process.env.NEXT_PUBLIC_ENABLE_TRADES_VIEW === "true
 
 export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
     const t = useTranslations("dashboard");
+    const tHistory = useTranslations("history");
+    const tTime = useTranslations("time");
     const { history } = usePositions();
 
     // View state - default to transactions if trades view is disabled
@@ -206,8 +208,8 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
             {/* Header with SectionHeader component */}
             <SectionHeader
                 icon={<TrendingUp className="w-6 h-6 text-[#c4f70e]" />}
-                title="History"
-                tooltip="Transaction history showing all your buy and sell activity. Click any transaction to view details on Solscan."
+                title={tHistory("title")}
+                tooltip={tHistory("tooltip")}
                 rightContent={
                     TRADES_VIEW_ENABLED ? (
                         <div className="flex items-center bg-white/5 rounded-full p-0.5">
@@ -219,7 +221,7 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
                                         : "text-white/60 hover:text-white"
                                 }`}
                             >
-                                Trades
+                                {tHistory("trades")}
                             </button>
                             <button
                                 onClick={() => handleViewModeChange("transactions")}
@@ -229,7 +231,7 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
                                         : "text-white/60 hover:text-white"
                                 }`}
                             >
-                                Txns
+                                {tHistory("txns")}
                             </button>
                         </div>
                     ) : undefined
@@ -293,6 +295,7 @@ interface TradesViewProps {
 }
 
 function TradesView({ trades, onTradeClick, hasMore, onLoadMore }: TradesViewProps) {
+    const tHistory = useTranslations("history");
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
     // Infinite scroll with IntersectionObserver
@@ -319,9 +322,9 @@ function TradesView({ trades, onTradeClick, hasMore, onLoadMore }: TradesViewPro
         return (
             <div className="flex flex-col items-center justify-center py-8 text-white/40">
                 <Trophy className="w-8 h-8 mb-2 opacity-30" />
-                <span className="text-xs">No completed trades yet</span>
+                <span className="text-xs">{tHistory("noTrades")}</span>
                 <span className="text-[10px] text-white/30 mt-1">
-                    Closed positions appear here
+                    {tHistory("closedPositionsAppear")}
                 </span>
             </div>
         );
@@ -360,6 +363,8 @@ interface TradeRowProps {
 }
 
 function TradeRow({ trade, index, onClick }: TradeRowProps) {
+    const tHistory = useTranslations("history");
+    const tTime = useTranslations("time");
     const pnl = trade.realizedPnlSol ?? 0;
     const isProfit = pnl >= 0;
     const pnlPercent = trade.entryAmountSol > 0
@@ -368,7 +373,7 @@ function TradeRow({ trade, index, onClick }: TradeRowProps) {
 
     const exitReason = isProfit ? "tp" : "sl";
     const timeHeld = getHoldTime(trade.createdAt, trade.closedAt || trade.updatedAt);
-    const timeAgo = getTimeAgo(trade.closedAt || trade.updatedAt);
+    const timeAgo = formatTimeAgoTranslated(trade.closedAt || trade.updatedAt, tTime);
 
     return (
         <motion.div
@@ -392,9 +397,9 @@ function TradeRow({ trade, index, onClick }: TradeRowProps) {
                     <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="text-xs text-white/60">
                             {exitReason === "tp" ? (
-                                <span className="text-green-400 font-medium">Won</span>
+                                <span className="text-green-400 font-medium">{tHistory("won")}</span>
                             ) : (
-                                <span className="text-red-400 font-medium">Lost</span>
+                                <span className="text-red-400 font-medium">{tHistory("lost")}</span>
                             )}
                             {" "}<span className={`font-mono tabular-nums ${isProfit ? "text-green-400" : "text-red-400"}`}>
                                 {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)}
@@ -410,7 +415,7 @@ function TradeRow({ trade, index, onClick }: TradeRowProps) {
                         {timeAgo}
                     </span>
                     <span className="text-[10px] text-white/30">
-                        held {timeHeld}
+                        {tHistory("held")} {timeHeld}
                     </span>
                 </div>
             </div>
@@ -431,6 +436,7 @@ interface TransactionsViewProps {
 }
 
 function TransactionsView({ transactions, isLoading, isLoadingMore, hasMore, onLoadMore }: TransactionsViewProps) {
+    const tHistory = useTranslations("history");
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
     // Infinite scroll with IntersectionObserver
@@ -465,9 +471,9 @@ function TransactionsView({ transactions, isLoading, isLoadingMore, hasMore, onL
         return (
             <div className="flex flex-col items-center justify-center py-8 text-white/40">
                 <List className="w-8 h-8 mb-2 opacity-30" />
-                <span className="text-xs">No transactions yet</span>
+                <span className="text-xs">{tHistory("noTransactions")}</span>
                 <span className="text-[10px] text-white/30 mt-1">
-                    Buy/sell transactions appear here
+                    {tHistory("transactionsAppear")}
                 </span>
             </div>
         );
@@ -499,6 +505,8 @@ interface TransactionRowProps {
 }
 
 function TransactionRow({ tx }: TransactionRowProps) {
+    const tHistory = useTranslations("history");
+    const tTime = useTranslations("time");
     const isBuy = tx.tx_type === "buy";
     const solAmount = isBuy ? tx.sol_amount : tx.sol_received;
     const tokenAmount = isBuy ? tx.tokens_received : tx.tokens_sold;
@@ -533,15 +541,15 @@ function TransactionRow({ tx }: TransactionRowProps) {
                     <div className="flex items-center gap-1.5 mt-0.5">
                         {isBuy ? (
                             <span className="text-xs text-white/60">
-                                <span className="text-[#c4f70e] font-medium">Bought</span>
-                                {" "}{formatTokenAmount(tokenAmount)} for{" "}
+                                <span className="text-[#c4f70e] font-medium">{tHistory("bought")}</span>
+                                {" "}{formatTokenAmount(tokenAmount)}{" "}
                                 <span className="text-white font-mono tabular-nums">{formatSol(solAmount)}</span>
                                 {" "}SOL
                             </span>
                         ) : (
                             <span className="text-xs text-white/60">
-                                <span className="text-red-400 font-medium">Sold</span>
-                                {" "}{formatTokenAmount(tokenAmount)} for{" "}
+                                <span className="text-red-400 font-medium">{tHistory("sold")}</span>
+                                {" "}{formatTokenAmount(tokenAmount)}{" "}
                                 <span className="text-green-400 font-mono tabular-nums">+{formatSol(solAmount)}</span>
                                 {" "}SOL
                             </span>
@@ -552,7 +560,7 @@ function TransactionRow({ tx }: TransactionRowProps) {
                 {/* Right side */}
                 <div className="flex flex-col items-end gap-1">
                     <span className="text-[10px] font-mono tabular-nums text-white/40">
-                        {formatTimeAgo(tx.timestamp)}
+                        {formatTimeAgoTranslated(tx.timestamp, tTime)}
                     </span>
                     {pnlPercent !== null && (
                         <span className={`flex items-center gap-0.5 text-xs font-mono tabular-nums font-medium ${
@@ -563,7 +571,7 @@ function TransactionRow({ tx }: TransactionRowProps) {
                         </span>
                     )}
                     <span className="flex items-center gap-1 text-[10px] text-white/40">
-                        tx <ExternalLink className="w-2.5 h-2.5" />
+                        {tHistory("tx")} <ExternalLink className="w-2.5 h-2.5" />
                     </span>
                 </div>
             </div>
@@ -664,4 +672,16 @@ function formatTimeAgo(dateStr: string): string {
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${Math.floor(diffHours / 24)}d ago`;
+}
+
+function formatTimeAgoTranslated(dateStr: string, t: (key: string, params?: Record<string, string | number | Date>) => string): string {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return t("justNow");
+    if (diffMins < 60) return t("minutesAgo", { count: diffMins });
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return t("hoursAgo", { count: diffHours });
+    return t("daysAgo", { count: Math.floor(diffHours / 24) });
 }

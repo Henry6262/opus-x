@@ -15,6 +15,7 @@ import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Radar, Target, Trophy, ExternalLink, TrendingUp, TrendingDown, Clock, Coins, ArrowDownRight, ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import { usePositions, useDashboardStats } from '@/features/smart-trading/context';
+import { useTradingAnalytics } from '@/hooks/useTradingAnalytics';
 import { PulseRing, MetricBar, StatRow } from './OutcomePrimitives';
 import { CountUp } from '@/components/animations/CountUp';
 import { TransactionDrawer } from '@/features/smart-trading/components/TransactionDrawer';
@@ -22,6 +23,7 @@ import { TokenAvatar } from './TokenAvatar';
 import { SolIcon } from '@/components/SolIcon';
 import { cn } from '@/lib/utils';
 import type { Position } from '@/features/smart-trading/types';
+import type { TokenPerformance as BackendTokenPerformance } from '@/types/trading';
 
 // Extended Position type with fields added by WebSocket context
 type ExtendedPosition = Position & {
@@ -64,6 +66,10 @@ export function TradingAnalyticsDashboard() {
 
   // Use backend stats as SINGLE SOURCE OF TRUTH for PnL (Birdeye cache)
   const { dashboardStats } = useDashboardStats();
+
+  // Use trading analytics hook for TOP TRADES - this fetches directly from backend
+  // with accurate realized_pnl_sol values (not the WebSocket position data)
+  const { tokenPerformance: backendTokenPerformance, loading: analyticsLoading } = useTradingAnalytics();
 
   // Cast to extended type since WebSocket context adds extra fields
   const allPositions = useMemo(() => [...positions, ...history] as ExtendedPosition[], [positions, history]);
@@ -174,16 +180,70 @@ export function TradingAnalyticsDashboard() {
     }).sort((a, b) => b.totalPnlSol - a.totalPnlSol); // Sort by P&L descending
   }, [allPositions]);
 
-  const loading = isLoading;
+  const loading = isLoading || analyticsLoading;
 
   // Calculate derived stats
   const avgTargetEfficiency = useMemo(() => {
     return (analytics.tp1HitRate + analytics.tp2HitRate + analytics.tp3HitRate) / 3;
   }, [analytics]);
 
+  // TOP PERFORMERS: Calculate ACTUAL PnL from sell_transactions
+  // The backend realized_pnl_sol is unreliable - we must compute from actual tx data
   const topPerformers = useMemo(() => {
-    return tokenPerformance.slice(0, 3);
-  }, [tokenPerformance]);
+    // Get closed positions and calculate ACTUAL PnL from transactions
+    const closedWithActualPnl = backendTokenPerformance
+      .filter(t => t.status === 'closed')
+      .map(t => {
+        // Calculate actual PnL: sum of sol_received from sells - entry cost
+        const totalReturned = t.sellTransactions.reduce(
+          (sum, tx) => sum + (tx.sol_received || 0),
+          0
+        );
+        const actualPnl = totalReturned - t.investedSol;
+        const actualPnlPct = t.investedSol > 0 ? (actualPnl / t.investedSol) * 100 : 0;
+
+        return {
+          ...t,
+          calculatedPnl: actualPnl,
+          calculatedPnlPct: actualPnlPct,
+          totalReturned,
+        };
+      })
+      // Filter to only ACTUALLY profitable (returned > invested)
+      .filter(t => t.calculatedPnl > 0)
+      // Sort by actual PnL descending
+      .sort((a, b) => b.calculatedPnl - a.calculatedPnl)
+      .slice(0, 3);
+
+    // Debug log to verify correct calculation
+    if (closedWithActualPnl.length > 0) {
+      console.log('[TopTrades] Top 3 profitable (calculated from sell_transactions):');
+      closedWithActualPnl.forEach((t, i) => {
+        console.log(`  ${i+1}. ${t.ticker}: invested=${t.investedSol.toFixed(3)}, returned=${t.totalReturned.toFixed(3)}, pnl=${t.calculatedPnl.toFixed(3)} (${t.calculatedPnlPct.toFixed(1)}%)`);
+      });
+    }
+
+    // Map to our TokenPerformance format for display
+    return closedWithActualPnl.map((t): TokenPerformance => ({
+      positionId: t.positionId,
+      mint: t.mint,
+      tokenName: t.tokenName,
+      ticker: t.ticker,
+      entryTime: t.entryTime,
+      exitTime: t.exitTime,
+      investedSol: t.investedSol,
+      totalPnlSol: t.calculatedPnl, // Use ACTUAL calculated PnL
+      pnlPct: t.calculatedPnlPct,
+      peakPnlPct: t.peakPnlPct,
+      holdTimeMinutes: t.holdTimeMinutes,
+      status: t.status,
+      tp1Hit: t.tp1Hit,
+      tp2Hit: t.tp2Hit,
+      tp3Hit: t.tp3Hit,
+      buySignature: t.buySignature,
+      sellTransactions: t.sellTransactions,
+    }));
+  }, [backendTokenPerformance]);
 
   if (loading) {
     return (

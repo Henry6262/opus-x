@@ -36,7 +36,10 @@
     "winRate": "Win",
     "streak": "Streak",
     "trades": "Trades",
-    "bestTrade": "Best"
+    "bestTrade": "Best",
+    "today": "Today",
+    "copied": "Super Router trading address copied",
+    "winsAbbrev": "W"
   },
   "smartTrading": {
     "title": "Smart Money Copy Trading",
@@ -48,6 +51,7 @@
     "stopTrading": "Stop Trading",
     "recentSignals": "Recent Signals",
     "noRecentSignals": "No recent signals",
+    "signalsWillAppear": "Signals will appear when wallets make trades",
     "openPositions": "Open Positions",
     "noOpenPositions": "No open positions",
     "positionsWillAppear": "Positions will appear here when signals are executed",
@@ -184,6 +188,11 @@
       "mcap": "MCap",
       "liquidity": "Liquidity",
       "volume24h": "24h Vol"
+    },
+    "decisions": {
+      "enter": "ENTER",
+      "wait": "WAIT",
+      "pass": "PASS"
     }
   },
   "filters": {
@@ -239,6 +248,24 @@
     "recentTrades": "Recent Trades",
     "noRecentTrades": "No recent trades",
     "tradesAppearHere": "Completed trades will appear here"
+  },
+  "history": {
+    "title": "History",
+    "tooltip": "Transaction history showing all your buy and sell activity. Click any transaction to view details on Solscan.",
+    "trades": "Trades",
+    "txns": "Txns",
+    "noTrades": "No completed trades yet",
+    "closedPositionsAppear": "Closed positions appear here",
+    "noTransactions": "No transactions yet",
+    "transactionsAppear": "Buy/sell transactions appear here",
+    "won": "Won",
+    "lost": "Lost",
+    "bought": "Bought",
+    "sold": "Sold",
+    "held": "held",
+    "tx": "tx",
+    "winsAbbrev": "W",
+    "lossesAbbrev": "L"
   },
   "time": {
     "justNow": "just now",

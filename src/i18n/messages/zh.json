@@ -36,7 +36,10 @@
     "winRate": "胜率",
     "streak": "连胜",
     "trades": "交易",
-    "bestTrade": "最佳"
+    "bestTrade": "最佳",
+    "today": "今日",
+    "copied": "Super Router 交易地址已复制",
+    "winsAbbrev": "胜"
   },
   "smartTrading": {
     "title": "智能资金跟单",
@@ -48,6 +51,7 @@
     "stopTrading": "停止交易",
     "recentSignals": "最新信号",
     "noRecentSignals": "暂无信号",
+    "signalsWillAppear": "钱包交易后信号将显示在这里",
     "openPositions": "持仓中",
     "noOpenPositions": "暂无持仓",
     "positionsWillAppear": "执行信号后持仓将显示在这里",
@@ -184,6 +188,11 @@
       "mcap": "市值",
       "liquidity": "流动性",
       "volume24h": "24小时量"
+    },
+    "decisions": {
+      "enter": "进场",
+      "wait": "等待",
+      "pass": "观望"
     }
   },
   "filters": {
@@ -239,6 +248,24 @@
     "recentTrades": "交易记录",
     "noRecentTrades": "暂无交易",
     "tradesAppearHere": "成交后会显示在这里"
+  },
+  "history": {
+    "title": "历史记录",
+    "tooltip": "交易历史记录，显示所有买卖活动。点击任意交易可在 Solscan 查看详情。",
+    "trades": "交易",
+    "txns": "交易记录",
+    "noTrades": "暂无已完成交易",
+    "closedPositionsAppear": "已平仓位将显示在这里",
+    "noTransactions": "暂无交易记录",
+    "transactionsAppear": "买卖交易将显示在这里",
+    "won": "盈利",
+    "lost": "亏损",
+    "bought": "买入",
+    "sold": "卖出",
+    "held": "持有",
+    "tx": "交易",
+    "winsAbbrev": "胜",
+    "lossesAbbrev": "负"
   },
   "time": {
     "justNow": "刚刚",
