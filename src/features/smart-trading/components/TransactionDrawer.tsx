@@ -372,10 +372,28 @@ export function TransactionDrawer({
             const historyItems = result?.data || [];
 
             // Find the position by mint or positionId
-            const position = historyItems.find((item: any) =>
+            let position = historyItems.find((item: any) =>
                 (tokenMint && item.mint === tokenMint) ||
                 (positionId && item.id === positionId)
             );
+
+            // If not found in history, try fetching from positions endpoint (for open positions)
+            if (!position && (tokenMint || positionId)) {
+                try {
+                    const positionsUrl = buildDevprntApiUrl("/api/trading/positions");
+                    const positionsResponse = await fetch(positionsUrl.toString(), { signal: controller.signal });
+                    if (positionsResponse.ok) {
+                        const positionsResult = await positionsResponse.json();
+                        const positions = positionsResult?.data || [];
+                        position = positions.find((item: any) =>
+                            (tokenMint && item.mint === tokenMint) ||
+                            (positionId && item.id === positionId)
+                        );
+                    }
+                } catch (err) {
+                    console.warn("[TransactionDrawer] Failed to fetch from positions endpoint:", err);
+                }
+            }
 
             if (!position) {
                 setTransactions([]);
@@ -425,13 +443,19 @@ export function TransactionDrawer({
                         status: "confirmed",
                     });
                 });
-            } else if (position.status === "closed" && tokenMint) {
+            } else if (position.status === "closed" && tokenMint && tokenMint.length > 0) {
                 // FALLBACK: If position is closed but no sell_transactions, fetch from backend API
                 // The backend has access to Helius and can look up the actual sell transaction
-                try {
-                    console.log("[TransactionDrawer] No sell txs in DB, fetching from backend...");
-                    const API_BASE = process.env.NEXT_PUBLIC_DEVPRINT_API_URL || 'https://devprint-v2-production.up.railway.app';
-                    const txResponse = await fetch(`${API_BASE}/api/trading/position-txs/${tokenMint}`);
+                // Only call if tokenMint is a valid mint address (not a position ID)
+                // Mint addresses are base58 strings, typically 32-44 characters
+                const isValidMint = tokenMint.length >= 32 && tokenMint.length <= 44 && /^[A-Za-z0-9]+$/.test(tokenMint);
+                if (!isValidMint) {
+                    console.warn("[TransactionDrawer] Invalid mint address, skipping API call:", tokenMint);
+                } else {
+                    try {
+                        console.log("[TransactionDrawer] No sell txs in DB, fetching from backend...");
+                        const API_BASE = process.env.NEXT_PUBLIC_DEVPRINT_API_URL || 'https://devprint-v2-production.up.railway.app';
+                        const txResponse = await fetch(`${API_BASE}/api/trading/position-txs/${tokenMint}`);
 
                     if (txResponse.ok) {
                         const txData = await txResponse.json();
@@ -456,9 +480,12 @@ export function TransactionDrawer({
                             });
                             console.log(`[TransactionDrawer] Found ${txData.data.length} txs from backend`);
                         }
+                    } else if (txResponse.status === 404) {
+                        console.warn(`[TransactionDrawer] Position not found for mint: ${tokenMint}`);
                     }
-                } catch (backendErr) {
-                    console.warn("[TransactionDrawer] Backend fallback failed:", backendErr);
+                    } catch (backendErr) {
+                        console.warn("[TransactionDrawer] Backend fallback failed:", backendErr);
+                    }
                 }
             }
 

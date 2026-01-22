@@ -84,9 +84,8 @@ export function useTradingAnalytics(dateRange?: { start: string; end: string }) 
     const closedPositions = closedPositionsList.length;
 
     const totalInvestedSol = positions.reduce((sum, p) => sum + p.entry_sol_value, 0);
-    const totalRealizedPnl = positions.reduce((sum, p) => sum + p.realized_pnl_sol, 0);
-    const totalUnrealizedPnl = positions.reduce((sum, p) => sum + (p.unrealized_pnl_sol || 0), 0);
-    const totalPnlSol = totalRealizedPnl + totalUnrealizedPnl;
+    // ONLY use realized_pnl_sol - we don't count unrealized profits
+    const totalPnlSol = positions.reduce((sum, p) => sum + p.realized_pnl_sol, 0);
     const totalPnlPct = totalInvestedSol > 0 ? (totalPnlSol / totalInvestedSol) * 100 : 0;
 
     // Win rate - ONLY count closed positions (open trades haven't finished yet)
@@ -170,14 +169,16 @@ export function useTradingAnalytics(dateRange?: { start: string; end: string }) 
     return Array.from(dateMap.entries())
       .map(([date, dayPositions]) => {
         const totalTrades = dayPositions.length;
+        // Only count trades with realized profit (actual SOL received)
         const winningTrades = dayPositions.filter(
-          p => p.tp1_hit || p.realized_pnl_sol > 0 || p.unrealized_pnl_sol > 0
+          p => p.tp1_hit || p.realized_pnl_sol > 0
         ).length;
         const losingTrades = totalTrades - winningTrades;
         const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
 
+        // ONLY use realized_pnl_sol - we don't count unrealized profits
         const totalPnlSol = dayPositions.reduce(
-          (sum, p) => sum + p.realized_pnl_sol + (p.unrealized_pnl_sol || 0),
+          (sum, p) => sum + p.realized_pnl_sol,
           0
         );
 
@@ -205,7 +206,8 @@ export function useTradingAnalytics(dateRange?: { start: string; end: string }) 
   const tokenPerformance: TokenPerformance[] = useMemo(() => {
     return positions
       .map(p => {
-        const totalPnlSol = p.realized_pnl_sol + (p.unrealized_pnl_sol || 0);
+        // ONLY use realized_pnl_sol - we don't count unrealized profits
+        const totalPnlSol = p.realized_pnl_sol;
         const pnlPct = p.entry_sol_value > 0 ? (totalPnlSol / p.entry_sol_value) * 100 : 0;
 
         let holdTimeMinutes: number | null = null;
