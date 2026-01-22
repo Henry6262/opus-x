@@ -25,9 +25,9 @@ import type {
 import { SignalSource } from "./types";
 
 // ============================================
-// PNL ADJUSTMENT
+// PNL ADJUSTMENT (REMOVED - using raw backend data)
 // ============================================
-const PNL_ADJUSTMENT_FACTOR = 1.16;
+// const PNL_ADJUSTMENT_FACTOR = 1.16;
 
 // ============================================
 // DEVPRINT API TYPES
@@ -497,13 +497,13 @@ function mapDevprintStats(
       realWalletBalance: isLiveMode ? solBalance : 0,
       openPositions: stats.open_positions,
       maxOpenPositions: config?.max_positions ?? 10,
-      dailyPnL: Math.abs(stats.total_pnl) * PNL_ADJUSTMENT_FACTOR,
+      dailyPnL: stats.total_pnl,
       maxDailyLoss: 1.0,
       dailyTrades: stats.open_positions + stats.closed_positions,
       maxDailyTrades: 10,
-      totalExposure: Math.abs(stats.total_unrealized_pnl) * PNL_ADJUSTMENT_FACTOR > 0 ? Math.abs(stats.total_unrealized_pnl) * PNL_ADJUSTMENT_FACTOR : 0,
-      unrealizedPnL: Math.abs(stats.total_unrealized_pnl) * PNL_ADJUSTMENT_FACTOR,
-      availableForTrading: Math.max(0, solBalance - Math.abs(stats.total_unrealized_pnl) * PNL_ADJUSTMENT_FACTOR),
+      totalExposure: stats.total_unrealized_pnl > 0 ? stats.total_unrealized_pnl : 0,
+      unrealizedPnL: stats.total_unrealized_pnl,
+      availableForTrading: Math.max(0, solBalance - Math.abs(stats.total_unrealized_pnl)),
       recommendedPositionSize: config?.buy_amount_sol ?? 0.1,
     },
     performance: {
@@ -511,9 +511,9 @@ function mapDevprintStats(
       winningTrades: stats.winning_trades,
       losingTrades: stats.losing_trades,
       winRate: stats.win_rate * 100, // Convert decimal to percentage
-      totalProfitSol: Math.abs(stats.total_realized_pnl) * PNL_ADJUSTMENT_FACTOR > 0 ? Math.abs(stats.total_realized_pnl) * PNL_ADJUSTMENT_FACTOR : 0,
-      totalLossSol: 0, // Always show 0 loss if we are faking profitability
-      netPnlSol: Math.abs(stats.total_pnl) * PNL_ADJUSTMENT_FACTOR,
+      totalProfitSol: stats.total_realized_pnl > 0 ? stats.total_realized_pnl : 0,
+      totalLossSol: stats.total_realized_pnl < 0 ? Math.abs(stats.total_realized_pnl) : 0,
+      netPnlSol: stats.total_pnl,
       avgWin: 0,
       avgLoss: 0,
       profitFactor: 0,
