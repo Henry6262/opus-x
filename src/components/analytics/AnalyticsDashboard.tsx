@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/chart';
 import { TradingAnalyticsDashboard } from '@/components/trading/TradingAnalyticsDashboard';
 import { StatCard } from '@/components/analytics/StatCard';
+import { SolIcon } from '@/components/SolIcon';
 
 // ============================================
 // COLORS
@@ -591,7 +592,7 @@ export function AnalyticsDashboard() {
                   label="Total PnL"
                   value={selectedSummary.totalPnlSol}
                   prefix={selectedSummary.totalPnlSol >= 0 ? "+" : ""}
-                  suffix=" SOL"
+                  suffixIcon={<SolIcon size={16} className="ml-1.5" />}
                   decimals={2}
                   icon={TrendingUp}
                   delay={0}
