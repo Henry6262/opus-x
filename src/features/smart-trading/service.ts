@@ -125,7 +125,7 @@ interface DevprintHolding {
   buy_criteria: BuyCriteriaResult | null;
 }
 
-/** Devprint history item from /api/trading/history */
+/** Devprint history item from /api/analytics/history */
 interface DevprintHistoryItem {
   id: string;
   mint: string;
@@ -156,7 +156,7 @@ interface DevprintHistoryItem {
   updated_at: string;
 }
 
-/** Devprint trading stats from /api/trading/stats */
+/** Devprint trading stats from /api/analytics/stats */
 interface DevprintTradingStats {
   open_positions: number;
   closed_positions: number;
@@ -544,8 +544,8 @@ export const smartTradingService = {
       fetchDevprint<{ wallets: DevprintWallet[] }>("/api/wallets"),
       fetchDevprint<DevprintTradingConfig>("/api/trading/config"),
       fetchDevprint<DevprintHolding[]>("/api/trading/holdings"),
-      fetchDevprint<DevprintHistoryItem[]>("/api/trading/history?limit=100"),
-      fetchDevprint<DevprintTradingStats>("/api/trading/stats"),
+      fetchDevprint<DevprintHistoryItem[]>("/api/analytics/history?limit=100"),
+      fetchDevprint<DevprintTradingStats>("/api/analytics/stats"),
     ]);
 
     const tokens = Array.isArray(tokensResult) ? tokensResult : [];
@@ -587,7 +587,7 @@ export const smartTradingService = {
   async getDashboardStats(): Promise<DashboardStatsResponse> {
     // Fetch stats and config in parallel to get wallet balance
     const [stats, config] = await Promise.all([
-      fetchDevprint<DevprintTradingStats>("/api/trading/stats"),
+      fetchDevprint<DevprintTradingStats>("/api/analytics/stats"),
       fetchDevprint<DevprintTradingConfig>("/api/trading/config"),
     ]);
     return mapDevprintStats(stats, config);

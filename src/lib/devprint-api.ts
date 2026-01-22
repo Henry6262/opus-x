@@ -429,17 +429,19 @@ class DevprintApiClient {
 
     /**
      * Get closed positions history
+     * Note: Moved to analytics module for better separation of concerns
      */
     async getHistory(limit?: number): Promise<Position[]> {
         const query = limit ? `?limit=${limit}` : '';
-        return this.request<Position[]>(`/api/trading/history${query}`);
+        return this.request<Position[]>(`/api/analytics/history${query}`);
     }
 
     /**
      * Get trading statistics
+     * Note: Moved to analytics module for better separation of concerns
      */
     async getStats(): Promise<TradingStats> {
-        return this.request<TradingStats>('/api/trading/stats');
+        return this.request<TradingStats>('/api/analytics/stats');
     }
 
     /**

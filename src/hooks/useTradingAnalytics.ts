@@ -27,7 +27,7 @@ export function useTradingAnalytics(dateRange?: { start: string; end: string }) 
       // Fetch BOTH open positions AND history (closed positions)
       // The API returns:
       // - /api/trading/positions: open/partially_closed positions (in-memory)
-      // - /api/trading/history: closed positions (from database)
+      // - /api/analytics/history: closed positions (from database)
       const [openPositions, historyPositions] = await Promise.all([
         tradingApi.getPositions(),
         tradingApi.getHistory(500), // Get last 500 closed positions

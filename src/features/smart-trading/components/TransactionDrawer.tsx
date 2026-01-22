@@ -355,8 +355,8 @@ export function TransactionDrawer({
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            // Fetch from history endpoint which has close_reason and proper exit types
-            const url = buildDevprntApiUrl("/api/trading/history?limit=200");
+            // Fetch from analytics/history endpoint which has close_reason and proper exit types
+            const url = buildDevprntApiUrl("/api/analytics/history?limit=200");
             const response = await fetch(url.toString(), { signal: controller.signal });
             clearTimeout(timeoutId);
 
@@ -455,7 +455,7 @@ export function TransactionDrawer({
                     try {
                         console.log("[TransactionDrawer] No sell txs in DB, fetching from backend...");
                         const API_BASE = process.env.NEXT_PUBLIC_DEVPRINT_API_URL || 'https://devprint-v2-production.up.railway.app';
-                        const txResponse = await fetch(`${API_BASE}/api/trading/position-txs/${tokenMint}`);
+                        const txResponse = await fetch(`${API_BASE}/api/analytics/position-txs/${tokenMint}`);
 
                     if (txResponse.ok) {
                         const txData = await txResponse.json();
