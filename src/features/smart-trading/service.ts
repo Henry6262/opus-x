@@ -389,7 +389,7 @@ export function getSignalSourceInfo(source: SignalSource | undefined): {
 }
 
 /** Map devprint holding to Position */
-function mapDevprintHolding(h: DevprintHolding): Position {
+function mapDevprintHolding(h: DevprintHolding): Position & { peakPnlPct?: number } {
   return {
     id: h.id,
     signalId: h.id,
@@ -417,8 +417,9 @@ function mapDevprintHolding(h: DevprintHolding): Position {
 
     currentPrice: h.current_price,
     remainingTokens: h.current_quantity,
-    realizedPnlSol: Math.abs(h.realized_pnl_sol) * PNL_ADJUSTMENT_FACTOR,
-    unrealizedPnl: Math.abs(h.unrealized_pnl_sol) * PNL_ADJUSTMENT_FACTOR,
+    realizedPnlSol: h.realized_pnl_sol,
+    unrealizedPnl: h.unrealized_pnl_sol,
+    peakPnlPct: h.peak_pnl_pct,
 
     createdAt: h.entry_time,
     updatedAt: h.entry_time,
@@ -427,7 +428,7 @@ function mapDevprintHolding(h: DevprintHolding): Position {
 }
 
 /** Map devprint history item to Position */
-function mapDevprintHistoryItem(h: DevprintHistoryItem): Position {
+function mapDevprintHistoryItem(h: DevprintHistoryItem): Position & { peakPnlPct?: number } {
   return {
     id: h.id,
     signalId: h.id,
@@ -455,8 +456,9 @@ function mapDevprintHistoryItem(h: DevprintHistoryItem): Position {
 
     currentPrice: h.current_price,
     remainingTokens: h.current_quantity,
-    realizedPnlSol: Math.abs(h.realized_pnl_sol) * PNL_ADJUSTMENT_FACTOR,
-    unrealizedPnl: Math.abs(h.unrealized_pnl_sol) * PNL_ADJUSTMENT_FACTOR,
+    realizedPnlSol: h.realized_pnl_sol,
+    unrealizedPnl: h.unrealized_pnl_sol,
+    peakPnlPct: h.peak_pnl_pct,
 
     createdAt: h.created_at,
     updatedAt: h.updated_at,

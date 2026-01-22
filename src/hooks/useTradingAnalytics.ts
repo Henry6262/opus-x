@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { tradingApi } from '@/lib/trading-api';
+import { tradingApi, type BackendTradingStats } from '@/lib/trading-api';
 import type {
   TradingPosition,
   TradingAnalytics,
@@ -16,6 +16,7 @@ import type {
 
 export function useTradingAnalytics(dateRange?: { start: string; end: string }) {
   const [positions, setPositions] = useState<TradingPosition[]>([]);
+  const [backendStats, setBackendStats] = useState<BackendTradingStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,13 +25,12 @@ export function useTradingAnalytics(dateRange?: { start: string; end: string }) 
       setLoading(true);
       setError(null);
 
-      // Fetch BOTH open positions AND history (closed positions)
-      // The API returns:
-      // - /api/trading/positions: open/partially_closed positions (in-memory)
-      // - /api/analytics/history: closed positions (from database)
-      const [openPositions, historyPositions] = await Promise.all([
+      // Fetch positions AND backend stats
+      // Backend stats use Birdeye PnL cache (SINGLE SOURCE OF TRUTH)
+      const [openPositions, historyPositions, stats] = await Promise.all([
         tradingApi.getPositions(),
         tradingApi.getHistory(500), // Get last 500 closed positions
+        tradingApi.getStats(), // Get accurate stats from backend
       ]);
 
       // Merge and deduplicate by position ID
@@ -64,6 +64,7 @@ export function useTradingAnalytics(dateRange?: { start: string; end: string }) 
       }
 
       setPositions(filteredPositions);
+      setBackendStats(stats);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load positions');
     } finally {
@@ -77,44 +78,83 @@ export function useTradingAnalytics(dateRange?: { start: string; end: string }) 
 
   // Calculate overall analytics
   const analytics: TradingAnalytics = useMemo(() => {
+    // Use backend stats as SINGLE SOURCE OF TRUTH (uses Birdeye PnL cache)
+    if (backendStats) {
+      const totalTrades = positions.length;
+      const openPositionsList = positions.filter(p => p.status === 'open');
+      const closedPositionsList = positions.filter(p => p.status === 'closed' || p.status === 'partially_closed');
+
+      const totalInvestedSol = positions.reduce((sum, p) => sum + p.entry_sol_value, 0);
+
+      // Use backend stats for accurate Birdeye-synced data
+      const totalPnlSol = backendStats.total_pnl;
+      const totalPnlPct = totalInvestedSol > 0 ? (totalPnlSol / totalInvestedSol) * 100 : 0;
+      const winRate = backendStats.win_rate;
+      const avgHoldTimeMinutes = backendStats.avg_hold_time_minutes;
+      const bestTradePct = backendStats.best_trade_pct;
+      const worstTradePct = backendStats.worst_trade_pct;
+
+      // Calculate multiplier from positions (not in backend stats)
+      const avgMultiplier = totalTrades > 0
+        ? positions.reduce((sum, p) => sum + ((p.peak_pnl_pct / 100) + 1), 0) / totalTrades
+        : 0;
+
+      // TP hit rates - ONLY count closed positions (open trades haven't had chance to hit TPs)
+      const tp1HitRate = closedPositionsList.length > 0
+        ? (closedPositionsList.filter(p => p.tp1_hit).length / closedPositionsList.length) * 100
+        : 0;
+      const tp2HitRate = closedPositionsList.length > 0
+        ? (closedPositionsList.filter(p => p.tp2_hit).length / closedPositionsList.length) * 100
+        : 0;
+      const tp3HitRate = closedPositionsList.length > 0
+        ? (closedPositionsList.filter(p => p.tp3_hit).length / closedPositionsList.length) * 100
+        : 0;
+
+      return {
+        totalTrades,
+        openPositions: openPositionsList.length,
+        closedPositions: closedPositionsList.length,
+        totalInvestedSol,
+        totalPnlSol,
+        totalPnlPct,
+        winRate,
+        avgMultiplier,
+        avgHoldTimeMinutes,
+        bestTradePct,
+        worstTradePct,
+        tp1HitRate,
+        tp2HitRate,
+        tp3HitRate,
+      };
+    }
+
+    // Fallback to manual calculation if backend stats not available
     const totalTrades = positions.length;
     const openPositionsList = positions.filter(p => p.status === 'open');
     const closedPositionsList = positions.filter(p => p.status === 'closed' || p.status === 'partially_closed');
-    const openPositions = openPositionsList.length;
-    const closedPositions = closedPositionsList.length;
 
     const totalInvestedSol = positions.reduce((sum, p) => sum + p.entry_sol_value, 0);
-    // ONLY use realized_pnl_sol - we don't count unrealized profits
     const totalPnlSol = positions.reduce((sum, p) => sum + p.realized_pnl_sol, 0);
     const totalPnlPct = totalInvestedSol > 0 ? (totalPnlSol / totalInvestedSol) * 100 : 0;
 
-    // Win rate - ONLY count closed positions (open trades haven't finished yet)
     const profitableClosedPositions = closedPositionsList.filter(
       p => p.tp1_hit || p.realized_pnl_sol > 0
     );
-    const winRate = closedPositions > 0 ? (profitableClosedPositions.length / closedPositions) * 100 : 0;
+    const winRate = closedPositionsList.length > 0 ? (profitableClosedPositions.length / closedPositionsList.length) * 100 : 0;
 
-    // Average multiplier (from peak P&L) - all positions
     const avgMultiplier = totalTrades > 0
       ? positions.reduce((sum, p) => sum + ((p.peak_pnl_pct / 100) + 1), 0) / totalTrades
       : 0;
 
-    // Hold time - use backend data if available, otherwise calculate
     const closedWithTime = closedPositionsList.filter(p => p.closed_at);
     const avgHoldTimeMinutes = closedWithTime.length > 0
       ? closedWithTime.reduce((sum, p) => {
-        // Use backend hold_duration_minutes if available
-        if (typeof (p as any).hold_duration_minutes === 'number') {
-          return sum + (p as any).hold_duration_minutes;
-        }
-        // Fallback to calculation
         const entryTime = new Date(p.entry_time).getTime();
         const closeTime = new Date(p.closed_at!).getTime();
         return sum + (closeTime - entryTime) / (1000 * 60);
       }, 0) / closedWithTime.length
       : 0;
 
-    // Best and worst trades
     const bestTradePct = positions.length > 0
       ? Math.max(...positions.map(p => p.peak_pnl_pct))
       : 0;
@@ -122,22 +162,20 @@ export function useTradingAnalytics(dateRange?: { start: string; end: string }) 
       ? Math.min(...positions.map(p => p.unrealized_pnl_pct))
       : 0;
 
-    // TP hit rates - ONLY count closed positions (open trades haven't had chance to hit TPs)
-    // This prevents showing artificially low hit rates due to open positions
-    const tp1HitRate = closedPositions > 0
-      ? (closedPositionsList.filter(p => p.tp1_hit).length / closedPositions) * 100
+    const tp1HitRate = closedPositionsList.length > 0
+      ? (closedPositionsList.filter(p => p.tp1_hit).length / closedPositionsList.length) * 100
       : 0;
-    const tp2HitRate = closedPositions > 0
-      ? (closedPositionsList.filter(p => p.tp2_hit).length / closedPositions) * 100
+    const tp2HitRate = closedPositionsList.length > 0
+      ? (closedPositionsList.filter(p => p.tp2_hit).length / closedPositionsList.length) * 100
       : 0;
-    const tp3HitRate = closedPositions > 0
-      ? (closedPositionsList.filter(p => p.tp3_hit).length / closedPositions) * 100
+    const tp3HitRate = closedPositionsList.length > 0
+      ? (closedPositionsList.filter(p => p.tp3_hit).length / closedPositionsList.length) * 100
       : 0;
 
     return {
       totalTrades,
-      openPositions,
-      closedPositions,
+      openPositions: openPositionsList.length,
+      closedPositions: closedPositionsList.length,
       totalInvestedSol,
       totalPnlSol,
       totalPnlPct,
@@ -150,7 +188,7 @@ export function useTradingAnalytics(dateRange?: { start: string; end: string }) 
       tp2HitRate,
       tp3HitRate,
     };
-  }, [positions]);
+  }, [positions, backendStats]);
 
   // Calculate daily metrics for charts
   const dailyMetrics: DailyTradingMetrics[] = useMemo(() => {

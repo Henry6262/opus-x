@@ -23,6 +23,24 @@ interface ApiResponse<T> {
   error: string | null;
 }
 
+/**
+ * Backend trading stats from /api/analytics/stats
+ * Uses Birdeye PnL cache (SINGLE SOURCE OF TRUTH for on-chain data)
+ */
+export interface BackendTradingStats {
+  open_positions: number;
+  closed_positions: number;
+  total_unrealized_pnl: number;
+  total_realized_pnl: number;
+  total_pnl: number;
+  winning_trades: number;
+  losing_trades: number;
+  win_rate: number;
+  avg_hold_time_minutes: number;
+  best_trade_pct: number;
+  worst_trade_pct: number;
+}
+
 // ============================================
 // TRADING API CLIENT
 // ============================================
@@ -86,6 +104,14 @@ class TradingAPI {
    */
   async getHistory(limit: number = 50): Promise<TradingPosition[]> {
     return this.fetch<TradingPosition[]>(`/api/analytics/history?limit=${Math.min(limit, 500)}`);
+  }
+
+  /**
+   * Get trading statistics from backend
+   * Uses Birdeye PnL cache - SINGLE SOURCE OF TRUTH for on-chain data
+   */
+  async getStats(): Promise<BackendTradingStats> {
+    return this.fetch<BackendTradingStats>('/api/analytics/stats');
   }
 }
 
