@@ -52,6 +52,14 @@ interface TransactionDrawerProps {
     tokenMint: string;
     tokenImage?: string | null;
     positionId?: string;
+    /** Buy transaction signature - passed directly to avoid relying on API */
+    buySignature?: string | null;
+    /** Entry SOL value - for displaying buy amount if buy_signature is provided */
+    entrySolValue?: number;
+    /** Entry time - for buy transaction timestamp */
+    entryTime?: string;
+    /** Initial token quantity */
+    initialQuantity?: number;
 }
 
 // ============================================
@@ -278,6 +286,10 @@ export function TransactionDrawer({
     tokenMint,
     tokenImage,
     positionId,
+    buySignature: propBuySignature,
+    entrySolValue: propEntrySolValue,
+    entryTime: propEntryTime,
+    initialQuantity: propInitialQuantity,
 }: TransactionDrawerProps) {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -403,13 +415,19 @@ export function TransactionDrawer({
             const mappedTransactions: Transaction[] = [];
 
             // Add entry transaction (buy)
-            if (position.buy_signature) {
+            // First try position.buy_signature from API, then fallback to prop
+            const buySignature = position.buy_signature || propBuySignature;
+            const entrySolValue = position.entry_sol_value || propEntrySolValue || 0;
+            const entryTime = position.entry_time || propEntryTime;
+            const initialQuantity = position.initial_quantity || propInitialQuantity || 0;
+
+            if (buySignature) {
                 mappedTransactions.push({
-                    signature: position.buy_signature,
+                    signature: buySignature,
                     type: "entry",
-                    timestamp: new Date(position.entry_time).getTime(),
-                    solAmount: position.entry_sol_value || 0,
-                    tokenAmount: position.initial_quantity || 0,
+                    timestamp: entryTime ? new Date(entryTime).getTime() : Date.now(),
+                    solAmount: entrySolValue,
+                    tokenAmount: initialQuantity,
                     priceUsd: position.entry_price || 0,
                     status: "confirmed",
                 });
@@ -502,7 +520,7 @@ export function TransactionDrawer({
         } finally {
             setIsLoading(false);
         }
-    }, [tokenMint, positionId]);
+    }, [tokenMint, positionId, propBuySignature, propEntrySolValue, propEntryTime, propInitialQuantity]);
 
     useEffect(() => {
         if (isOpen) {

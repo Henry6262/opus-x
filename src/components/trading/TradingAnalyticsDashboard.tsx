@@ -13,13 +13,14 @@
 
 import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Radar, Target, Trophy, ExternalLink, TrendingUp, TrendingDown, Clock, Coins } from 'lucide-react';
+import { Radar, Target, Trophy, ExternalLink, TrendingUp, TrendingDown, Clock, Coins, ArrowDownRight, ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import { subDays } from 'date-fns';
 import { useTradingAnalytics } from '@/hooks/useTradingAnalytics';
 import { PulseRing, MetricBar, StatRow } from './OutcomePrimitives';
 import { CountUp } from '@/components/animations/CountUp';
 import { TransactionDrawer } from '@/features/smart-trading/components/TransactionDrawer';
 import { TokenAvatar } from './TokenAvatar';
+import { SolIcon } from '@/components/SolIcon';
 import { cn } from '@/lib/utils';
 import type { TokenPerformance } from '@/types/trading';
 
@@ -96,7 +97,7 @@ export function TradingAnalyticsDashboard() {
 
       <div className="relative z-10 p-5 md:p-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col items-center gap-4 mb-6 md:flex-row md:justify-between">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -114,7 +115,7 @@ export function TradingAnalyticsDashboard() {
           </motion.div>
 
           {/* View Mode Tabs */}
-          <div className="flex gap-1 rounded-full bg-white/5 p-1">
+          <div className="flex gap-1 rounded-full bg-white/5 p-1 w-fit">
             {[
               { id: 'overview', label: 'Overview' },
               { id: 'targets', label: 'Targets' },
@@ -167,7 +168,7 @@ export function TradingAnalyticsDashboard() {
                   <span className={analytics.totalPnlSol >= 0 ? "text-emerald-400" : "text-red-400"}>
                     {analytics.totalPnlSol >= 0 ? "+" : ""}
                   </span>
-                  <CountUp to={analytics.totalPnlSol} decimals={3} duration={1.5} suffix=" SOL" />
+                  <CountUp to={analytics.totalPnlSol} decimals={3} duration={1.5} /><SolIcon size={20} className="ml-2" />
                 </div>
               </motion.div>
 
@@ -288,12 +289,8 @@ export function TradingAnalyticsDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {topPerformers.map((token, idx) => {
                     const isProfit = token.totalPnlSol >= 0;
-                    const rankColors = [
-                      { bg: 'from-yellow-500/20 to-amber-600/10', border: 'border-yellow-500/30', badge: 'bg-yellow-500/20 text-yellow-400' },
-                      { bg: 'from-gray-400/15 to-slate-500/10', border: 'border-gray-400/25', badge: 'bg-gray-400/20 text-gray-300' },
-                      { bg: 'from-orange-600/15 to-amber-700/10', border: 'border-orange-500/25', badge: 'bg-orange-600/20 text-orange-400' },
-                    ];
-                    const rankStyle = rankColors[idx] || rankColors[2];
+                    const totalSellsReceived = token.sellTransactions.reduce((sum, tx) => sum + tx.sol_received, 0);
+                    const multiplier = (token.pnlPct / 100) + 1;
 
                     return (
                       <motion.div
@@ -302,88 +299,89 @@ export function TradingAnalyticsDashboard() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         transition={{ delay: 0.1 + idx * 0.1, type: 'spring', stiffness: 200 }}
                         onClick={() => setSelectedToken(token)}
-                        className={cn(
-                          "relative overflow-hidden rounded-2xl border p-4 cursor-pointer transition-all duration-300",
-                          "bg-gradient-to-br hover:scale-[1.02] hover:shadow-xl",
-                          rankStyle.bg,
-                          rankStyle.border,
-                          "hover:border-white/30 group"
-                        )}
+                        className="relative overflow-hidden rounded-xl border border-white/10 p-4 cursor-pointer transition-all duration-300 bg-gradient-to-br from-black to-zinc-900/80 hover:scale-[1.02] hover:shadow-xl hover:border-white/20 group"
                       >
-                        {/* Rank Badge - Top Right */}
-                        <div className={cn(
-                          "absolute top-3 right-3 flex items-center justify-center w-7 h-7 rounded-full font-bold text-xs",
-                          rankStyle.badge
-                        )}>
-                          {idx === 0 ? <Trophy className="w-3.5 h-3.5" /> : `#${idx + 1}`}
-                        </div>
-
-                        {/* Token Image & Name Row */}
-                        <div className="flex items-center gap-3 mb-4">
-                          <TokenAvatar
-                            symbol={token.ticker}
-                            mint={token.mint}
-                            size={52}
-                            rounded="xl"
-                            className="ring-2 ring-white/10"
-                          />
-                          <div className="flex-1 min-w-0 pr-8">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-white text-base truncate">${token.ticker}</span>
+                        {/* Header: Token + PnL + Multiplier */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <TokenAvatar
+                              symbol={token.ticker}
+                              mint={token.mint}
+                              size={40}
+                              rounded="lg"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-white text-sm truncate">${token.ticker}</span>
+                                <span className="flex items-center gap-0.5 text-[10px] text-white/40">
+                                  <Clock className="w-3 h-3" />
+                                  {token.holdTimeMinutes !== null ? `${Math.round(token.holdTimeMinutes)}m` : '-'}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-white/40 truncate">{token.tokenName}</p>
                             </div>
-                            <p className="text-xs text-white/40 truncate mt-0.5">{token.tokenName}</p>
                           </div>
-                        </div>
-
-                        {/* PnL Display - Prominent */}
-                        <div className={cn(
-                          "rounded-xl p-3 mb-3",
-                          isProfit ? "bg-emerald-500/10" : "bg-red-500/10"
-                        )}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              {isProfit ? (
-                                <TrendingUp className="w-4 h-4 text-emerald-400" />
-                              ) : (
-                                <TrendingDown className="w-4 h-4 text-red-400" />
-                              )}
-                              <span className="text-xs font-medium text-white/50">P&L</span>
-                            </div>
-                            <div className={cn(
-                              "text-lg font-bold",
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className={cn(
+                              "text-sm font-bold",
                               isProfit ? "text-emerald-400" : "text-red-400"
                             )}>
-                              {isProfit ? "+" : ""}{token.totalPnlSol.toFixed(4)} SOL
-                            </div>
-                          </div>
-                          <div className={cn(
-                            "text-right text-sm font-semibold mt-0.5",
-                            isProfit ? "text-emerald-400/80" : "text-red-400/80"
-                          )}>
-                            {isProfit ? "+" : ""}{token.pnlPct.toFixed(1)}%
+                              {isProfit ? "+" : ""}{token.totalPnlSol.toFixed(3)}
+                            </span>
+                            <span className={cn(
+                              "text-xl font-bold",
+                              isProfit ? "text-emerald-400" : "text-red-400"
+                            )}>
+                              {multiplier.toFixed(2)}X
+                            </span>
                           </div>
                         </div>
 
-                        {/* Stats Row */}
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1 text-white/50">
-                            <Coins className="w-3 h-3" />
-                            <span>{token.investedSol.toFixed(3)} SOL</span>
+                        {/* Entry → Sales Row */}
+                        <div className="flex items-center gap-2 text-xs mb-3">
+                          <div className="flex items-center gap-1">
+                            <ArrowDownRight className="w-3 h-3 text-blue-400" />
+                            <span className="text-white/50">{token.investedSol.toFixed(3)}</span>
                           </div>
-                          {token.holdTimeMinutes !== null && (
-                            <div className="flex items-center gap-1 text-white/50">
-                              <Clock className="w-3 h-3" />
-                              <span>{Math.round(token.holdTimeMinutes)}m</span>
-                            </div>
-                          )}
+                          <span className="text-white/20">→</span>
+                          <div className="flex items-center gap-1">
+                            <ArrowUpRight className="w-3 h-3 text-emerald-400" />
+                            <span className="text-emerald-400 font-medium">
+                              {totalSellsReceived > 0 ? totalSellsReceived.toFixed(3) : '-'}
+                            </span>
+                            {token.sellTransactions.length > 0 && (
+                              <span className="text-white/30">({token.sellTransactions.length})</span>
+                            )}
+                          </div>
+                          <div className="flex-1" />
+                          {/* Status + TPs on right */}
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded text-[9px] font-medium",
+                              token.status === 'closed' ? "bg-white/5 text-white/50" : "bg-emerald-500/10 text-emerald-400/70"
+                            )}>
+                              {token.status === 'closed' ? 'Closed' : token.status === 'partially_closed' ? 'Partial' : 'Open'}
+                            </span>
+                            {(token.tp1Hit || token.tp2Hit || token.tp3Hit) && (
+                              <>
+                                <div className="w-px h-3 bg-white/20" />
+                                <div className="flex items-center gap-1">
+                                  {token.tp1Hit && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-[#c4f70e]/15 text-[#c4f70e]">TP1</span>
+                                  )}
+                                  {token.tp2Hit && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-[#c4f70e]/15 text-[#c4f70e]">TP2</span>
+                                  )}
+                                  {token.tp3Hit && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-[#c4f70e]/15 text-[#c4f70e]">TP3</span>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Hover indicator */}
-                        <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ExternalLink className="w-4 h-4 text-[#c4f70e]" />
-                        </div>
-
-                        {/* Subtle shine effect on hover */}
+                        {/* Hover shine */}
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 pointer-events-none" />
                       </motion.div>
                     );
@@ -422,6 +420,10 @@ export function TradingAnalyticsDashboard() {
         tokenSymbol={selectedToken?.ticker || ''}
         tokenMint={selectedToken?.mint || ''}
         positionId={selectedToken?.positionId}
+        buySignature={selectedToken?.buySignature}
+        entrySolValue={selectedToken?.investedSol}
+        entryTime={selectedToken?.entryTime}
+        initialQuantity={undefined}
       />
     </motion.div>
   );
