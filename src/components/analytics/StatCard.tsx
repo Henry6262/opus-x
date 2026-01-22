@@ -100,26 +100,22 @@ export function StatCard({
                 {/* Inner gradient overlay */}
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/[0.03] via-transparent to-white/[0.01] pointer-events-none" />
 
-                {/* Content */}
-                <div className="relative z-10 flex flex-col gap-1">
-                    {/* Label row with icon */}
-                    <div className="flex items-center justify-between">
-                        <span className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50 group-hover:text-[#c4f70e]/70 transition-colors duration-300">
-                            {label}
-                        </span>
-                        {Icon && (
-                            <motion.div
-                                className="text-white/30 group-hover:text-[#c4f70e] transition-colors duration-300"
-                                animate={{ rotate: [0, 5, -5, 0] }}
-                                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                {/* Content - horizontal layout with stacked label words */}
+                <div className="relative z-10 flex items-center justify-between gap-2">
+                    {/* Left side: Stacked label words */}
+                    <div className="flex flex-col leading-tight">
+                        {label.split(' ').map((word, idx) => (
+                            <span
+                                key={idx}
+                                className="text-[11px] md:text-xs font-bold uppercase tracking-[0.15em] text-white/50 group-hover:text-[#c4f70e]/70 transition-colors duration-300"
                             >
-                                <Icon className="w-4 h-4 md:w-5 md:h-5" />
-                            </motion.div>
-                        )}
+                                {word}
+                            </span>
+                        ))}
                     </div>
 
-                    {/* Value */}
-                    <div className="flex items-baseline gap-2">
+                    {/* Right side: Value */}
+                    <div className="flex items-center gap-1.5">
                         <span
                             className={cn(
                                 "text-lg md:text-xl font-bold tracking-tight transition-colors duration-200",
@@ -225,7 +221,7 @@ export function WinRateStatCard({ value, ...props }: Omit<StatCardProps, "label"
 export function TradesStatCard({ value, ...props }: Omit<StatCardProps, "label" | "decimals">) {
     return (
         <StatCard
-            label="Trades"
+            label="Total Trades"
             value={value}
             decimals={0}
             glowColor="rgba(59, 130, 246, 0.4)"

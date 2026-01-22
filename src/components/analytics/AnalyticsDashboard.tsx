@@ -516,11 +516,11 @@ export function AnalyticsDashboard() {
 
           {/* Mobile Header - Title and dropdown selectors */}
           <div className="flex flex-col gap-3 md:hidden">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <h3 className="text-lg font-bold text-white flex items-center justify-center gap-2">
               <Activity className="w-5 h-5 text-[#c4f70e]" />
               Agent Metrics
             </h3>
-            <div className="flex items-end gap-3">
+            <div className="flex items-end justify-center gap-3">
               <TimeframeSelector
                 selectedBucket={bucket}
                 onChange={setBucket}
@@ -608,7 +608,7 @@ export function AnalyticsDashboard() {
                   glowColor="rgba(196, 247, 14, 0.35)"
                 />
                 <StatCard
-                  label="Trades"
+                  label="Total Trades"
                   value={selectedSummary.totalTrades}
                   decimals={0}
                   icon={BarChart3}
@@ -629,6 +629,9 @@ export function AnalyticsDashboard() {
             )}
           </div>
         </div>
+
+        {/* Mobile separator between Agent Metrics and Outcome Pulse */}
+        <div className="h-px w-full bg-gradient-to-r from-white/0 via-white/15 to-white/0 md:hidden" />
 
         <TradingAnalyticsDashboard />
       </div>

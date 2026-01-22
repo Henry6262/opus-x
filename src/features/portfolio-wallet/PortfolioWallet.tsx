@@ -3,12 +3,12 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { X, TrendingUp, TrendingDown, BarChart3, Clock, Layers, ChevronUp, ChevronDown, AlertCircle, CheckCircle2 } from "lucide-react";
+import { X, TrendingUp, TrendingDown, Clock, Layers, ChevronUp, ChevronDown, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { CountUp } from "@/components/animations";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
-import type { PortfolioWalletProps, TimeFilter, PortfolioStats, WalletView, Position as UiPosition, Transaction, ChartHistoryEntry } from "./types";
+import type { PortfolioWalletProps, TimeFilter, PortfolioStats, Position as UiPosition, ChartHistoryEntry } from "./types";
 import { useDashboardStats, usePositions, useSmartTradingConfig } from "@/features/smart-trading";
 import { useSharedWebSocket } from "@/features/smart-trading/hooks/useWebSocket";
 
@@ -44,18 +44,6 @@ function formatSolValue(value: number): string {
   return value.toFixed(4);
 }
 
-function formatTimeAgo(dateInput: string | Date): string {
-  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 // Type for on-chain holdings from API (IDENTICAL to PortfolioHoldingsPanel)
 interface OnChainHolding {
   id: string;
@@ -87,9 +75,6 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   const { positions, history } = usePositions();
   const { config } = useSmartTradingConfig();
   const chartHistory: ChartHistoryEntry[] = []; // TODO: Add chartHistory to real-time context
-  const [fetchedTransactions, setFetchedTransactions] = useState<Transaction[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [historyError, setHistoryError] = useState<string | null>(null);
 
   // Fetch holdings directly like the main dashboard does
   const [fetchedHoldings, setFetchedHoldings] = useState<OnChainHolding[]>([]);
@@ -105,17 +90,11 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
   const { on: onTradingEvent } = useSharedWebSocket({ path: "/ws/trading" });
 
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeView, setActiveView] = useState<WalletView>("overview");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("24H");
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const [isTimeFilterOpen, setIsTimeFilterOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    if (activeView === "positions") {
-      setActiveView("overview");
-    }
-  }, [activeView]);
+  const [positionSortBy, setPositionSortBy] = useState<"recency" | "pnl">("recency");
 
   // Detect mobile viewport
   useEffect(() => {
@@ -177,18 +156,62 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     }
   }, []);
 
-  // Compute UI Data
+  // Compute UI Data - Calculate stats from history for consistency with Outcome Pulse
+  // The history array comes from /api/analytics/history (same source as Outcome Pulse)
+  const calculatedStats = useMemo(() => {
+    // Combine positions (open) and history (closed) for full trade data
+    const allTrades = [...positions, ...history];
+    const closedTrades = history;
+
+    // Calculate win rate from closed trades (same logic as Outcome Pulse)
+    const winningTrades = closedTrades.filter(
+      p => p.realizedPnlSol > 0
+    ).length;
+    const losingTrades = closedTrades.length - winningTrades;
+    const winRate = closedTrades.length > 0
+      ? (winningTrades / closedTrades.length) * 100
+      : 0;
+
+    // Calculate total PnL from history
+    const totalRealizedPnL = closedTrades.reduce((sum, p) => sum + p.realizedPnlSol, 0);
+    const avgPnL = closedTrades.length > 0
+      ? totalRealizedPnL / closedTrades.length
+      : 0;
+
+    // Find best trade
+    const bestTrade = closedTrades.length > 0
+      ? closedTrades.reduce((best, p) => {
+          const pnlPct = p.entryAmountSol > 0 ? (p.realizedPnlSol / p.entryAmountSol) * 100 : 0;
+          const bestPct = best.entryAmountSol > 0 ? (best.realizedPnlSol / best.entryAmountSol) * 100 : 0;
+          return pnlPct > bestPct ? p : best;
+        })
+      : null;
+
+    const bestTradePct = bestTrade && bestTrade.entryAmountSol > 0
+      ? (bestTrade.realizedPnlSol / bestTrade.entryAmountSol) * 100
+      : 0;
+
+    return {
+      totalTrades: allTrades.length,
+      winningTrades,
+      losingTrades,
+      winRate,
+      avgPnL,
+      bestTradePct,
+    };
+  }, [positions, history]);
+
   const portfolioStats: PortfolioStats = {
     totalValue,
     totalPnL: displayPnL,
     totalPnLPercent: pnlPercent,
-    winnersCount: dashboardStats?.performance.winningTrades || 0,
-    losersCount: dashboardStats?.performance.losingTrades || 0,
-    winRate: dashboardStats?.performance.winRate || 0,
-    avgPnL: (dashboardStats?.performance.netPnlSol || 0) / (dashboardStats?.performance.totalTrades || 1), // approx
-    topPerformer: null, // TODO: Compute from history
-    worstPerformer: null, // TODO: Compute from history
-    totalTrades: dashboardStats?.performance.totalTrades || 0,
+    winnersCount: calculatedStats.winningTrades,
+    losersCount: calculatedStats.losingTrades,
+    winRate: calculatedStats.winRate,
+    avgPnL: calculatedStats.avgPnL,
+    topPerformer: { pnlPercent: calculatedStats.bestTradePct } as PortfolioStats['topPerformer'],
+    worstPerformer: null,
+    totalTrades: calculatedStats.totalTrades,
   };
 
   // Map holdings to UI positions - using backend API data (IDENTICAL to PortfolioHoldingsPanel)
@@ -245,93 +268,24 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
       .sort((a, b) => b.pnlPercent - a.pnlPercent);
   }, [fetchedHoldings, positions]);
 
-  type EnrichedTransaction = {
-    id: string;
-    tx_type: "buy" | "sell";
-    signature: string;
-    mint: string;
-    ticker: string;
-    token_name: string;
-    sol_amount?: number;
-    tokens_received?: number;
-    tokens_sold?: number;
-    sol_received?: number;
-    price: number;
-    timestamp: string;
-    current_price?: number;
-  };
+  // Sorted positions based on user selection
+  const sortedPositions = useMemo(() => {
+    const positionsToSort = [...uiPositions];
+    if (positionSortBy === "recency") {
+      return positionsToSort.sort((a, b) => b.entryTime.getTime() - a.entryTime.getTime());
+    }
+    // Sort by PnL (SOL amount)
+    return positionsToSort.sort((a, b) => b.pnl - a.pnl);
+  }, [uiPositions, positionSortBy]);
 
-  const mapHistoryToTransactions = useMemo(
-    () =>
-      history.map((p) => ({
-        id: p.id,
-        mint: p.tokenMint,
-        type: "sell" as const,
-        symbol: p.tokenSymbol || "TOKEN",
-        price: p.currentPrice || p.entryPriceSol || 0,
-        quantity: p.entryTokens,
-        value: p.realizedPnlSol + p.entryAmountSol,
-        pnl: p.realizedPnlSol,
-        pnlPercent: p.entryAmountSol > 0 ? (p.realizedPnlSol / p.entryAmountSol) * 100 : 0,
-        timestamp: new Date(p.closedAt || p.updatedAt),
-        txHash: p.target1TxSig || p.stopLossTxSig || undefined,
-      })),
-    [history]
-  );
-
-  const mapEnrichedTransaction = useCallback((tx: EnrichedTransaction): Transaction => {
-    const value = tx.tx_type === "buy" ? tx.sol_amount ?? 0 : tx.sol_received ?? 0;
-    const quantity = tx.tx_type === "buy" ? tx.tokens_received ?? 0 : tx.tokens_sold ?? 0;
-    const pnlPercent =
-      tx.current_price && tx.price
-        ? ((tx.current_price / tx.price - 1) * 100)
-        : undefined;
-
-    return {
-      id: tx.id || tx.signature,
-      mint: tx.mint,
-      type: tx.tx_type,
-      symbol: tx.ticker || tx.token_name || tx.mint?.slice(0, 4) || "TOKEN",
-      price: tx.price || 0,
-      quantity,
-      value,
-      pnlPercent,
-      timestamp: new Date(tx.timestamp),
-      txHash: tx.signature,
-    };
-  }, []);
-
-  // Fetch transactions from API (same as main dashboard's TransactionsPanel)
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchTransactions = async () => {
-      setIsLoadingHistory(true);
-      setHistoryError(null);
-      try {
-        const url = buildDevprntApiUrl("/api/trading/transactions?limit=25");
-        const response = await fetch(url.toString());
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const result = await response.json();
-        const items: EnrichedTransaction[] = Array.isArray(result.data) ? result.data : [];
-        if (!cancelled) {
-          setFetchedTransactions(items.map(mapEnrichedTransaction));
-        }
-      } catch (err) {
-        console.error("Failed to fetch wallet transaction history", err);
-        if (!cancelled) {
-          setHistoryError(err instanceof Error ? err.message : "Failed to load transactions");
-        }
-      } finally {
-        if (!cancelled) setIsLoadingHistory(false);
-      }
-    };
-
-    fetchTransactions();
-    return () => {
-      cancelled = true;
-    };
-  }, [mapEnrichedTransaction]);
+  // Calculate total SOL invested in active positions (entry values)
+  const totalActiveExposure = useMemo(() => {
+    // Use entry value (value - pnl) for exposure calculation
+    return uiPositions.reduce((sum, p) => {
+      const entryValue = p.value - p.pnl;
+      return sum + Math.max(0, entryValue);
+    }, 0);
+  }, [uiPositions]);
 
   // Fetch holdings from API (IDENTICAL to PortfolioHoldingsPanel)
   const fetchHoldings = useCallback(async () => {
@@ -494,9 +448,6 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     };
   }, [onTradingEvent]);
 
-  const transactions: Transaction[] =
-    fetchedTransactions.length > 0 ? fetchedTransactions : mapHistoryToTransactions;
-
   const isProfitable = pnlPercent >= 0;
 
   // Generate mock chart data only once per timeFilter change (not on every isProfitable change)
@@ -634,31 +585,13 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
               </button>
             </div>
 
-            {/* View Tabs */}
-            <div className="portfolio-wallet-tabs">
-              <button
-                onClick={() => setActiveView("overview")}
-                className={`portfolio-wallet-tab ${activeView === "overview" ? "active" : ""}`}
-              >
-                <BarChart3 className="w-3.5 h-3.5" />
-                <span>Overview</span>
-              </button>
-              <button
-                onClick={() => setActiveView("history")}
-                className={`portfolio-wallet-tab ${activeView === "history" ? "active" : ""}`}
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>History</span>
-              </button>
-            </div>
-
-            {/* Overview View */}
-            {activeView === "overview" && (
+            {/* Overview Content */}
+            {(
               <>
-                {/* Total Value in SOL */}
+                {/* SOL Balance Section */}
                 <div className="portfolio-wallet-total">
                   <div className="portfolio-wallet-total-value">
-                    <span className="tabular-nums">{formatSolValue(totalValue)}</span>
+                    <span className="tabular-nums">{formatSolValue(walletBalance)}</span>
                     <Image src="/logos/solana.png" alt="SOL" width={24} height={24} className="inline-block ml-2" />
                   </div>
                   <div className={`portfolio-wallet-total-pnl ${isProfitable ? "positive" : "negative"}`}>
@@ -668,50 +601,18 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                   </div>
                 </div>
 
-                {/* Time Filters - Dropdown on mobile, buttons on desktop */}
-                {isMobile ? (
-                  <div className="portfolio-wallet-filters-mobile">
-                    <button
-                      onClick={() => setIsTimeFilterOpen(!isTimeFilterOpen)}
-                      className="portfolio-wallet-filter-dropdown"
-                    >
-                      <span>{timeFilter}</span>
-                      <ChevronDown className={`w-4 h-4 transition-transform ${isTimeFilterOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {isTimeFilterOpen && (
-                      <div className="portfolio-wallet-filter-dropdown-menu">
-                        {(["1H", "24H", "1W", "1M", "ALL"] as TimeFilter[]).map((filter) => (
-                          <button
-                            key={filter}
-                            onClick={() => {
-                              setTimeFilter(filter);
-                              setIsTimeFilterOpen(false);
-                            }}
-                            className={`portfolio-wallet-filter-dropdown-item ${timeFilter === filter ? "active" : ""}`}
-                          >
-                            {filter}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="portfolio-wallet-filters">
-                    {(["1H", "24H", "1W", "1M", "ALL"] as TimeFilter[]).map((filter) => (
-                      <button
-                        key={filter}
-                        onClick={() => setTimeFilter(filter)}
-                        className={`portfolio-wallet-filter ${timeFilter === filter ? "active" : ""}`}
-                      >
-                        {filter}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {/* Active Exposure Info */}
+                <div className="flex items-center justify-between px-1 py-2 text-xs">
+                  <span className="text-white/50">In Active Positions:</span>
+                  <span className="text-white/80 font-medium tabular-nums">
+                    {formatSolValue(totalActiveExposure)} SOL
+                    <span className="text-white/40 ml-1">({sortedPositions.length} tokens)</span>
+                  </span>
+                </div>
 
                 {/* Chart */}
                 <div className="portfolio-wallet-chart">
-                  <ChartContainer config={chartConfig} className="h-[120px] w-full">
+                  <ChartContainer config={chartConfig} className="h-[100px] w-full">
                     <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
                       <defs>
                         <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
@@ -742,109 +643,119 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
                   </ChartContainer>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="portfolio-wallet-stats">
-                  <div className="portfolio-wallet-stat">
-                    <span className="portfolio-wallet-stat-label">Win Rate</span>
-                    <span className="portfolio-wallet-stat-value tabular-nums text-matrix-green">{portfolioStats.winRate.toFixed(1)}%</span>
+                {/* Positions Header with Sort */}
+                <div className="flex items-center justify-between pt-3 pb-2 border-t border-white/10">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-white/50">Active Positions</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setPositionSortBy("recency")}
+                      className={`px-2 py-1 text-[10px] font-medium rounded transition-colors ${
+                        positionSortBy === "recency"
+                          ? "bg-[#c4f70e]/20 text-[#c4f70e]"
+                          : "text-white/40 hover:text-white/60"
+                      }`}
+                    >
+                      <Clock className="w-3 h-3 inline mr-1" />
+                      Recent
+                    </button>
+                    <button
+                      onClick={() => setPositionSortBy("pnl")}
+                      className={`px-2 py-1 text-[10px] font-medium rounded transition-colors ${
+                        positionSortBy === "pnl"
+                          ? "bg-[#c4f70e]/20 text-[#c4f70e]"
+                          : "text-white/40 hover:text-white/60"
+                      }`}
+                    >
+                      <TrendingUp className="w-3 h-3 inline mr-1" />
+                      PnL
+                    </button>
                   </div>
-                  <div className="portfolio-wallet-stat">
-                    <span className="portfolio-wallet-stat-label">Avg Trade</span>
-                    <span className={`portfolio-wallet-stat-value tabular-nums ${portfolioStats.avgPnL >= 0 ? "text-matrix-green" : "text-terminal-red"}`}>
-                      {portfolioStats.avgPnL >= 0 ? "+" : ""}{portfolioStats.avgPnL.toFixed(2)} SOL
-                    </span>
-                  </div>
-                  <div className="portfolio-wallet-stat">
-                    <span className="portfolio-wallet-stat-label">Best</span>
-                    <span className="portfolio-wallet-stat-value tabular-nums text-matrix-green">
-                      +{portfolioStats.topPerformer?.pnlPercent || 0}%
-                    </span>
-                  </div>
-                  <div className="portfolio-wallet-stat">
-                    <span className="portfolio-wallet-stat-label">Trades</span>
-                    <span className="portfolio-wallet-stat-value tabular-nums">{portfolioStats.totalTrades}</span>
-                  </div>
-                  <div className="portfolio-wallet-stat">
-                    <span className="portfolio-wallet-stat-label">Winners</span>
-                    <span className="portfolio-wallet-stat-value tabular-nums text-matrix-green">{portfolioStats.winnersCount}</span>
-                  </div>
-                  <div className="portfolio-wallet-stat">
-                    <span className="portfolio-wallet-stat-label">Losers</span>
-                    <span className="portfolio-wallet-stat-value tabular-nums text-terminal-red">{portfolioStats.losersCount}</span>
-                  </div>
+                </div>
+
+                {/* Positions List - Outcome Pulse Style */}
+                <div className="portfolio-wallet-positions-list space-y-3 max-h-[320px] overflow-y-auto pr-1 pb-2">
+                  {sortedPositions.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-white/30">
+                      <Layers className="w-8 h-8 mb-2" />
+                      <span className="text-xs">No active positions</span>
+                    </div>
+                  ) : (
+                    sortedPositions.map((position) => {
+                      const isProfit = position.pnl >= 0;
+                      const multiplier = (position.pnlPercent / 100) + 1;
+                      const holdTimeMinutes = Math.round((Date.now() - position.entryTime.getTime()) / (1000 * 60));
+                      const entryValue = position.value - position.pnl; // Calculate entry value
+
+                      return (
+                        <div
+                          key={position.id}
+                          className="relative overflow-visible p-4 rounded-xl bg-gradient-to-br from-black to-zinc-900/80 border border-white/10 transition-all duration-300 hover:border-white/20 group cursor-pointer"
+                        >
+                          {/* Header: Token + PnL + Multiplier */}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <Image
+                                src={`https://dd.dexscreener.com/ds-data/tokens/solana/${position.mint}.png`}
+                                alt={position.symbol}
+                                width={40}
+                                height={40}
+                                className="rounded-lg flex-shrink-0"
+                                unoptimized
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-white text-sm">${position.symbol}</span>
+                                  <span className="flex items-center gap-0.5 text-[10px] text-white/40 flex-shrink-0">
+                                    <Clock className="w-3 h-3" />
+                                    {holdTimeMinutes < 60
+                                      ? `${holdTimeMinutes}m`
+                                      : holdTimeMinutes < 1440
+                                      ? `${Math.round(holdTimeMinutes / 60)}h`
+                                      : `${Math.round(holdTimeMinutes / 1440)}d`}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-white/40 truncate max-w-[120px]">{position.name}</p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end flex-shrink-0 ml-2">
+                              <span className={`text-sm font-bold tabular-nums ${isProfit ? "text-emerald-400" : "text-red-400"}`}>
+                                {isProfit ? "+" : ""}{position.pnl.toFixed(3)}
+                              </span>
+                              <span className={`text-lg font-bold tabular-nums ${isProfit ? "text-emerald-400" : "text-red-400"}`}>
+                                {multiplier.toFixed(2)}X
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Entry → Current Value Row */}
+                          <div className="flex items-center gap-2 text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <ArrowDownRight className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                              <span className="text-white/50 tabular-nums">{Math.max(0, entryValue).toFixed(3)}</span>
+                            </div>
+                            <span className="text-white/30">→</span>
+                            <div className="flex items-center gap-1.5">
+                              <ArrowUpRight className={`w-3.5 h-3.5 flex-shrink-0 ${isProfit ? "text-emerald-400" : "text-red-400"}`} />
+                              <span className={`font-medium tabular-nums ${isProfit ? "text-emerald-400" : "text-red-400"}`}>
+                                {Math.max(0, position.value).toFixed(3)}
+                              </span>
+                            </div>
+                            <div className="flex-1" />
+                            <span className="px-2 py-1 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400/80 flex-shrink-0">
+                              Open
+                            </span>
+                          </div>
+
+                          {/* Hover shine */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 pointer-events-none rounded-xl" />
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </>
             )}
 
-            {/* History View */}
-            {activeView === "history" && (
-              <div className="portfolio-wallet-history">
-                {isLoadingHistory && transactions.length === 0 ? (
-                  <div className="portfolio-wallet-empty">
-                    <Clock className="w-8 h-8 text-white/20 animate-pulse" />
-                    <span>Loading history...</span>
-                  </div>
-                ) : historyError && transactions.length === 0 ? (
-                  <div className="portfolio-wallet-empty">
-                    <AlertCircle className="w-8 h-8 text-red-400/60" />
-                    <span className="text-red-400/80">{historyError}</span>
-                  </div>
-                ) : transactions.length === 0 ? (
-                  <div className="portfolio-wallet-empty">
-                    <Clock className="w-8 h-8 text-white/20" />
-                    <span>No transactions yet</span>
-                  </div>
-                ) : (
-                  <div className="portfolio-wallet-history-list">
-                    {transactions.map((tx) => (
-                      <div key={tx.id} className="portfolio-wallet-transaction">
-                        <div className="portfolio-wallet-transaction-header">
-                          {tx.mint && (
-                            <Image
-                              src={`https://dd.dexscreener.com/ds-data/tokens/solana/${tx.mint}.png`}
-                              alt={tx.symbol}
-                              width={24}
-                              height={24}
-                              className="rounded-md flex-shrink-0"
-                              unoptimized
-                            />
-                          )}
-                          <div className="flex flex-col flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="portfolio-wallet-transaction-symbol font-semibold">{tx.symbol}</span>
-                              <div className={`portfolio-wallet-transaction-type ${tx.type}`}>
-                                {tx.type === "buy" ? "BUY" : "SELL"}
-                              </div>
-                            </div>
-                            <span className="portfolio-wallet-transaction-time text-[10px]">{formatTimeAgo(tx.timestamp)}</span>
-                          </div>
-                          {tx.pnlPercent !== undefined && (
-                            <div className={`portfolio-wallet-transaction-pnl tabular-nums min-w-[4ch] ${tx.pnlPercent >= 0 ? "positive" : "negative"}`}>
-                              {tx.pnlPercent >= 0 ? "+" : ""}{tx.pnlPercent.toFixed(0)}%
-                            </div>
-                          )}
-                        </div>
-                        <div className="portfolio-wallet-transaction-details">
-                          <div className="portfolio-wallet-transaction-value tabular-nums">
-                            {tx.value.toFixed(2)} SOL
-                          </div>
-                          {tx.txHash && (
-                            <a
-                              href={`https://solscan.io/tx/${tx.txHash}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="portfolio-wallet-transaction-hash hover:text-[#c4f70e] transition-colors"
-                            >
-                              {tx.txHash.substring(0, 6)}...
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
             </div>
           </div>
         </>,

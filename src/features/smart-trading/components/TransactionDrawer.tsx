@@ -18,6 +18,8 @@ import {
     Droplets,
     BarChart3,
     Globe,
+    Copy,
+    Check,
 } from "lucide-react";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 
@@ -74,6 +76,36 @@ function XIcon({ className }: { className?: string }) {
         <svg viewBox="0 0 24 24" className={className} fill="currentColor">
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
         </svg>
+    );
+}
+
+// Copy Button Component
+function CopyButton({ text }: { text: string }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+        } catch {
+            console.error("Failed to copy");
+        }
+    };
+
+    return (
+        <button
+            onClick={handleCopy}
+            className="p-0.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
+            aria-label="Copy contract address"
+        >
+            {copied ? (
+                <Check className="w-3 h-3 text-[#c4f70e]" />
+            ) : (
+                <Copy className="w-3 h-3 text-white/40 hover:text-white/60" />
+            )}
+        </button>
     );
 }
 
@@ -591,6 +623,14 @@ export function TransactionDrawer({
                             <div>
                                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                                     $ <span className="text-[#c4f70e]">{tokenSymbol}</span>
+                                    {tokenMint && (
+                                        <span className="flex items-center gap-1">
+                                            <span className="text-[10px] font-mono text-white/40">
+                                                {tokenMint.slice(0, 4)}...
+                                            </span>
+                                            <CopyButton text={tokenMint} />
+                                        </span>
+                                    )}
                                 </h3>
                                 <p className="text-[10px] text-white/40">{transactions.length} txns</p>
                             </div>
@@ -604,10 +644,8 @@ export function TransactionDrawer({
                         </button>
                     </div>
 
-                    {/* Token Info Section */}
+                    {/* Summary Stats Section */}
                     <div className="px-4 py-3 border-b border-white/5">
-                        <TokenInfoSection tokenInfo={tokenInfo} isLoading={isLoadingTokenInfo} />
-
                         {/* Summary Stats - More compact */}
                         {transactions.length > 0 && (
                             <div className="grid grid-cols-3 gap-2">

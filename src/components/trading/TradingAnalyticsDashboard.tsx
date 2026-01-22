@@ -14,28 +14,156 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Radar, Target, Trophy, ExternalLink, TrendingUp, TrendingDown, Clock, Coins, ArrowDownRight, ArrowUpRight, CheckCircle2 } from 'lucide-react';
-import { subDays } from 'date-fns';
-import { useTradingAnalytics } from '@/hooks/useTradingAnalytics';
+import { usePositions } from '@/features/smart-trading/context';
 import { PulseRing, MetricBar, StatRow } from './OutcomePrimitives';
 import { CountUp } from '@/components/animations/CountUp';
 import { TransactionDrawer } from '@/features/smart-trading/components/TransactionDrawer';
 import { TokenAvatar } from './TokenAvatar';
 import { SolIcon } from '@/components/SolIcon';
 import { cn } from '@/lib/utils';
-import type { TokenPerformance } from '@/types/trading';
+import type { Position } from '@/features/smart-trading/types';
+
+// Extended Position type with fields added by WebSocket context
+type ExtendedPosition = Position & {
+  peakPrice?: number;
+  peakPnlPct?: number;
+  marketCap?: number;
+  liquidity?: number;
+  volume24h?: number;
+};
+
+// Transformed token performance for the trades view
+interface TokenPerformance {
+  positionId: string;
+  mint: string;
+  tokenName: string;
+  ticker: string;
+  entryTime: string;
+  exitTime: string | null;
+  investedSol: number;
+  totalPnlSol: number;
+  pnlPct: number;
+  peakPnlPct: number;
+  holdTimeMinutes: number | null;
+  status: 'open' | 'partially_closed' | 'closed';
+  tp1Hit: boolean;
+  tp2Hit: boolean;
+  tp3Hit: boolean;
+  buySignature: string | null;
+  sellTransactions: { signature: string; sol_received: number; quantity: number; price: number; timestamp: string }[];
+}
 
 type ViewMode = 'overview' | 'targets' | 'performance';
 
 export function TradingAnalyticsDashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [selectedToken, setSelectedToken] = useState<TokenPerformance | null>(null);
-  const [dateRange] = useState({
-    start: subDays(new Date(), 30).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0],
-  });
 
-  const { analytics, tokenPerformance, loading, error } =
-    useTradingAnalytics(dateRange);
+  // Use the same data source as HistoryPanel for consistency
+  const { positions, history, isLoading } = usePositions();
+
+  // Cast to extended type since WebSocket context adds extra fields
+  const allPositions = useMemo(() => [...positions, ...history] as ExtendedPosition[], [positions, history]);
+
+  // Calculate analytics from combined position data
+  const analytics = useMemo(() => {
+    const totalTrades = allPositions.length;
+    const openPositions = positions.length;
+    const closedPositions = history.length;
+
+    const totalInvestedSol = allPositions.reduce((sum, p) => sum + (p.entryAmountSol || 0), 0);
+    const totalPnlSol = allPositions.reduce((sum, p) => sum + (p.realizedPnlSol || 0), 0);
+    const totalPnlPct = totalInvestedSol > 0 ? (totalPnlSol / totalInvestedSol) * 100 : 0;
+
+    // Win rate - only count closed positions
+    const closedWithPnl = history.filter(p => p.realizedPnlSol !== undefined);
+    const profitableTrades = closedWithPnl.filter(p => (p.realizedPnlSol || 0) > 0);
+    const winRate = closedWithPnl.length > 0 ? (profitableTrades.length / closedWithPnl.length) * 100 : 0;
+
+    // Average multiplier (from peak P&L)
+    const avgMultiplier = totalTrades > 0
+      ? allPositions.reduce((sum, p) => sum + (((p.peakPnlPct || 0) / 100) + 1), 0) / totalTrades
+      : 0;
+
+    // Hold time calculation
+    const closedWithTime = history.filter(p => p.closedAt);
+    const avgHoldTimeMinutes = closedWithTime.length > 0
+      ? closedWithTime.reduce((sum, p) => {
+          const entryTime = new Date(p.createdAt).getTime();
+          const closeTime = new Date(p.closedAt!).getTime();
+          return sum + (closeTime - entryTime) / (1000 * 60);
+        }, 0) / closedWithTime.length
+      : 0;
+
+    // Best and worst trades
+    const bestTradePct = allPositions.length > 0
+      ? Math.max(...allPositions.map(p => p.peakPnlPct || 0))
+      : 0;
+
+    // TP hit rates - only from closed positions
+    const tp1HitRate = closedPositions > 0
+      ? (history.filter(p => p.target1Hit).length / closedPositions) * 100
+      : 0;
+    const tp2HitRate = closedPositions > 0
+      ? (history.filter(p => p.target2Hit).length / closedPositions) * 100
+      : 0;
+    const tp3HitRate = 0; // Position type doesn't have target3
+
+    return {
+      totalTrades,
+      openPositions,
+      closedPositions,
+      totalInvestedSol,
+      totalPnlSol,
+      totalPnlPct,
+      winRate,
+      avgMultiplier,
+      avgHoldTimeMinutes,
+      bestTradePct,
+      tp1HitRate,
+      tp2HitRate,
+      tp3HitRate,
+    };
+  }, [allPositions, positions, history]);
+
+  // Transform positions to TokenPerformance format for top trades display
+  const tokenPerformance: TokenPerformance[] = useMemo(() => {
+    return allPositions.map((p): TokenPerformance => {
+      const totalPnlSol = p.realizedPnlSol || 0;
+      const pnlPct = p.entryAmountSol > 0 ? (totalPnlSol / p.entryAmountSol) * 100 : 0;
+
+      let holdTimeMinutes: number | null = null;
+      if (p.closedAt) {
+        const entryTime = new Date(p.createdAt).getTime();
+        const closeTime = new Date(p.closedAt).getTime();
+        holdTimeMinutes = (closeTime - entryTime) / (1000 * 60);
+      }
+
+      return {
+        positionId: p.id,
+        mint: p.tokenMint,
+        tokenName: p.tokenSymbol || 'Unknown',
+        ticker: p.tokenSymbol || p.tokenMint.slice(0, 6),
+        entryTime: p.createdAt,
+        exitTime: p.closedAt || null,
+        investedSol: p.entryAmountSol || 0,
+        totalPnlSol,
+        pnlPct,
+        peakPnlPct: p.peakPnlPct || 0,
+        holdTimeMinutes,
+        status: (p.status === 'CLOSED' || p.status === 'STOPPED_OUT' ? 'closed'
+          : p.status === 'PARTIALLY_CLOSED' ? 'partially_closed'
+          : 'open') as 'open' | 'partially_closed' | 'closed',
+        tp1Hit: p.target1Hit || false,
+        tp2Hit: p.target2Hit || false,
+        tp3Hit: false, // Position type doesn't have target3
+        buySignature: p.entryTxSig || null,
+        sellTransactions: [], // Not available from Position type, drawer will fetch
+      };
+    }).sort((a, b) => b.totalPnlSol - a.totalPnlSol); // Sort by P&L descending
+  }, [allPositions]);
+
+  const loading = isLoading;
 
   // Calculate derived stats
   const avgTargetEfficiency = useMemo(() => {
@@ -67,27 +195,19 @@ export function TradingAnalyticsDashboard() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-[300px] rounded-2xl border border-red-500/20 bg-red-500/5">
-        <div className="text-red-400">Error: {error}</div>
-      </div>
-    );
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl"
+      className="relative overflow-hidden bg-black/40 backdrop-blur-xl md:rounded-2xl md:border md:border-white/10"
     >
       {/* Animated background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#c4f70e]/5 via-transparent to-purple-500/5 pointer-events-none" />
 
       {/* Subtle grid pattern */}
       <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        className="absolute inset-0 opacity-[0.03] pointer-events-none hidden md:block"
         style={{
           backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
                            linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
@@ -95,9 +215,9 @@ export function TradingAnalyticsDashboard() {
         }}
       />
 
-      <div className="relative z-10 p-5 md:p-8">
+      <div className="relative z-10 px-0 py-5 md:p-8">
         {/* Header */}
-        <div className="flex flex-col items-center gap-4 mb-6 md:flex-row md:justify-between">
+        <div className="flex flex-col items-center gap-4 mb-6 px-4 md:px-0 md:flex-row md:justify-between">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -119,7 +239,7 @@ export function TradingAnalyticsDashboard() {
             {[
               { id: 'overview', label: 'Overview' },
               { id: 'targets', label: 'Targets' },
-              { id: 'performance', label: 'Top Trades' },
+              { id: 'performance', label: 'Trades', desktopLabel: 'Top Trades' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -131,7 +251,8 @@ export function TradingAnalyticsDashboard() {
                     : "text-white/50 hover:text-white/70 hover:bg-white/5"
                 )}
               >
-                {tab.label}
+                <span className="md:hidden">{tab.label}</span>
+                <span className="hidden md:inline">{'desktopLabel' in tab ? tab.desktopLabel : tab.label}</span>
               </button>
             ))}
           </div>
@@ -139,7 +260,7 @@ export function TradingAnalyticsDashboard() {
 
         {/* Content based on view mode */}
         {viewMode === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-10 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-10 items-center px-4 md:px-0">
             {/* Pulse Ring - Win Rate with padding */}
             <div className="flex justify-center p-8 md:p-12">
               <PulseRing
@@ -181,7 +302,8 @@ export function TradingAnalyticsDashboard() {
                   className="rounded-lg bg-white/[0.03] p-2 md:p-4"
                 >
                   <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/60 md:text-sm">
-                    Avg Multiplier
+                    <span className="md:hidden">Avg PNL</span>
+                    <span className="hidden md:inline">Avg Multiplier</span>
                   </span>
                   <div className="mt-1 text-base font-bold text-white md:text-xl">
                     <CountUp to={analytics.avgMultiplier} decimals={2} duration={1.5} suffix="x" />
@@ -226,7 +348,7 @@ export function TradingAnalyticsDashboard() {
         )}
 
         {viewMode === 'targets' && (
-          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 items-center px-4 md:px-0">
             {/* Target Efficiency Ring */}
             <div className="flex justify-center">
               <PulseRing
@@ -278,15 +400,15 @@ export function TradingAnalyticsDashboard() {
         )}
 
         {viewMode === 'performance' && (
-          <div className="space-y-4">
+          <div className="space-y-4 md:px-0">
             {topPerformers.length === 0 ? (
-              <div className="flex items-center justify-center h-[200px] text-white/40">
+              <div className="flex items-center justify-center h-[200px] text-white/40 px-4">
                 No trades yet
               </div>
             ) : (
               <>
                 {/* Top Performers Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="flex flex-col gap-2 md:grid md:grid-cols-3 md:gap-3">
                   {topPerformers.map((token, idx) => {
                     const isProfit = token.totalPnlSol >= 0;
                     const totalSellsReceived = token.sellTransactions.reduce((sum, tx) => sum + tx.sol_received, 0);
@@ -299,7 +421,7 @@ export function TradingAnalyticsDashboard() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         transition={{ delay: 0.1 + idx * 0.1, type: 'spring', stiffness: 200 }}
                         onClick={() => setSelectedToken(token)}
-                        className="relative overflow-hidden rounded-xl border border-white/10 p-4 cursor-pointer transition-all duration-300 bg-gradient-to-br from-black to-zinc-900/80 hover:scale-[1.02] hover:shadow-xl hover:border-white/20 group"
+                        className="relative overflow-hidden px-4 py-3 cursor-pointer transition-all duration-300 bg-gradient-to-br from-black to-zinc-900/80 md:rounded-xl md:border md:border-white/10 md:p-4 md:hover:scale-[1.02] md:hover:shadow-xl md:hover:border-white/20 group"
                       >
                         {/* Header: Token + PnL + Multiplier */}
                         <div className="flex items-center justify-between mb-3">
@@ -322,12 +444,15 @@ export function TradingAnalyticsDashboard() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className={cn(
-                              "text-sm font-bold",
-                              isProfit ? "text-emerald-400" : "text-red-400"
-                            )}>
-                              {isProfit ? "+" : ""}{token.totalPnlSol.toFixed(3)}
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className={cn(
+                                "text-sm font-bold",
+                                isProfit ? "text-emerald-400" : "text-red-400"
+                              )}>
+                                {isProfit ? "+" : ""}{token.totalPnlSol.toFixed(1)}
+                              </span>
+                              <SolIcon size={14} className="ml-0.5" />
+                            </div>
                             <span className={cn(
                               "text-xl font-bold",
                               isProfit ? "text-emerald-400" : "text-red-400"
@@ -393,7 +518,7 @@ export function TradingAnalyticsDashboard() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.5 }}
-                  className="flex items-center justify-between pt-4 border-t border-white/10 text-sm"
+                  className="flex items-center justify-between pt-4 border-t border-white/10 text-sm px-4 md:px-0"
                 >
                   <span className="text-white/40">Total analyzed: {tokenPerformance.length} trades</span>
                   <span className="text-white/60">
