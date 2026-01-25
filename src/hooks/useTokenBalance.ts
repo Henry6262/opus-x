@@ -28,11 +28,13 @@ export function useTokenBalance(walletAddress: string | null): TokenBalance {
     setError(null);
 
     try {
+      console.log("[useTokenBalance] Fetching balance for wallet:", walletAddress);
       const response = await fetch(
         `/api/token-balance?wallet=${encodeURIComponent(walletAddress)}`
       );
 
       const data = await response.json();
+      console.log("[useTokenBalance] API response:", data);
 
       if (!response.ok) {
         throw new Error(data.error || `API error: ${response.status}`);
