@@ -27,7 +27,7 @@ export function WalletButton({ className, showBalance = true }: WalletButtonProp
   if (!connected) {
     return (
       <button
-        onClick={connect}
+        onClick={() => connect()}
         disabled={connecting}
         className={cn(
           "relative z-50 flex items-center gap-2 px-5 py-2.5 rounded-lg",
