@@ -6,6 +6,7 @@ export { CompactAILog } from "./components/CompactAILog";
 export { EnhancedWatchlist } from "./components/EnhancedWatchlist";
 export { GodWalletActivity } from "./components/GodWalletActivity";
 export { TrackerWalletIndicator } from "./components/TrackerWalletIndicator";
+export { WalletEntryChart } from "./components/WalletEntryChart";
 
 // Hooks
 export { useTrackerWallets } from "./hooks/useTrackerWallets";

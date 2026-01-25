@@ -3,15 +3,22 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { Eye, Loader2, Copy, Check, Brain, TrendingUp, Users } from "lucide-react";
+import { Eye, Loader2, Copy, Check, Brain, Users, ExternalLink, X, BarChart3 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { smartTradingService } from "@/features/smart-trading/service";
 import { useSharedWebSocket } from "@/features/smart-trading/hooks/useWebSocket";
 import { TrackerWalletIndicator } from "./TrackerWalletIndicator";
+import { WalletEntryChart } from "./WalletEntryChart";
 import { useTrackerWallets } from "../hooks/useTrackerWallets";
 import type { WatchlistToken, WatchlistAddedEvent, WatchlistUpdatedEvent, WatchlistRemovedEvent } from "@/features/smart-trading/types";
 import type { WalletEntry } from "../types";
@@ -36,6 +43,7 @@ interface EnhancedWatchlistCardProps {
     will_trade: boolean;
     timestamp: number;
   };
+  onOpenChart: (token: WatchlistToken) => void;
 }
 
 function formatNumber(num: number): string {
@@ -58,12 +66,12 @@ function getStateLabel(token: WatchlistToken): { label: string; color: string } 
   return { label: "MONITORING", color: "bg-white/10 text-white/60" };
 }
 
-function EnhancedWatchlistCard({ token, walletEntries, aiReasoning }: EnhancedWatchlistCardProps) {
+function EnhancedWatchlistCard({ token, walletEntries, aiReasoning, onOpenChart }: EnhancedWatchlistCardProps) {
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState(false);
 
-  const dexScreenerUrl = `https://dd.dexscreener.com/ds-data/tokens/solana/${token.mint}.png`;
-  const chartUrl = `https://dexscreener.com/solana/${token.mint}`;
+  const dexScreenerImgUrl = `https://dd.dexscreener.com/ds-data/tokens/solana/${token.mint}.png`;
+  const dexScreenerChartUrl = `https://dexscreener.com/solana/${token.mint}`;
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -72,14 +80,17 @@ function EnhancedWatchlistCard({ token, walletEntries, aiReasoning }: EnhancedWa
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const handleOpenDexScreener = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(dexScreenerChartUrl, "_blank", "noopener,noreferrer");
+  };
+
   const stateInfo = getStateLabel(token);
   const hasWalletEntries = walletEntries.length > 0;
 
   return (
-    <motion.a
-      href={chartUrl}
-      target="_blank"
-      rel="noopener noreferrer"
+    <motion.div
+      onClick={() => onOpenChart(token)}
       initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -10, scale: 0.98 }}
@@ -107,7 +118,7 @@ function EnhancedWatchlistCard({ token, walletEntries, aiReasoning }: EnhancedWa
             <div className="relative">
               {!imgError ? (
                 <Image
-                  src={dexScreenerUrl}
+                  src={dexScreenerImgUrl}
                   alt={token.symbol}
                   width={44}
                   height={44}
@@ -142,6 +153,13 @@ function EnhancedWatchlistCard({ token, walletEntries, aiReasoning }: EnhancedWa
                   ) : (
                     <Copy className="w-3.5 h-3.5 text-white/40 hover:text-white/70" />
                   )}
+                </button>
+                <button
+                  onClick={handleOpenDexScreener}
+                  className="p-0.5 rounded hover:bg-white/10 transition-colors"
+                  title="Open on DexScreener"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-white/40 hover:text-white/70" />
                 </button>
               </div>
               <span className="text-xs text-white/50 truncate max-w-[120px]">{token.name}</span>
@@ -198,6 +216,11 @@ function EnhancedWatchlistCard({ token, walletEntries, aiReasoning }: EnhancedWa
           </div>
         </div>
 
+        {/* Mini Chart Preview */}
+        <div className="mb-3 rounded-lg overflow-hidden border border-white/5">
+          <WalletEntryChart mint={token.mint} height={100} />
+        </div>
+
         {/* AI Reasoning preview */}
         {aiReasoning && (
           <Tooltip>
@@ -245,7 +268,7 @@ function EnhancedWatchlistCard({ token, walletEntries, aiReasoning }: EnhancedWa
           </div>
         )}
       </div>
-    </motion.a>
+    </motion.div>
   );
 }
 
@@ -254,9 +277,16 @@ export function EnhancedWatchlist() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [aiReasoningsMap, setAiReasoningsMap] = useState<Map<string, { reasoning: string; conviction: number; will_trade: boolean; timestamp: number }>>(new Map());
+  const [selectedToken, setSelectedToken] = useState<WatchlistToken | null>(null);
+  const [isChartModalOpen, setIsChartModalOpen] = useState(false);
 
   const { wallets: trackerWallets } = useTrackerWallets();
   const isFetchingRef = useRef(false);
+
+  const handleOpenChart = useCallback((token: WatchlistToken) => {
+    setSelectedToken(token);
+    setIsChartModalOpen(true);
+  }, []);
 
   const { on: onTradingEvent } = useSharedWebSocket({ path: "/ws/trading" });
   const { on: onReasoningEvent } = useSharedWebSocket({ path: "/ws/trading/reasoning" });
@@ -438,11 +468,75 @@ export function EnhancedWatchlist() {
                 token={token}
                 walletEntries={getWalletEntriesForToken(token.mint, trackerWallets)}
                 aiReasoning={aiReasoningsMap.get(token.mint)}
+                onOpenChart={handleOpenChart}
               />
             ))}
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Chart Modal */}
+      <Dialog open={isChartModalOpen} onOpenChange={setIsChartModalOpen}>
+        <DialogContent className="max-w-2xl bg-zinc-950 border-white/10">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <BarChart3 className="w-5 h-5 text-brand-primary" />
+              <span className="text-white">
+                {selectedToken?.symbol} - Wallet Entries
+              </span>
+              <a
+                href={`https://dexscreener.com/solana/${selectedToken?.mint}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-auto text-xs text-white/50 hover:text-white flex items-center gap-1"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                DexScreener
+              </a>
+            </DialogTitle>
+          </DialogHeader>
+          {selectedToken && (
+            <div className="space-y-4">
+              {/* Token info header */}
+              <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+                <Image
+                  src={`https://dd.dexscreener.com/ds-data/tokens/solana/${selectedToken.mint}.png`}
+                  alt={selectedToken.symbol}
+                  width={40}
+                  height={40}
+                  className="rounded-lg"
+                  unoptimized
+                />
+                <div>
+                  <div className="font-bold text-white">{selectedToken.symbol}</div>
+                  <div className="text-xs text-white/50">{selectedToken.name}</div>
+                </div>
+                <div className="ml-auto text-right">
+                  <div className="text-sm text-white">
+                    ${formatNumber(selectedToken.metrics.market_cap_usd)}
+                  </div>
+                  <div className="text-xs text-white/50">Market Cap</div>
+                </div>
+              </div>
+
+              {/* Chart */}
+              <WalletEntryChart mint={selectedToken.mint} height={300} />
+
+              {/* Legend info */}
+              <div className="flex items-center justify-center gap-6 text-xs text-white/60 pt-2 border-t border-white/10">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                  <span>Whale (God Wallet)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500" />
+                  <span>Tracked Wallet</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
