@@ -1,6 +1,0 @@
-System logs analysis:
-1. Backend: Market data fetching (Birdeye/DexScreener) is working.
-2. Rate Limits: Jupiter API is hitting 429 errors consistently (likely free tier limits).
-3. AI Analysis: Skipping frequently due to "critical criteria failed" (mostly low market cap < $35k).
-4. Database: Watchlist DB operations are succeeding.
-5. Frontend: Should display these events in the "Analysis Feed".
