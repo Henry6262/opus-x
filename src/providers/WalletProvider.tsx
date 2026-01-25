@@ -220,6 +220,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
       const response = await Promise.race([connectPromise, timeoutPromise]);
 
+      // Validate response has publicKey before accessing
+      if (!response?.publicKey) {
+        throw new Error("No public key returned from wallet");
+      }
+
       setConnected(true);
       setPublicKey(response.publicKey.toBase58());
       setWalletName(getWalletName(provider));
