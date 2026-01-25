@@ -4,7 +4,7 @@ import { ReactNode } from "react";
 import Image from "next/image";
 import { useWalletContext } from "@/providers/WalletProvider";
 import { useTokenGate } from "@/hooks/useTokenGate";
-import { Loader2, ExternalLink, Sparkles, Download, LogOut, CheckCircle2 } from "lucide-react";
+import { Loader2, ExternalLink, Sparkles, Download, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SR_TOKEN_MINT } from "@/lib/config";
 import CountUp from "@/components/CountUp";
@@ -20,7 +20,6 @@ interface TokenGateGuardProps {
 const JUPITER_BUY_URL = `https://jup.ag/swap/SOL-${SR_TOKEN_MINT}`;
 const DEXSCREENER_URL = `https://dexscreener.com/solana/${SR_TOKEN_MINT}`;
 
-// Wallet info for download buttons
 const WALLETS = [
   { name: "Phantom", url: "https://phantom.app/", icon: "👻" },
   { name: "Solflare", url: "https://solflare.com/", icon: "🔥" },
@@ -38,7 +37,7 @@ export function TokenGateGuard({
   const { isGated, isVerifying, balance, minRequired } = useTokenGate();
 
   const formatNumber = (n: number) => {
-    if (n >= 1_000_000) return `${Math.floor(n / 1_000_000)}M`;
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `${Math.floor(n / 1_000)}K`;
     return n.toLocaleString();
   };
@@ -61,10 +60,8 @@ export function TokenGateGuard({
             fallbackClassName
           )}
         >
-          {/* Glow effect */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_0%_100%,rgba(196,247,14,0.15),transparent_50%)]" />
 
-          {/* Left: Character image anchored to bottom */}
           <div className="relative flex-shrink-0 self-end z-10">
             <Image
               src="/character/watching.png"
@@ -76,7 +73,6 @@ export function TokenGateGuard({
             />
           </div>
 
-          {/* Right: Loading content */}
           <div className="flex-1 flex flex-col items-center justify-center p-8">
             <Loader2 className="w-12 h-12 animate-spin text-[#c4f70e] mb-4" />
             <p className="text-white/70 text-lg font-medium">
@@ -101,10 +97,8 @@ export function TokenGateGuard({
             fallbackClassName
           )}
         >
-          {/* Glow effect */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_0%_100%,rgba(196,247,14,0.2),transparent_50%)]" />
 
-          {/* Left: Character image anchored to bottom-left - bigger on desktop */}
           <div className="relative flex-shrink-0 self-end z-10">
             <Image
               src="/character/watching.png"
@@ -116,9 +110,7 @@ export function TokenGateGuard({
             />
           </div>
 
-          {/* Right: Content */}
           <div className="flex-1 flex flex-col justify-center p-6 md:p-10 z-10">
-            {/* Token holders badge */}
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-5 h-5 text-[#c4f70e]" />
               <span className="text-[#c4f70e] text-sm font-bold uppercase tracking-wider">
@@ -126,36 +118,25 @@ export function TokenGateGuard({
               </span>
             </div>
 
-            {/* Title */}
             <h3 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-4 tracking-tight">
               {title}
             </h3>
 
-            {/* Description */}
             <p className="text-white/60 text-base md:text-lg mb-5 max-w-md leading-relaxed">
               {description || "Exclusive trading insights, god wallet tracking & enhanced signals for $SR holders."}
             </p>
 
-            {/* Requirement badge */}
-            <div className="flex items-center gap-2 mb-6">
-              <span className="text-white/40 text-base">Requires</span>
-              <span className="text-[#c4f70e] font-bold text-lg">
-                <CountUp
-                  to={minRequired}
-                  from={0}
-                  duration={1.5}
-                  separator=","
-                  className="tabular-nums"
-                />
-                {" "}$SR
+            <p className="text-white/40 text-base mb-6">
+              Requires{" "}
+              <span className="text-[#c4f70e] font-bold">
+                <CountUp to={minRequired} from={0} duration={1.5} separator="," className="tabular-nums" /> $SR
               </span>
-            </div>
+            </p>
 
-            {/* No wallet found message */}
             {noWalletFound && (
-              <div className="mb-6 p-4 rounded-xl bg-[#c4f70e]/5 border border-[#c4f70e]/20">
-                <p className="text-white/70 text-sm font-medium mb-3">
-                  No Solana wallet detected. Install one to continue:
+              <div className="mb-6">
+                <p className="text-white/50 text-sm mb-3">
+                  No wallet detected. Install one:
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {WALLETS.map((wallet) => (
@@ -164,10 +145,10 @@ export function TokenGateGuard({
                       href={wallet.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
                     >
                       <span>{wallet.icon}</span>
-                      <span className="text-white text-sm font-medium">{wallet.name}</span>
+                      <span className="text-white text-sm">{wallet.name}</span>
                       <Download className="w-3 h-3 text-white/50" />
                     </a>
                   ))}
@@ -175,14 +156,12 @@ export function TokenGateGuard({
               </div>
             )}
 
-            {/* Available wallets indicator */}
             {availableWallets.length > 0 && !noWalletFound && (
               <p className="text-white/40 text-sm mb-4">
                 Detected: {availableWallets.join(", ")}
               </p>
             )}
 
-            {/* Connect Button */}
             <button
               onClick={() => connect()}
               className={cn(
@@ -196,7 +175,6 @@ export function TokenGateGuard({
               {noWalletFound ? "Install Wallet" : "Connect Wallet"}
             </button>
 
-            {/* Supported wallets text */}
             {!noWalletFound && availableWallets.length === 0 && (
               <p className="mt-4 text-white/30 text-sm">
                 Supports Phantom, Solflare, Backpack
@@ -208,7 +186,7 @@ export function TokenGateGuard({
     );
   }
 
-  // Connected but insufficient balance - same color palette as other states
+  // Connected but insufficient balance - clean, minimal design
   return (
     <div className="flex justify-center">
       <div
@@ -220,10 +198,8 @@ export function TokenGateGuard({
           fallbackClassName
         )}
       >
-        {/* Glow effect */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_0%_100%,rgba(196,247,14,0.2),transparent_50%)]" />
 
-        {/* Left: Character image anchored to bottom-left */}
         <div className="relative flex-shrink-0 self-end z-10">
           <Image
             src="/character/watching.png"
@@ -234,64 +210,43 @@ export function TokenGateGuard({
           />
         </div>
 
-        {/* Right: Content */}
         <div className="flex-1 flex flex-col justify-center p-6 md:p-10 z-10">
-          {/* Connected wallet info */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 border border-[#c4f70e]/20">
-              <div className="flex flex-col">
-                <span className="text-xs text-white/50">{walletName}</span>
-                <span className="text-sm font-mono text-white">
-                  {publicKey ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}` : ""}
-                </span>
-              </div>
-              <button
-                onClick={() => disconnect()}
-                className="p-1.5 rounded-md hover:bg-white/10 transition-colors text-white/60 hover:text-white"
-                title="Disconnect"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
+          {/* Wallet info - minimal */}
+          <div className="flex items-center gap-3 mb-8">
+            <span className="text-sm font-mono text-white/60">
+              {walletName} · {publicKey ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}` : ""}
+            </span>
+            <button
+              onClick={() => disconnect()}
+              className="p-1.5 rounded-md hover:bg-white/10 transition-colors text-white/40 hover:text-white"
+              title="Disconnect"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* Not Eligible Message */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-[#c4f70e]/10 border border-[#c4f70e]/30 flex items-center justify-center">
-              <span className="text-xl">🔒</span>
-            </div>
-            <div>
-              <h3 className="text-xl md:text-2xl font-bold text-white">Not Eligible Yet</h3>
-              <p className="text-white/50 text-sm">Requires {formatNumber(minRequired)} $SR</p>
-            </div>
+          {/* Not Eligible */}
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-2xl">🔒</span>
+            <h3 className="text-2xl md:text-3xl font-bold text-white">Not Eligible Yet</h3>
           </div>
 
-          {/* Balance display */}
-          <div className="mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
-            <div className="flex items-center justify-between">
-              <span className="text-white/50 text-sm">Your Balance</span>
-              <span className="text-white font-bold text-lg">
-                <CountUp
-                  to={balance}
-                  from={0}
-                  duration={1}
-                  separator=","
-                  className="tabular-nums"
-                />
-                {" "}$SR
-              </span>
-            </div>
-          </div>
+          {/* Balance */}
+          <p className="text-white/50 text-lg mb-2">
+            Your balance:{" "}
+            <span className="text-white font-bold">
+              <CountUp to={balance} from={0} duration={1} separator="," className="tabular-nums" /> $SR
+            </span>
+          </p>
+
+          <p className="text-white/40 text-base mb-6">
+            Requires {formatNumber(minRequired)} $SR
+          </p>
 
           {/* Cooking message */}
-          <div className="mb-6 p-4 rounded-xl bg-[#c4f70e]/5 border border-[#c4f70e]/20">
-            <p className="text-white/80 text-base font-medium">
-              Come back tomorrow. The team is cooking. 🍳
-            </p>
-            <p className="text-white/50 text-sm mt-1">
-              Get more $SR to unlock exclusive features
-            </p>
-          </div>
+          <p className="text-[#c4f70e] text-lg font-medium mb-8">
+            Come back tomorrow. The team is cooking. 🍳
+          </p>
 
           {/* Buy Button */}
           <a
@@ -310,15 +265,15 @@ export function TokenGateGuard({
             <ExternalLink className="w-5 h-5" />
           </a>
 
-          {/* Secondary link */}
+          {/* DexScreener link */}
           <a
             href={DEXSCREENER_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-4 text-white/40 text-base hover:text-white/70 transition-colors flex items-center gap-1 w-fit"
+            className="mt-4 text-white/40 text-sm hover:text-white/70 transition-colors flex items-center gap-1 w-fit"
           >
             View chart on DexScreener
-            <ExternalLink className="w-4 h-4" />
+            <ExternalLink className="w-3 h-3" />
           </a>
         </div>
       </div>

@@ -1,22 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY;
+const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
 const SR_TOKEN_MINT = process.env.NEXT_PUBLIC_SR_TOKEN_MINT || "48BbwbZHWc8QJBiuGJTQZD5aWZdP3i6xrDw5N9EHpump";
 
-interface BirdeyeTokenBalance {
-  address: string;
-  decimals: number;
-  price: number;
-  balance: string;
-  amount: number;
-  network: string;
-  name: string;
-  symbol: string;
-  value: string;
+interface TokenAccountInfo {
+  parsed: {
+    info: {
+      mint: string;
+      tokenAmount: {
+        uiAmount: number;
+      };
+    };
+  };
 }
 
-interface BirdeyeResponse {
-  data: BirdeyeTokenBalance[];
+interface RpcResponse {
+  result?: {
+    value: Array<{
+      account: {
+        data: TokenAccountInfo;
+      };
+    }>;
+  };
+  error?: {
+    message: string;
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -31,8 +39,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (!BIRDEYE_API_KEY) {
-    console.error("BIRDEYE_API_KEY not configured");
+  if (!HELIUS_API_KEY) {
+    console.error("HELIUS_API_KEY not configured");
     return NextResponse.json(
       { error: "Server configuration error" },
       { status: 500 }
@@ -40,40 +48,49 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Use Birdeye wallet token balance API
-    const response = await fetch("https://public-api.birdeye.so/wallet/v2/token-balance", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-API-KEY": BIRDEYE_API_KEY,
-        "x-chain": "solana",
-      },
-      body: JSON.stringify({
-        wallet: walletAddress,
-        token_addresses: [tokenMint],
-      }),
-    });
+    // Use Helius RPC - getTokenAccountsByOwner (simple, reliable)
+    const response = await fetch(
+      `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "getTokenAccountsByOwner",
+          params: [
+            walletAddress,
+            { mint: tokenMint },
+            { encoding: "jsonParsed" }
+          ],
+        }),
+      }
+    );
 
     if (!response.ok) {
-      console.error(`Birdeye API error: ${response.status} ${response.statusText}`);
-      const text = await response.text();
-      console.error("Response:", text);
+      console.error(`Helius API error: ${response.status}`);
       return NextResponse.json(
-        { error: `Birdeye API error: ${response.status}` },
+        { error: `Helius API error: ${response.status}` },
         { status: 502 }
       );
     }
 
-    const data: BirdeyeResponse = await response.json();
+    const data: RpcResponse = await response.json();
 
-    // Find the token in the response
+    if (data.error) {
+      console.error("Helius RPC error:", data.error.message);
+      return NextResponse.json(
+        { error: data.error.message },
+        { status: 400 }
+      );
+    }
+
+    // Extract balance from token account
     let balance = 0;
-    if (data.data && data.data.length > 0) {
-      const tokenData = data.data.find(t => t.address === tokenMint);
-      if (tokenData) {
-        balance = tokenData.amount; // Human-readable balance
-      }
+    const accounts = data.result?.value || [];
+
+    if (accounts.length > 0) {
+      balance = accounts[0].account.data.parsed.info.tokenAmount.uiAmount || 0;
     }
 
     return NextResponse.json({
