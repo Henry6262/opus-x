@@ -301,7 +301,8 @@ src/features/super-router-calls/
 │   └── WalletEntryChart.tsx         # Price chart with wallet entry markers
 ├── hooks/
 │   ├── useGodWallets.ts             # Fetch god wallets + listen for buys
-│   └── useTrackerWallets.ts         # Fetch active tracked wallets
+│   ├── useTrackerWallets.ts         # Fetch active tracked wallets
+│   └── useWalletEntries.ts          # Fetch wallet entries for tokens (batch + single)
 ├── types.ts                          # TrackerWallet, GodWalletBuy, etc.
 └── index.ts                          # Exports
 
@@ -475,12 +476,13 @@ When a god wallet buys:
 
 ### Known Issues / TODOs
 
-1. **EnhancedWatchlist**: `getWalletEntriesForToken()` returns empty array (mock)
-   - Need to create hook to fetch from `/api/wallets/token/:mint/entries`
+1. ~~**EnhancedWatchlist**: `getWalletEntriesForToken()` returns empty array (mock)~~ ✅ FIXED
+   - Created `useWalletEntries.ts` hook to fetch from `/api/wallets/token/:mint/entries`
+   - Added `useMultipleWalletEntries()` for batch fetching
 
 2. **WalletEntryChart**: Uses synthetic candle data from DexScreener
    - Real OHLCV should come from backend when available
 
-3. **Type Mismatch**: `WalletEntry` type in types.ts vs WalletEntryChart
-   - types.ts expects full `TrackerWallet` object
-   - Chart expects flat `{ wallet_label, is_god_wallet }` from API
+3. ~~**Type Mismatch**: `WalletEntry` type in types.ts vs WalletEntryChart~~ ✅ FIXED
+   - TrackerWalletIndicator now uses `WalletEntryPoint` type directly from hook
+   - Types match backend response format
