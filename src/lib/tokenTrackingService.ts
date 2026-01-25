@@ -10,6 +10,7 @@ import {
   TokenJourney,
   PriceSnapshot,
   RetracementSignals,
+  SocialMetrics,
   calculateTrend,
   calculateRiskLevel,
 } from './tokenJourney';
@@ -188,7 +189,8 @@ function initializeJourney(
   initialMcap: number,
   initialPrice: number,
   liquidity: number | null,
-  migrationTime: number
+  migrationTime: number,
+  social?: SocialMetrics
 ): TokenJourney {
   const now = Date.now();
   const snapshot: PriceSnapshot = {
@@ -219,9 +221,81 @@ function initializeJourney(
       entrySignal: 'no_data',
       riskLevel: 'medium',
     },
+    social,
   };
 
   return journey;
+}
+
+/**
+ * Extract social metrics from token input
+ * Handles both tweet and community data based on twitter_link_type
+ */
+function extractSocialMetrics(token: TokenInput): SocialMetrics | undefined {
+  const linkType = token.twitter_link_type;
+
+  // Community type - use community data
+  if (linkType === 'community') {
+    // Only return if we have community data
+    if (token.community_member_count === undefined && token.community_creator_followers === undefined) {
+      return undefined;
+    }
+
+    return {
+      sourceType: 'community',
+      // Use community creator as the "author"
+      authorFollowers: token.community_creator_followers ?? null,
+      authorVerified: token.community_creator_verified ?? null,
+      authorUsername: token.community_creator_username ?? null,
+      authorName: token.community_creator_name ?? null,
+      // No tweet engagement for communities
+      likeCount: null,
+      retweetCount: null,
+      replyCount: null,
+      quoteCount: null,
+      bookmarkCount: null,
+      impressionCount: null,
+      viewCount: null,
+      tweetText: null,
+      tweetCreatedAt: null,
+      // Community-specific data
+      communityId: token.community_id ?? null,
+      communityName: token.community_name ?? null,
+      communityDescription: token.community_description ?? null,
+      communityMemberCount: token.community_member_count ?? null,
+      communityModeratorCount: token.community_moderator_count ?? null,
+      communityCreatedAt: token.community_created_at ?? null,
+    };
+  }
+
+  // Tweet type (or profile/search/unknown) - use tweet data
+  if (token.author_followers === undefined && token.tweet_like_count === undefined) {
+    return undefined;
+  }
+
+  return {
+    sourceType: linkType === 'tweet' ? 'tweet' : 'unknown',
+    authorFollowers: token.author_followers ?? null,
+    authorVerified: token.author_verified ?? null,
+    authorUsername: token.tweet_author_username ?? null,
+    authorName: token.tweet_author_name ?? null,
+    likeCount: token.tweet_like_count ?? null,
+    retweetCount: token.tweet_retweet_count ?? null,
+    replyCount: token.tweet_reply_count ?? null,
+    quoteCount: token.tweet_quote_count ?? null,
+    bookmarkCount: token.tweet_bookmark_count ?? null,
+    impressionCount: token.tweet_impression_count ?? null,
+    viewCount: token.tweet_view_count ?? null,
+    tweetText: token.tweet_text ?? null,
+    tweetCreatedAt: token.tweet_created_at ?? null,
+    // No community data for tweets
+    communityId: null,
+    communityName: null,
+    communityDescription: null,
+    communityMemberCount: null,
+    communityModeratorCount: null,
+    communityCreatedAt: null,
+  };
 }
 
 /**
@@ -273,17 +347,48 @@ function updateJourney(
 // PUBLIC API
 // ============================================
 
+/** Input token type with optional social metrics */
+export interface TokenInput {
+  mint: string;
+  symbol: string;
+  detected_at: string;
+  market_cap: number | null;
+  twitter_link_type?: string | null;
+
+  // Tweet social metrics (from devprint with include_tweets=true)
+  author_followers?: number | null;
+  author_verified?: boolean | null;
+  tweet_author_username?: string | null;
+  tweet_author_name?: string | null;
+  tweet_like_count?: number | null;
+  tweet_retweet_count?: number | null;
+  tweet_reply_count?: number | null;
+  tweet_quote_count?: number | null;
+  tweet_bookmark_count?: number | null;
+  tweet_impression_count?: number | null;
+  tweet_view_count?: number | null;
+  tweet_text?: string | null;
+  tweet_created_at?: string | null;
+
+  // Community social metrics (from devprint with include_tweets=true, for community link type)
+  community_id?: string | null;
+  community_name?: string | null;
+  community_description?: string | null;
+  community_member_count?: number | null;
+  community_moderator_count?: number | null;
+  community_creator_username?: string | null;
+  community_creator_name?: string | null;
+  community_creator_followers?: number | null;
+  community_creator_verified?: boolean | null;
+  community_created_at?: string | null;
+}
+
 /**
  * Update the tracking cache with tokens from the devprnt feed
  * Call this periodically to keep the cache fresh
  */
 export async function updateTokenTracking(
-  tokens: Array<{
-    mint: string;
-    symbol: string;
-    detected_at: string;
-    market_cap: number | null;
-  }>
+  tokens: TokenInput[]
 ): Promise<Map<string, TokenJourney>> {
   const now = Date.now();
 
@@ -322,13 +427,14 @@ export async function updateTokenTracking(
     const existingJourney = tokenJourneyCache.get(token.mint);
 
     if (existingJourney) {
-      // Update existing journey
+      // Update existing journey (preserve social metrics)
       const updated = updateJourney(existingJourney, marketCap, price, liquidity);
       tokenJourneyCache.set(token.mint, updated);
     } else {
-      // Initialize new journey
+      // Initialize new journey with social metrics if available
       const migrationTime = new Date(token.detected_at).getTime();
       const migrationMcap = token.market_cap || marketCap;
+      const social = extractSocialMetrics(token);
 
       const newJourney = initializeJourney(
         token.mint,
@@ -336,7 +442,8 @@ export async function updateTokenTracking(
         migrationMcap,
         price,
         liquidity,
-        migrationTime
+        migrationTime,
+        social
       );
       tokenJourneyCache.set(token.mint, newJourney);
     }

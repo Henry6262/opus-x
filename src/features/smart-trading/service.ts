@@ -54,6 +54,36 @@ interface DevprintToken {
   transaction_signature: string | null;
   creator: string | null;
   sol_amount: number | null;
+  // Market data (enriched)
+  market_cap?: number | null;
+  price_usd?: number | null;
+  liquidity?: number | null;
+  volume_24h?: number | null;
+  // Tweet social metrics (when include_tweets=true)
+  author_followers?: number | null;
+  author_verified?: boolean | null;
+  tweet_author_username?: string | null;
+  tweet_author_name?: string | null;
+  tweet_like_count?: number | null;
+  tweet_retweet_count?: number | null;
+  tweet_reply_count?: number | null;
+  tweet_quote_count?: number | null;
+  tweet_bookmark_count?: number | null;
+  tweet_impression_count?: number | null;
+  tweet_view_count?: number | null;
+  tweet_text?: string | null;
+  tweet_created_at?: string | null;
+  // Community social metrics (when include_tweets=true, for community link type)
+  community_id?: string | null;
+  community_name?: string | null;
+  community_description?: string | null;
+  community_member_count?: number | null;
+  community_moderator_count?: number | null;
+  community_creator_username?: string | null;
+  community_creator_name?: string | null;
+  community_creator_followers?: number | null;
+  community_creator_verified?: boolean | null;
+  community_created_at?: string | null;
 }
 
 /** Devprint wallet response from /api/wallets */
@@ -544,8 +574,9 @@ export const smartTradingService = {
   // ============================================
   async getDashboardInit(): Promise<DashboardInitResponse> {
     // Fetch all data in parallel from devprint
+    // Note: include_tweets=true adds social metrics (author_followers, engagement, etc.)
     const [tokensResult, walletsResult, configResult, holdingsResult, historyResult, statsResult] = await Promise.all([
-      fetchDevprint<DevprintToken[]>("/api/tokens?limit=50&order=desc"),
+      fetchDevprint<DevprintToken[]>("/api/tokens?limit=50&order=desc&include_tweets=true"),
       fetchDevprint<{ wallets: DevprintWallet[] }>("/api/wallets"),
       fetchDevprint<DevprintTradingConfig>("/api/trading/config"),
       fetchDevprint<DevprintHolding[]>("/api/trading/holdings"),
@@ -758,6 +789,7 @@ export const smartTradingService = {
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("offset", String(offset));
     url.searchParams.set("order", "desc");
+    url.searchParams.set("include_tweets", "true"); // Include social metrics
 
     const response = await fetch(url.toString());
     if (!response.ok) {
@@ -814,6 +846,7 @@ export const smartTradingService = {
     url.searchParams.set("limit", String(fetchLimit));
     url.searchParams.set("offset", "0");
     url.searchParams.set("order", "desc");
+    url.searchParams.set("include_tweets", "true"); // Include social metrics
 
     const response = await fetch(url.toString());
     if (!response.ok) {

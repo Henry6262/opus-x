@@ -20,6 +20,7 @@ export async function fetchPumpTokens(
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("offset", String(offset));
     url.searchParams.set("order", sortOrder);
+    url.searchParams.set("include_tweets", "true"); // Include social metrics
 
     console.log(`[fetchPumpTokens] Fetching from devprint API: ${url.toString()}`);
 

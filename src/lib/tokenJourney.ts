@@ -42,6 +42,41 @@ export interface TokenJourney {
 
   // Calculated signals
   signals: RetracementSignals;
+
+  // Social/Twitter metrics (optional, populated when available)
+  social?: SocialMetrics;
+}
+
+export interface SocialMetrics {
+  // Source type - tweet or community
+  sourceType: 'tweet' | 'community' | 'unknown';
+
+  // Author/Creator credibility (works for both tweets and communities)
+  authorFollowers: number | null;
+  authorVerified: boolean | null;
+  authorUsername: string | null;
+  authorName: string | null;
+
+  // Tweet engagement (only for tweet type)
+  likeCount: number | null;
+  retweetCount: number | null;
+  replyCount: number | null;
+  quoteCount: number | null;
+  bookmarkCount: number | null;
+  impressionCount: number | null;
+  viewCount: number | null;
+
+  // Tweet content (only for tweet type)
+  tweetText: string | null;
+  tweetCreatedAt: string | null;
+
+  // Community data (only for community type)
+  communityId: string | null;
+  communityName: string | null;
+  communityDescription: string | null;
+  communityMemberCount: number | null;
+  communityModeratorCount: number | null;
+  communityCreatedAt: string | null;
 }
 
 export interface RetracementSignals {
