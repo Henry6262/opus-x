@@ -220,17 +220,27 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
       const response = await Promise.race([connectPromise, timeoutPromise]);
 
-      // Validate response has publicKey before accessing
-      if (!response?.publicKey) {
-        throw new Error("No public key returned from wallet");
+      // Get publicKey from response or from provider (some wallets don't return it)
+      const pubKey = response?.publicKey || provider.publicKey;
+
+      if (!pubKey) {
+        // User likely rejected the connection - just reset silently
+        setConnected(false);
+        setPublicKey(null);
+        setWalletName(null);
+        return;
       }
 
       setConnected(true);
-      setPublicKey(response.publicKey.toBase58());
+      setPublicKey(pubKey.toBase58());
       setWalletName(getWalletName(provider));
     } catch (error) {
-      console.error("Failed to connect wallet:", error);
-      // User rejected or timeout - reset state
+      // User rejected or timeout - reset state silently
+      // Don't log error for user rejection (common case)
+      const errorMessage = error instanceof Error ? error.message : "";
+      if (!errorMessage.includes("rejected") && !errorMessage.includes("cancelled")) {
+        console.error("Failed to connect wallet:", error);
+      }
       setConnected(false);
       setPublicKey(null);
       setWalletName(null);
