@@ -267,3 +267,220 @@ npm run lint
 3. Full refetch for structural changes (positions)
 4. Activity feed captures user-facing events (50 max)
 5. Terminal receives AI reasoning events separately
+
+---
+
+## Super Router Calls (Token-Gated Feature)
+
+Token-gated section for exclusive trading insights, god wallet copy trading, and enhanced market intelligence.
+
+### Feature Flag
+```bash
+NEXT_PUBLIC_ENABLE_SUPER_ROUTER_CALLS=true  # Enable SR Calls section (hidden in prod if false)
+```
+
+### Token Gating Configuration
+```typescript
+// src/lib/config.ts
+SR_TOKEN_MINT = "48BbwbZHWc8QJBiuGJTQZD5aWZdP3i6xrDw5N9EHpump"  // $SR token
+SR_MIN_BALANCE = 1000                                           // Minimum tokens to access
+SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com"         // For balance checks
+TOKEN_GATE_SESSION_DURATION = 12 * 60 * 60 * 1000              // 12 hours
+```
+
+### Architecture
+
+```
+src/features/super-router-calls/
+├── components/
+│   ├── SuperRouterCallsSection.tsx  # Main container (wrapped in TokenGateGuard)
+│   ├── CompactAILog.tsx             # AI reasoning stream (WebSocket)
+│   ├── GodWalletActivity.tsx        # God wallet buy feed
+│   ├── EnhancedWatchlist.tsx        # Watchlist with tracker indicators
+│   ├── TrackerWalletIndicator.tsx   # PFP avatars for tracked wallets
+│   └── WalletEntryChart.tsx         # Price chart with wallet entry markers
+├── hooks/
+│   ├── useGodWallets.ts             # Fetch god wallets + listen for buys
+│   └── useTrackerWallets.ts         # Fetch active tracked wallets
+├── types.ts                          # TrackerWallet, GodWalletBuy, etc.
+└── index.ts                          # Exports
+
+src/providers/
+└── WalletProvider.tsx               # Phantom/Solflare/Backpack connection
+
+src/components/auth/
+├── WalletButton.tsx                 # Connect/disconnect UI with balance
+└── TokenGateGuard.tsx               # Protects gated content
+
+src/hooks/
+├── useTokenGate.ts                  # Session management + gating logic
+└── useTokenBalance.ts               # Fetch $SR balance from Solana RPC
+
+src/lib/
+├── config.ts                        # SR_TOKEN_MINT, SR_MIN_BALANCE, etc.
+└── tokenGateSession.ts              # Cookie-based session storage
+```
+
+### Wallet Connection (No External Packages)
+
+Uses browser wallet detection (window.solana, window.phantom, etc.):
+- **Phantom**: `window.phantom.solana`
+- **Solflare**: `window.solflare`
+- **Backpack**: `window.backpack`
+
+No API keys required. Balance check uses Solana RPC directly.
+
+### Token Gating Flow
+
+```
+1. User visits → TokenGateGuard shows "Connect Wallet"
+2. User connects → useTokenBalance fetches $SR balance from RPC
+3. If balance ≥ 1000 → Session created (cookie, 12h expiry)
+4. Content unlocked → SuperRouterCallsSection renders
+5. Every 12h → Auto re-verify silently
+```
+
+### Backend Endpoints (DevPrint)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/wallets` | GET | List all tracked wallets |
+| `/api/wallets/active` | GET | List active wallets only |
+| `/api/wallets/god` | GET | List god wallets only |
+| `/api/wallets/token/:mint` | GET | Wallets that bought a token |
+| `/api/wallets/token/:mint/entries` | GET | Wallet entry points for chart |
+| `/api/wallets/leaderboard` | GET | Wallet leaderboard by trust score |
+| `/api/wallets/recent-buys` | GET | Recent buys from all wallets |
+
+### Response Format
+
+```typescript
+// GET /api/wallets/god
+{
+  success: true,
+  data: {
+    wallets: [
+      {
+        id: "uuid",
+        address: "wallet-address",
+        label: "Whale Name",
+        pfp_url: "https://...",
+        twitter_handle: "@handle",
+        trust_score: 0.95,
+        is_god_wallet: true,
+        is_active: true
+      }
+    ],
+    total: 5
+  }
+}
+
+// GET /api/wallets/token/:mint/entries
+{
+  success: true,
+  data: [
+    {
+      timestamp: 1706000000000,      // Unix ms
+      price: 0.000001234,            // USD at entry
+      amount_sol: 0.15,
+      amount_usd: 25.50,
+      wallet_label: "Whale",         // Anonymous for god wallets
+      is_god_wallet: true,
+      tx_hash: "signature..."
+    }
+  ]
+}
+```
+
+### WebSocket Events
+
+| Event | Source | Data |
+|-------|--------|------|
+| `ai_reasoning` | `/ws/trading/reasoning` | `{ symbol, mint, reasoning, conviction, will_trade, timestamp }` |
+| `god_wallet_buy_detected` | `/ws/trading` | `{ wallet_id, wallet_address, wallet_label, mint, symbol, amount_usd, copied_by_system }` |
+| `wallet_buy_detected` | `/ws/trading` | Regular tracked wallet buys |
+
+### Components
+
+**SuperRouterCallsSection**: Main container
+- Wrapped in `<TokenGateGuard>` for access control
+- Shows header with "EXCLUSIVE" badge
+- Contains CompactAILog, GodWalletActivity, EnhancedWatchlist
+
+**CompactAILog**: AI reasoning stream
+- Latest AI decision with conviction %
+- Expandable history (10 items)
+- Real-time via `/ws/trading/reasoning`
+
+**GodWalletActivity**: God wallet buy feed
+- Shows recent god wallet purchases
+- "COPIED" badge if system auto-copied trade
+- Real-time via `god_wallet_buy_detected` event
+
+**EnhancedWatchlist**: Watchlist with charts
+- Token cards with mini charts (100px)
+- Click to open full chart modal (300px)
+- Tracker wallet indicators on each card
+- Links to DexScreener
+
+**WalletEntryChart**: Price visualization
+- Candlestick chart (lightweight-charts v5)
+- Markers for wallet entries
+- Yellow = God wallet ("🐋 Whale")
+- Blue = Regular tracked wallet
+
+### Database Schema (DevPrint/Supabase)
+
+**tracked_wallets table:**
+```sql
+id: uuid PRIMARY KEY
+address: text NOT NULL
+chain: text DEFAULT 'solana'
+label: text
+trust_score: float DEFAULT 0.5
+is_active: boolean DEFAULT true
+pfp_url: text
+twitter_handle: text
+is_god_wallet: boolean DEFAULT false
+wallet_group: text                    -- For multi-wallet clusters
+group_buy_threshold: int DEFAULT 1    -- Min buys to trigger copy
+```
+
+**wallet_trades table:**
+```sql
+id: uuid PRIMARY KEY
+wallet_id: uuid REFERENCES tracked_wallets
+mint: text NOT NULL
+action: text ('buy' | 'sell')
+price_usd: float
+amount_native: float                  -- SOL amount
+amount_usd: float
+timestamp: timestamptz
+tx_hash: text
+triggered_signal: boolean DEFAULT false
+```
+
+### God Wallet Copy Trading
+
+When a god wallet buys:
+1. Backend detects via Helius webhook
+2. Checks group threshold (if grouped wallets)
+3. Auto-executes copy trade (0.15 SOL default)
+4. Broadcasts `god_wallet_buy_detected` event
+5. Frontend shows buy + "COPIED" badge
+
+**Position sizing:**
+- Regular trades: `buy_amount_sol` config (0.3 SOL default)
+- God wallet copies: `god_wallet_buy_amount_sol` config (0.15 SOL default)
+
+### Known Issues / TODOs
+
+1. **EnhancedWatchlist**: `getWalletEntriesForToken()` returns empty array (mock)
+   - Need to create hook to fetch from `/api/wallets/token/:mint/entries`
+
+2. **WalletEntryChart**: Uses synthetic candle data from DexScreener
+   - Real OHLCV should come from backend when available
+
+3. **Type Mismatch**: `WalletEntry` type in types.ts vs WalletEntryChart
+   - types.ts expects full `TrackerWallet` object
+   - Chart expects flat `{ wallet_label, is_god_wallet }` from API

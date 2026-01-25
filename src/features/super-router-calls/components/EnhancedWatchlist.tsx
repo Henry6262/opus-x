@@ -19,24 +19,12 @@ import { smartTradingService } from "@/features/smart-trading/service";
 import { useSharedWebSocket } from "@/features/smart-trading/hooks/useWebSocket";
 import { TrackerWalletIndicator } from "./TrackerWalletIndicator";
 import { WalletEntryChart } from "./WalletEntryChart";
-import { useTrackerWallets } from "../hooks/useTrackerWallets";
+import { useMultipleWalletEntries, type WalletEntryPoint } from "../hooks/useWalletEntries";
 import type { WatchlistToken, WatchlistAddedEvent, WatchlistUpdatedEvent, WatchlistRemovedEvent } from "@/features/smart-trading/types";
-import type { WalletEntry } from "../types";
-
-// Mock function to get wallet entries for a token
-// In production, this would fetch from the API
-function getWalletEntriesForToken(
-  mint: string,
-  trackerWallets: ReturnType<typeof useTrackerWallets>["wallets"]
-): WalletEntry[] {
-  // This would be replaced with actual API data
-  // For now, return empty or mock data based on random chance
-  return [];
-}
 
 interface EnhancedWatchlistCardProps {
   token: WatchlistToken;
-  walletEntries: WalletEntry[];
+  walletEntries: WalletEntryPoint[];
   aiReasoning?: {
     reasoning: string;
     conviction: number;
@@ -280,8 +268,11 @@ export function EnhancedWatchlist() {
   const [selectedToken, setSelectedToken] = useState<WatchlistToken | null>(null);
   const [isChartModalOpen, setIsChartModalOpen] = useState(false);
 
-  const { wallets: trackerWallets } = useTrackerWallets();
   const isFetchingRef = useRef(false);
+
+  // Fetch wallet entries for all tokens in the watchlist
+  const tokenMints = tokens.map((t) => t.mint);
+  const walletEntriesMap = useMultipleWalletEntries(tokenMints);
 
   const handleOpenChart = useCallback((token: WatchlistToken) => {
     setSelectedToken(token);
@@ -466,7 +457,7 @@ export function EnhancedWatchlist() {
               <EnhancedWatchlistCard
                 key={token.mint}
                 token={token}
-                walletEntries={getWalletEntriesForToken(token.mint, trackerWallets)}
+                walletEntries={walletEntriesMap.get(token.mint) || []}
                 aiReasoning={aiReasoningsMap.get(token.mint)}
                 onOpenChart={handleOpenChart}
               />

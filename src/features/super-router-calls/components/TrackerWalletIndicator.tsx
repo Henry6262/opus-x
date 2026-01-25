@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
 import { motion } from "motion/react";
 import {
   Tooltip,
@@ -9,10 +7,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Crown, User } from "lucide-react";
-import type { WalletEntry } from "../types";
+import type { WalletEntryPoint } from "../hooks/useWalletEntries";
 
 interface TrackerWalletIndicatorProps {
-  entries: WalletEntry[];
+  entries: WalletEntryPoint[];
   maxDisplay?: number;
   size?: "sm" | "md" | "lg";
 }
@@ -23,8 +21,8 @@ const sizeMap = {
   lg: { avatar: 36, ring: 3, overlap: 10 },
 };
 
-function formatTimeAgo(timestamp: string): string {
-  const seconds = Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000);
+function formatTimeAgo(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
   if (seconds < 60) return "just now";
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
@@ -39,30 +37,22 @@ function formatUsd(amount: number): string {
   return `$${amount.toFixed(0)}`;
 }
 
-function formatMarketCap(mc: number): string {
-  if (mc >= 1_000_000) return `${(mc / 1_000_000).toFixed(1)}M`;
-  if (mc >= 1_000) return `${(mc / 1_000).toFixed(0)}K`;
-  return mc.toFixed(0);
-}
-
 interface WalletAvatarProps {
-  entry: WalletEntry;
+  entry: WalletEntryPoint;
   size: "sm" | "md" | "lg";
   index: number;
 }
 
 function WalletAvatar({ entry, size, index }: WalletAvatarProps) {
-  const [imgError, setImgError] = useState(false);
   const { avatar: avatarSize, ring: ringWidth, overlap } = sizeMap[size];
-  const { wallet } = entry;
 
-  const initials = (wallet.label || wallet.address.slice(0, 2)).slice(0, 2).toUpperCase();
+  const initials = entry.wallet_label.slice(0, 2).toUpperCase();
 
-  const ringColor = wallet.isGodWallet
+  const ringColor = entry.is_god_wallet
     ? "ring-yellow-500"
     : "ring-purple-500";
 
-  const bgGradient = wallet.isGodWallet
+  const bgGradient = entry.is_god_wallet
     ? "from-yellow-500/20 to-yellow-600/10"
     : "from-purple-500/20 to-purple-600/10";
 
@@ -82,31 +72,19 @@ function WalletAvatar({ entry, size, index }: WalletAvatarProps) {
           }}
         >
           {/* God wallet crown */}
-          {wallet.isGodWallet && (
+          {entry.is_god_wallet && (
             <div className="absolute -top-1.5 -right-1 z-20">
               <Crown className="w-3 h-3 text-yellow-500" />
             </div>
           )}
 
-          {/* Avatar */}
-          {wallet.pfpUrl && !imgError ? (
-            <Image
-              src={wallet.pfpUrl}
-              alt={wallet.label || wallet.address}
-              width={avatarSize}
-              height={avatarSize}
-              className="rounded-full object-cover"
-              onError={() => setImgError(true)}
-              unoptimized
-            />
-          ) : (
-            <div
-              className={`flex items-center justify-center rounded-full bg-gradient-to-br ${bgGradient} text-white font-bold`}
-              style={{ width: avatarSize, height: avatarSize, fontSize: avatarSize * 0.35 }}
-            >
-              {initials}
-            </div>
-          )}
+          {/* Avatar - use initials since we don't have PFP URL from this endpoint */}
+          <div
+            className={`flex items-center justify-center rounded-full bg-gradient-to-br ${bgGradient} text-white font-bold`}
+            style={{ width: avatarSize, height: avatarSize, fontSize: avatarSize * 0.35 }}
+          >
+            {entry.is_god_wallet ? "🐋" : initials}
+          </div>
         </motion.div>
       </TooltipTrigger>
 
@@ -115,23 +93,12 @@ function WalletAvatar({ entry, size, index }: WalletAvatarProps) {
         className="p-3 bg-zinc-900/95 border border-white/10 backdrop-blur-xl"
       >
         <div className="flex items-start gap-3">
-          {/* Larger avatar in tooltip */}
+          {/* Avatar in tooltip */}
           <div className="relative flex-shrink-0">
-            {wallet.pfpUrl && !imgError ? (
-              <Image
-                src={wallet.pfpUrl}
-                alt={wallet.label || wallet.address}
-                width={40}
-                height={40}
-                className="rounded-full object-cover"
-                unoptimized
-              />
-            ) : (
-              <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br ${bgGradient} text-white font-bold`}>
-                <User className="w-5 h-5" />
-              </div>
-            )}
-            {wallet.isGodWallet && (
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br ${bgGradient} text-white font-bold text-lg`}>
+              {entry.is_god_wallet ? "🐋" : <User className="w-5 h-5" />}
+            </div>
+            {entry.is_god_wallet && (
               <div className="absolute -top-1 -right-1">
                 <Crown className="w-4 h-4 text-yellow-500" />
               </div>
@@ -142,29 +109,18 @@ function WalletAvatar({ entry, size, index }: WalletAvatarProps) {
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-white truncate">
-                {wallet.label || `${wallet.address.slice(0, 4)}...${wallet.address.slice(-4)}`}
+                {entry.wallet_label}
               </span>
-              {wallet.isGodWallet && (
+              {entry.is_god_wallet && (
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium">
                   GOD
                 </span>
               )}
             </div>
 
-            {wallet.twitterHandle && (
-              <a
-                href={`https://twitter.com/${wallet.twitterHandle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-blue-400 hover:underline"
-              >
-                @{wallet.twitterHandle}
-              </a>
-            )}
-
             <div className="flex items-center gap-3 mt-2 text-[10px] text-white/60">
-              <span>Entry: {formatUsd(entry.amountUsd)}</span>
-              <span>@ {formatMarketCap(entry.entryMarketCap)} MC</span>
+              <span>Entry: {formatUsd(entry.amount_usd)}</span>
+              <span>{entry.amount_sol.toFixed(2)} SOL</span>
             </div>
 
             <span className="text-[10px] text-white/40 mt-1">
@@ -186,10 +142,10 @@ export function TrackerWalletIndicator({
 
   // Sort by god wallets first, then by entry time
   const sortedEntries = [...entries].sort((a, b) => {
-    if (a.wallet.isGodWallet !== b.wallet.isGodWallet) {
-      return a.wallet.isGodWallet ? -1 : 1;
+    if (a.is_god_wallet !== b.is_god_wallet) {
+      return a.is_god_wallet ? -1 : 1;
     }
-    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    return b.timestamp - a.timestamp;
   });
 
   const displayEntries = sortedEntries.slice(0, maxDisplay);
@@ -199,7 +155,7 @@ export function TrackerWalletIndicator({
     <div className="flex items-center">
       {displayEntries.map((entry, index) => (
         <WalletAvatar
-          key={`${entry.wallet.id}-${entry.txHash}`}
+          key={`${entry.tx_hash}-${index}`}
           entry={entry}
           size={size}
           index={index}
