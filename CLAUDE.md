@@ -486,3 +486,277 @@ When a god wallet buys:
 3. ~~**Type Mismatch**: `WalletEntry` type in types.ts vs WalletEntryChart~~ ✅ FIXED
    - TrackerWalletIndicator now uses `WalletEntryPoint` type directly from hook
    - Types match backend response format
+
+---
+
+## God Wallet Copy Trading System
+
+### Current State (Jan 2026)
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| God wallet buy detection | ✅ Working | Helius WebSocket detects buys |
+| Recording buys to DB | ✅ Working | 360+ trades in `wallet_trades` |
+| God wallet sell detection | ❌ Not implemented | Only buys tracked |
+| Copy trade execution | ❌ Not implemented | Detection works, execution doesn't fire |
+| Exit strategy | ❌ Not defined | No sell logic |
+
+### God Wallets Configured (24 total)
+
+| Label | Address | Trust Score |
+|-------|---------|-------------|
+| Profits | G5nxE...w5E | 0.9 |
+| HighPnL-1 | 5h7yz...kfE | 0.85 |
+| Remus | E4Rue...5S | 0.5 |
+| Nikita | 8fSnL...LJ | 0.5 |
+| marcell-1 to marcell-20 | Various | 0.8 |
+
+### Backend Changes Required (DevPrint/Rust)
+
+#### 1. Track God Wallet SELLS (not just buys)
+
+**File:** `apps/core/src/trading/wallet_tracker/helius_tracker.rs`
+
+```rust
+// In handle_swap() - currently only handles buys
+// Need to add sell detection:
+
+if is_sell {
+    // Record sell to wallet_trades with action='sell'
+    db.record_trade(WalletTrade {
+        wallet_id,
+        mint,
+        action: "sell".to_string(),
+        price_usd: current_price,
+        amount_tokens,
+        amount_native,
+        amount_usd,
+        exit_price: Some(current_price),
+        realized_pnl_pct: calculate_pnl(entry_price, current_price),
+        realized_pnl_usd: calculate_pnl_usd(entry_amount, exit_amount),
+        timestamp: Utc::now(),
+        tx_hash: signature,
+        ..Default::default()
+    });
+
+    // Emit WebSocket event
+    emit_event("god_wallet_sell_detected", GodWalletSellEvent {
+        wallet_label,
+        mint,
+        symbol,
+        exit_price,
+        realized_pnl_pct,
+        hold_time_minutes,
+    });
+}
+```
+
+#### 2. Paper Trade Copy System
+
+**New table:** `god_wallet_copy_paper_trades`
+
+```sql
+CREATE TABLE god_wallet_copy_paper_trades (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    -- Source god wallet info
+    source_wallet_id UUID REFERENCES tracked_wallets(id),
+    source_wallet_label TEXT,
+    source_buy_tx TEXT,
+    source_buy_time TIMESTAMPTZ,
+    source_buy_price FLOAT,
+    source_buy_amount_usd FLOAT,
+
+    -- Token info
+    mint TEXT NOT NULL,
+    token_symbol TEXT,
+    token_name TEXT,
+
+    -- Simulated copy trade
+    simulated_entry_price FLOAT,           -- Price we would have gotten
+    simulated_entry_sol FLOAT DEFAULT 0.1, -- Position size
+    simulated_entry_time TIMESTAMPTZ,
+    detection_latency_ms INT,              -- Time from their buy to our detection
+    execution_latency_ms INT,              -- Simulated execution delay (add 500ms)
+    price_slippage_pct FLOAT,              -- (our_price - their_price) / their_price
+
+    -- Exit tracking (filled when god wallet sells)
+    source_sell_tx TEXT,
+    source_sell_time TIMESTAMPTZ,
+    source_sell_price FLOAT,
+    source_realized_pnl_pct FLOAT,         -- God wallet's actual PnL
+
+    -- Our simulated exit
+    simulated_exit_price FLOAT,
+    simulated_exit_time TIMESTAMPTZ,
+    simulated_pnl_pct FLOAT,               -- What we would have made
+    simulated_pnl_sol FLOAT,
+
+    -- Status
+    status TEXT DEFAULT 'open',            -- 'open', 'closed_copy_sell', 'closed_timeout', 'closed_stop_loss'
+
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Index for quick lookups
+CREATE INDEX idx_paper_trades_status ON god_wallet_copy_paper_trades(status);
+CREATE INDEX idx_paper_trades_source_wallet ON god_wallet_copy_paper_trades(source_wallet_id);
+CREATE INDEX idx_paper_trades_mint ON god_wallet_copy_paper_trades(mint);
+```
+
+#### 3. Copy Trade Flow (Paper Trading)
+
+```
+GOD WALLET BUY DETECTED
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│ 1. Record to wallet_trades (existing)   │
+└─────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│ 2. Create paper trade record            │
+│    - source_wallet_label                │
+│    - source_buy_price                   │
+│    - simulated_entry_price (+slippage)  │
+│    - simulated_entry_sol = 0.1          │
+│    - detection_latency_ms               │
+└─────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│ 3. Emit WebSocket event                 │
+│    god_wallet_buy_detected {            │
+│      paper_trade_id,                    │
+│      simulated: true                    │
+│    }                                    │
+└─────────────────────────────────────────┘
+
+
+GOD WALLET SELL DETECTED
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│ 1. Find matching open paper trade       │
+│    WHERE source_wallet_id = X           │
+│    AND mint = Y                         │
+│    AND status = 'open'                  │
+└─────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│ 2. Calculate simulated exit             │
+│    - simulated_exit_price               │
+│    - simulated_pnl_pct                  │
+│    - simulated_pnl_sol                  │
+│    - source_realized_pnl_pct            │
+└─────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│ 3. Update paper trade                   │
+│    status = 'closed_copy_sell'          │
+└─────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│ 4. Emit WebSocket event                 │
+│    god_wallet_copy_closed {             │
+│      paper_trade_id,                    │
+│      simulated_pnl_pct,                 │
+│      simulated_pnl_sol,                 │
+│      source_pnl_pct                     │
+│    }                                    │
+└─────────────────────────────────────────┘
+```
+
+### Exit Strategy
+
+**Primary: Copy their sells**
+- When god wallet sells, we sell (they're god wallets for a reason)
+- Calculate our simulated exit based on their exit price + slippage
+
+**Fallback exits (if they don't sell within 4 hours):**
+
+| Condition | Action |
+|-----------|--------|
+| Price drops 25% from peak | Stop loss exit |
+| Price up 50%+ after 4h | Take profit exit |
+| 4 hours elapsed, price flat | Timeout exit |
+
+### Position Sizing
+
+| Trade Type | SOL Amount | Notes |
+|------------|------------|-------|
+| Migration signal | 0.3 SOL | Current default |
+| God wallet copy (paper) | 0.1 SOL | Conservative for testing |
+| God wallet copy (live) | 0.1 SOL | Start small, increase if profitable |
+
+### API Endpoints Needed
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/god-wallet-copies` | GET | List paper trades with PnL |
+| `/api/god-wallet-copies/stats` | GET | Aggregate stats (win rate, total PnL) |
+| `/api/god-wallet-copies/:id` | GET | Single paper trade details |
+
+### WebSocket Events Needed
+
+| Event | Data |
+|-------|------|
+| `god_wallet_sell_detected` | `{ wallet_label, mint, symbol, exit_price, realized_pnl_pct, hold_time_minutes }` |
+| `god_wallet_copy_opened` | `{ paper_trade_id, wallet_label, mint, simulated_entry_price, simulated_entry_sol }` |
+| `god_wallet_copy_closed` | `{ paper_trade_id, simulated_pnl_pct, simulated_pnl_sol, close_reason }` |
+
+### Frontend Display (SR Calls Section)
+
+**New component:** `GodWalletCopyPerformance`
+
+```
+┌─────────────────────────────────────────────────┐
+│ 📊 God Wallet Copy Performance (Paper Trading)  │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  Today's Simulated PnL: +0.45 SOL (+15%)       │
+│  Open Positions: 3                              │
+│  Win Rate: 67% (8/12)                          │
+│                                                 │
+│  Recent Copies:                                 │
+│  ┌─────────────────────────────────────────┐   │
+│  │ 🐋 Profits bought BONK                  │   │
+│  │ Entry: $0.00001234 | Our entry: +2.1%   │   │
+│  │ Status: OPEN | Current: +18%            │   │
+│  └─────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────┐   │
+│  │ 🐋 marcell-13 sold PEPE                 │   │
+│  │ Their PnL: +45% | Our PnL: +41%         │   │
+│  │ Slippage: -4% | Hold: 2.3h              │   │
+│  └─────────────────────────────────────────┘   │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+### Implementation Priority
+
+1. **Phase 1: Track Sells** (Backend)
+   - Add sell detection to Helius tracker
+   - Record sells to wallet_trades
+   - Emit `god_wallet_sell_detected` event
+
+2. **Phase 2: Paper Trading** (Backend)
+   - Create `god_wallet_copy_paper_trades` table
+   - Create paper trade on god wallet buy
+   - Close paper trade on god wallet sell
+   - API endpoints for paper trade data
+
+3. **Phase 3: Frontend Display** (Frontend)
+   - New component to show paper trade performance
+   - Real-time updates via WebSocket
+   - Daily/weekly PnL summaries
+
+4. **Phase 4: Live Trading** (Backend)
+   - Replace paper trade creation with real execution
+   - Use `force_buy_no_filters()` with 0.1 SOL
+   - Implement exit logic (copy sells + fallbacks)
