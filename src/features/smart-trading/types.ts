@@ -342,6 +342,7 @@ export interface MigrationFeedEvent {
   | "stats_update"
   | "signal_detected"
   | "wallet_buy_detected"
+  | "god_wallet_buy_detected"
   | "position_opened"
   | "price_update"
   | "take_profit_triggered"
