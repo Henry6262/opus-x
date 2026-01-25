@@ -91,16 +91,13 @@ export function useTokenGate(): TokenGateState {
     setIsVerifying(true);
 
     try {
-      // Refetch balance from chain
-      await refetchBalance();
+      // Refetch balance from chain - returns the actual balance
+      const freshBalance = await refetchBalance();
 
-      // Wait a tick for state to update
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Create new session
+      // Create new session with the fresh balance
       const newSession: TokenGateSession = {
         walletAddress: publicKey,
-        balance: chainBalance,
+        balance: freshBalance,
         verifiedAt: Date.now(),
       };
 
@@ -108,14 +105,14 @@ export function useTokenGate(): TokenGateState {
       setTokenGateSession(newSession);
       setSessionTimeRemaining(TOKEN_GATE_SESSION_DURATION);
 
-      return chainBalance >= SR_MIN_BALANCE;
+      return freshBalance >= SR_MIN_BALANCE;
     } catch (error) {
       console.error("Token gate verification failed:", error);
       return false;
     } finally {
       setIsVerifying(false);
     }
-  }, [connected, publicKey, chainBalance, refetchBalance]);
+  }, [connected, publicKey, refetchBalance]);
 
   // Clear session and require re-verification
   const clearSessionHandler = useCallback(() => {

@@ -6,7 +6,7 @@ interface TokenBalance {
   balance: number;
   isLoading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: () => Promise<number>;
 }
 
 /**
@@ -18,10 +18,10 @@ export function useTokenBalance(walletAddress: string | null): TokenBalance {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchBalance = useCallback(async () => {
+  const fetchBalance = useCallback(async (): Promise<number> => {
     if (!walletAddress) {
       setBalance(0);
-      return;
+      return 0;
     }
 
     setIsLoading(true);
@@ -38,11 +38,14 @@ export function useTokenBalance(walletAddress: string | null): TokenBalance {
         throw new Error(data.error || `API error: ${response.status}`);
       }
 
-      setBalance(data.balance ?? 0);
+      const newBalance = data.balance ?? 0;
+      setBalance(newBalance);
+      return newBalance;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch balance";
       setError(message);
       console.error("Token balance fetch error:", err);
+      return 0;
     } finally {
       setIsLoading(false);
     }
