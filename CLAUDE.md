@@ -738,25 +738,278 @@ GOD WALLET SELL DETECTED
 └─────────────────────────────────────────────────┘
 ```
 
+### Position Tracking (Partial Sells)
+
+**Problem:** God wallets don't sell 100% at once. They scale out:
+- Buy 1M tokens
+- Sell 25% at +50%
+- Sell 50% at +100%
+- Sell remaining 25% at +200%
+
+**We need to track:**
+- Total tokens bought (sum of all buys)
+- Total tokens sold (sum of all sells)
+- Current position = bought - sold
+- Position % remaining = (bought - sold) / bought * 100
+- Average entry price (weighted by amount)
+- Average exit price (weighted by amount)
+
+#### New Table: `god_wallet_positions`
+
+```sql
+CREATE TABLE god_wallet_positions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    -- Wallet + Token
+    wallet_id UUID REFERENCES tracked_wallets(id),
+    wallet_label TEXT,
+    mint TEXT NOT NULL,
+    token_symbol TEXT,
+    token_name TEXT,
+
+    -- Aggregated Buy Side
+    total_tokens_bought FLOAT DEFAULT 0,      -- Sum of all buy amounts
+    total_sol_spent FLOAT DEFAULT 0,          -- Sum of all SOL spent
+    total_usd_spent FLOAT DEFAULT 0,          -- Sum of all USD spent
+    avg_entry_price FLOAT,                    -- Weighted average entry
+    first_buy_at TIMESTAMPTZ,
+    last_buy_at TIMESTAMPTZ,
+    buy_tx_count INT DEFAULT 0,               -- Number of buy transactions
+
+    -- Aggregated Sell Side
+    total_tokens_sold FLOAT DEFAULT 0,        -- Sum of all sell amounts
+    total_sol_received FLOAT DEFAULT 0,       -- Sum of all SOL received
+    total_usd_received FLOAT DEFAULT 0,       -- Sum of all USD received
+    avg_exit_price FLOAT,                     -- Weighted average exit
+    first_sell_at TIMESTAMPTZ,
+    last_sell_at TIMESTAMPTZ,
+    sell_tx_count INT DEFAULT 0,              -- Number of sell transactions
+
+    -- Current State
+    current_tokens FLOAT GENERATED ALWAYS AS (total_tokens_bought - total_tokens_sold) STORED,
+    position_remaining_pct FLOAT GENERATED ALWAYS AS (
+        CASE WHEN total_tokens_bought > 0
+        THEN ((total_tokens_bought - total_tokens_sold) / total_tokens_bought) * 100
+        ELSE 0 END
+    ) STORED,
+
+    -- PnL (updated on each sell)
+    realized_pnl_sol FLOAT DEFAULT 0,
+    realized_pnl_usd FLOAT DEFAULT 0,
+    realized_pnl_pct FLOAT DEFAULT 0,
+    unrealized_pnl_pct FLOAT,                 -- Based on current price
+
+    -- Status
+    status TEXT DEFAULT 'open',               -- 'open', 'partial', 'closed'
+    -- open = has tokens, no sells yet
+    -- partial = has tokens, some sells
+    -- closed = no tokens left (sold everything)
+
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Indexes
+CREATE UNIQUE INDEX idx_wallet_positions_unique ON god_wallet_positions(wallet_id, mint);
+CREATE INDEX idx_wallet_positions_status ON god_wallet_positions(status);
+CREATE INDEX idx_wallet_positions_wallet ON god_wallet_positions(wallet_id);
+```
+
+#### Position Update Logic
+
+```
+ON GOD WALLET BUY:
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ 1. Find or create position                      │
+│    WHERE wallet_id = X AND mint = Y             │
+└─────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ 2. Update buy aggregates                        │
+│    total_tokens_bought += buy_amount            │
+│    total_sol_spent += sol_amount                │
+│    total_usd_spent += usd_amount                │
+│    avg_entry_price = recalculate weighted avg   │
+│    buy_tx_count += 1                            │
+│    last_buy_at = now()                          │
+│    status = 'open' (if was closed)              │
+└─────────────────────────────────────────────────┘
+
+
+ON GOD WALLET SELL:
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ 1. Find position                                │
+│    WHERE wallet_id = X AND mint = Y             │
+└─────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ 2. Calculate sell percentage                    │
+│    sell_pct = sell_amount / current_tokens      │
+│    (e.g., selling 250K of 1M = 25%)            │
+└─────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ 3. Update sell aggregates                       │
+│    total_tokens_sold += sell_amount             │
+│    total_sol_received += sol_amount             │
+│    total_usd_received += usd_amount             │
+│    avg_exit_price = recalculate weighted avg    │
+│    sell_tx_count += 1                           │
+│    last_sell_at = now()                         │
+└─────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ 4. Update PnL                                   │
+│    realized_pnl_sol = total_sol_received        │
+│                       - (total_sol_spent *      │
+│                          tokens_sold/tokens_bought)│
+│    realized_pnl_pct = ...                       │
+└─────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ 5. Update status                                │
+│    IF current_tokens == 0:                      │
+│        status = 'closed'                        │
+│    ELSE:                                        │
+│        status = 'partial'                       │
+└─────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ 6. Emit event with sell details                 │
+│    god_wallet_sell_detected {                   │
+│      wallet_label,                              │
+│      mint,                                      │
+│      sell_amount_tokens,                        │
+│      sell_pct,           // 25%                 │
+│      position_remaining_pct, // 75%             │
+│      realized_pnl_pct,                          │
+│      is_full_exit,       // false               │
+│    }                                            │
+└─────────────────────────────────────────────────┘
+```
+
+#### Copy Trade Mirroring (Partial Sells)
+
+When we copy, we mirror their sell percentage:
+
+```
+God wallet sells 25% of position
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ 1. Find our paper position for same token       │
+│    WHERE source_wallet_id = X AND mint = Y      │
+└─────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ 2. Calculate our sell amount                    │
+│    our_sell = our_current_tokens * 0.25         │
+│    (mirror their 25%)                           │
+└─────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────┐
+│ 3. Record partial exit                          │
+│    - Update our position aggregates             │
+│    - Calculate realized PnL for this chunk      │
+│    - Keep position open if tokens remain        │
+└─────────────────────────────────────────────────┘
+```
+
+#### Updated Paper Trade Table
+
+```sql
+-- Add these columns to god_wallet_copy_paper_trades:
+
+ALTER TABLE god_wallet_copy_paper_trades ADD COLUMN
+    -- Our position tracking
+    simulated_tokens_bought FLOAT,
+    simulated_tokens_sold FLOAT DEFAULT 0,
+    simulated_tokens_remaining FLOAT,
+    simulated_position_remaining_pct FLOAT DEFAULT 100,
+
+    -- Partial exit tracking
+    exits JSONB DEFAULT '[]',  -- Array of exit events
+    /*
+    [
+      {
+        "exit_time": "2026-01-25T10:00:00Z",
+        "sell_pct": 25,
+        "tokens_sold": 2500000,
+        "price": 0.00001234,
+        "pnl_pct": 45,
+        "triggered_by": "god_wallet_sell"
+      },
+      {
+        "exit_time": "2026-01-25T12:00:00Z",
+        "sell_pct": 50,
+        "tokens_sold": 5000000,
+        "price": 0.00002345,
+        "pnl_pct": 120,
+        "triggered_by": "god_wallet_sell"
+      }
+    ]
+    */
+
+    -- Aggregated exits
+    total_exits INT DEFAULT 0,
+    avg_exit_price FLOAT,
+    total_realized_pnl_pct FLOAT DEFAULT 0,
+    total_realized_pnl_sol FLOAT DEFAULT 0;
+```
+
+#### WebSocket Events (Updated)
+
+| Event | Data |
+|-------|------|
+| `god_wallet_position_opened` | `{ wallet_label, mint, tokens_bought, entry_price, entry_sol }` |
+| `god_wallet_position_increased` | `{ wallet_label, mint, additional_tokens, new_total, new_avg_price }` |
+| `god_wallet_partial_sell` | `{ wallet_label, mint, sell_pct, tokens_sold, position_remaining_pct, realized_pnl_pct }` |
+| `god_wallet_position_closed` | `{ wallet_label, mint, total_pnl_pct, total_pnl_usd, hold_time_hours }` |
+
+#### API Endpoints (Updated)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/god-wallet-positions` | GET | All positions with current state |
+| `/api/god-wallet-positions/open` | GET | Only open/partial positions |
+| `/api/god-wallet-positions/:wallet/:mint` | GET | Single position details |
+| `/api/god-wallet-positions/:wallet/:mint/history` | GET | All trades for position |
+
 ### Implementation Priority
 
-1. **Phase 1: Track Sells** (Backend)
+1. **Phase 1: Track Sells + Position Aggregation** (Backend)
    - Add sell detection to Helius tracker
-   - Record sells to wallet_trades
-   - Emit `god_wallet_sell_detected` event
+   - Create `god_wallet_positions` table
+   - Update position on each buy/sell
+   - Track partial sells with percentages
+   - Emit detailed sell events
 
-2. **Phase 2: Paper Trading** (Backend)
+2. **Phase 2: Paper Trading with Partial Exits** (Backend)
    - Create `god_wallet_copy_paper_trades` table
-   - Create paper trade on god wallet buy
-   - Close paper trade on god wallet sell
+   - Mirror position opens
+   - Mirror partial sells (copy their sell %)
+   - Track our simulated position lifecycle
    - API endpoints for paper trade data
 
 3. **Phase 3: Frontend Display** (Frontend)
-   - New component to show paper trade performance
+   - Show god wallet positions with % remaining
+   - Show partial sell history
+   - Show our mirrored paper trades
    - Real-time updates via WebSocket
-   - Daily/weekly PnL summaries
 
 4. **Phase 4: Live Trading** (Backend)
-   - Replace paper trade creation with real execution
-   - Use `force_buy_no_filters()` with 0.1 SOL
-   - Implement exit logic (copy sells + fallbacks)
+   - Replace paper trades with real execution
+   - Execute partial sells matching their %
+   - Full position lifecycle management
