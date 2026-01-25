@@ -540,7 +540,7 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
               <span className="text-[10px] text-white/50 mr-1">Total:</span>
               <CountUp
                 from={0}
-                to={totalPortfolioValue}
+                to={totalValue}
                 duration={1.5}
                 decimals={2}
                 className="text-white font-bold"

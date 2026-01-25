@@ -8,7 +8,6 @@ import { HistoryPanel } from "./components/HistoryPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnalyticsDashboard } from "@/components/analytics/AnalyticsDashboard";
 import { SuperRouterCallsSection } from "@/features/super-router-calls";
-import { WalletButton } from "@/components/auth/WalletButton";
 import ShinyText from "@/components/ShinyText";
 
 // ============================================
@@ -88,9 +87,6 @@ export function SmartTradingDashboard() {
                   ) : (
                     "Analytics"
                   )}
-                  <span className="absolute -top-4 -right-10 rounded-full bg-[#c4f70e] px-2 py-0.5 text-[9px] font-bold tracking-[0.2em] text-black shadow-[0_0_12px_rgba(196,247,14,0.35)]">
-                    BETA
-                  </span>
                 </span>
               </TabsTrigger>
             )}
@@ -154,11 +150,7 @@ export function SmartTradingDashboard() {
 
         {SUPER_ROUTER_CALLS_ENABLED && (
           <TabsContent value="super-router-calls" className="space-y-4">
-            {/* Wallet Connect Button for SR Calls */}
-            <div className="flex justify-end mb-4">
-              <WalletButton />
-            </div>
-            {/* Super Router Calls Content */}
+            {/* Super Router Calls Content - WalletButton is inside TokenGateGuard */}
             <SuperRouterCallsSection />
           </TabsContent>
         )}
