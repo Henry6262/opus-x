@@ -1,32 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const HELIUS_API_KEY = process.env.HELIUS_API_KEY;
+const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY;
 const SR_TOKEN_MINT = process.env.NEXT_PUBLIC_SR_TOKEN_MINT || "48BbwbZHWc8QJBiuGJTQZD5aWZdP3i6xrDw5N9EHpump";
 
-// Build RPC URL - Helius if key available, otherwise public (will likely fail)
-const SOLANA_RPC_URL = HELIUS_API_KEY
-  ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`
-  : "https://api.mainnet-beta.solana.com";
+interface BirdeyeTokenBalance {
+  address: string;
+  decimals: number;
+  price: number;
+  balance: string;
+  amount: number;
+  network: string;
+  name: string;
+  symbol: string;
+  value: string;
+}
 
-interface TokenAccountResponse {
-  result?: {
-    value: Array<{
-      account: {
-        data: {
-          parsed: {
-            info: {
-              tokenAmount: {
-                uiAmount: number;
-              };
-            };
-          };
-        };
-      };
-    }>;
-  };
-  error?: {
-    message: string;
-  };
+interface BirdeyeResponse {
+  success: boolean;
+  data: BirdeyeTokenBalance[];
 }
 
 export async function GET(request: NextRequest) {
@@ -41,48 +32,64 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  if (!BIRDEYE_API_KEY) {
+    console.error("BIRDEYE_API_KEY not configured");
+    return NextResponse.json(
+      { error: "Server configuration error" },
+      { status: 500 }
+    );
+  }
+
   try {
-    const response = await fetch(SOLANA_RPC_URL, {
+    // Use Birdeye wallet token balance API
+    const response = await fetch("https://public-api.birdeye.so/wallet/v2/token-balance", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-API-KEY": BIRDEYE_API_KEY,
+        "x-chain": "solana",
       },
       body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "getTokenAccountsByOwner",
-        params: [
-          walletAddress,
-          { mint: tokenMint },
-          { encoding: "jsonParsed" },
-        ],
+        wallet: walletAddress,
+        token_addresses: [tokenMint],
       }),
     });
 
     if (!response.ok) {
-      console.error(`RPC error: ${response.status} ${response.statusText}`);
+      console.error(`Birdeye API error: ${response.status} ${response.statusText}`);
+      const text = await response.text();
+      console.error("Response:", text);
       return NextResponse.json(
-        { error: `RPC error: ${response.status}` },
+        { error: `Birdeye API error: ${response.status}` },
         { status: 502 }
       );
     }
 
-    const data: TokenAccountResponse = await response.json();
+    const data: BirdeyeResponse = await response.json();
 
-    if (data.error) {
-      console.error("RPC returned error:", data.error);
+    if (!data.success) {
+      console.error("Birdeye returned unsuccessful response");
       return NextResponse.json(
-        { error: data.error.message },
+        { error: "Failed to fetch balance from Birdeye" },
         { status: 502 }
       );
     }
 
+    // Find the token in the response
     let balance = 0;
-    if (data.result?.value?.length > 0) {
-      balance = data.result.value[0].account.data.parsed.info.tokenAmount.uiAmount;
+    if (data.data && data.data.length > 0) {
+      const tokenData = data.data.find(t => t.address === tokenMint);
+      if (tokenData) {
+        balance = tokenData.amount; // Human-readable balance
+      }
     }
 
-    return NextResponse.json({ balance });
+    return NextResponse.json({
+      balance,
+      mint: tokenMint,
+      wallet: walletAddress,
+    });
   } catch (error) {
     console.error("Token balance fetch error:", error);
     return NextResponse.json(
