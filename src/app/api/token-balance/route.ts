@@ -16,7 +16,6 @@ interface BirdeyeTokenBalance {
 }
 
 interface BirdeyeResponse {
-  success: boolean;
   data: BirdeyeTokenBalance[];
 }
 
@@ -67,14 +66,6 @@ export async function GET(request: NextRequest) {
     }
 
     const data: BirdeyeResponse = await response.json();
-
-    if (!data.success) {
-      console.error("Birdeye returned unsuccessful response");
-      return NextResponse.json(
-        { error: "Failed to fetch balance from Birdeye" },
-        { status: 502 }
-      );
-    }
 
     // Find the token in the response
     let balance = 0;
