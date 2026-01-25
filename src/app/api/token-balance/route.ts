@@ -48,8 +48,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    console.log("[token-balance API] Fetching for wallet:", walletAddress, "mint:", tokenMint);
-
     // Use Helius RPC - getTokenAccountsByOwner (simple, reliable)
     const response = await fetch(
       `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`,
@@ -90,11 +88,9 @@ export async function GET(request: NextRequest) {
     // Extract balance from token account
     let balance = 0;
     const accounts = data.result?.value || [];
-    console.log("[token-balance API] Found", accounts.length, "token accounts");
 
     if (accounts.length > 0) {
       balance = accounts[0].account.data.parsed.info.tokenAmount.uiAmount || 0;
-      console.log("[token-balance API] Balance:", balance);
     }
 
     return NextResponse.json({
