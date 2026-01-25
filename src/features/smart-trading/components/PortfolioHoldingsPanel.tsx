@@ -646,18 +646,6 @@ function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
 
                         {/* PnL Percentage Section (right side) */}
                         <div className="flex items-center gap-2 flex-shrink-0">
-                            <div className="flex items-center gap-1 text-[11px] text-white/60 md:hidden">
-                                <span className="font-mono font-semibold tabular-nums">
-                                    {holding.entry_sol_value?.toFixed(2) ?? "0.00"}
-                                </span>
-                                <Image
-                                    src="/logos/solana.png"
-                                    alt="SOL"
-                                    width={12}
-                                    height={12}
-                                    className="opacity-80"
-                                />
-                            </div>
                             {/* PnL Percentage - Animated with flash on change */}
                             <div className="flex flex-col items-end">
                                 {pnlPct !== null ? (
@@ -680,24 +668,40 @@ function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
                         </div>
                     </div>
 
-                    {/* Entry + Market Cap (right aligned under ticker) */}
-                    <div className="flex items-center justify-start gap-3 text-[10px] md:text-xs font-mono text-white/60">
-                        {entryMarketCap !== undefined && entryMarketCap > 0 && (
-                            <div className="flex items-center gap-1">
-                                <span className="uppercase tracking-widest text-white/40 text-[9px] md:text-[10px]">Entry</span>
-                                <span className="font-semibold text-white/80 tabular-nums">
-                                    {formatMarketCap(entryMarketCap)}
-                                </span>
-                            </div>
-                        )}
-                        {currentMarketCap !== undefined && currentMarketCap > 0 && (
-                            <div className="flex items-center gap-1">
-                                <span className="uppercase tracking-widest text-white/40 text-[9px] md:text-[10px]">MCap</span>
-                                <span className="font-semibold text-white/90 tabular-nums">
-                                    {formatMarketCap(currentMarketCap)}
-                                </span>
-                            </div>
-                        )}
+                    {/* Entry + Market Cap (left) | Entry SOL (right) */}
+                    <div className="flex items-center justify-between text-[10px] md:text-xs font-mono text-white/60">
+                        {/* Left side: Entry MCap + Current MCap */}
+                        <div className="flex items-center gap-3">
+                            {entryMarketCap !== undefined && entryMarketCap > 0 && (
+                                <div className="flex items-center gap-1">
+                                    <span className="uppercase tracking-widest text-white/40 text-[9px] md:text-[10px]">Entry</span>
+                                    <span className="font-semibold text-white/80 tabular-nums">
+                                        {formatMarketCap(entryMarketCap)}
+                                    </span>
+                                </div>
+                            )}
+                            {currentMarketCap !== undefined && currentMarketCap > 0 && (
+                                <div className="flex items-center gap-1">
+                                    <span className="uppercase tracking-widest text-white/40 text-[9px] md:text-[10px]">MCap</span>
+                                    <span className="font-semibold text-white/90 tabular-nums">
+                                        {formatMarketCap(currentMarketCap)}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                        {/* Right side: Entry SOL value */}
+                        <div className="flex items-center gap-1">
+                            <span className="font-semibold text-white/80 tabular-nums">
+                                {holding.entry_sol_value?.toFixed(2) ?? "0.00"}
+                            </span>
+                            <Image
+                                src="/logos/solana.png"
+                                alt="SOL"
+                                width={12}
+                                height={12}
+                                className="opacity-80"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
