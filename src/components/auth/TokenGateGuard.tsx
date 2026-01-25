@@ -7,6 +7,7 @@ import { useTokenGate } from "@/hooks/useTokenGate";
 import { Loader2, ExternalLink, Sparkles, Download, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SR_TOKEN_MINT } from "@/lib/config";
+import CountUp from "@/components/CountUp";
 
 interface TokenGateGuardProps {
   children: ReactNode;
@@ -42,8 +43,8 @@ export function TokenGateGuard({
   }
 
   const formatNumber = (n: number) => {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    if (n >= 1_000_000) return `${Math.floor(n / 1_000_000)}M`;
+    if (n >= 1_000) return `${Math.floor(n / 1_000)}K`;
     return n.toLocaleString();
   };
 
@@ -135,7 +136,16 @@ export function TokenGateGuard({
             {/* Requirement badge */}
             <div className="flex items-center gap-2 mb-6">
               <span className="text-white/40 text-base">Requires</span>
-              <span className="text-[#c4f70e] font-bold text-lg">{formatNumber(minRequired)} $SR</span>
+              <span className="text-[#c4f70e] font-bold text-lg">
+                <CountUp
+                  to={minRequired}
+                  from={0}
+                  duration={1.5}
+                  separator=","
+                  className="tabular-nums"
+                />
+                {" "}$SR
+              </span>
             </div>
 
             {/* No wallet found message */}
