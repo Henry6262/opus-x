@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { SOLANA_RPC_URL, SR_TOKEN_MINT } from "@/lib/config";
 
 interface TokenBalance {
   balance: number;
@@ -10,31 +9,11 @@ interface TokenBalance {
   refetch: () => Promise<void>;
 }
 
-interface TokenAccountResponse {
-  result: {
-    value: Array<{
-      account: {
-        data: {
-          parsed: {
-            info: {
-              tokenAmount: {
-                uiAmount: number;
-              };
-            };
-          };
-        };
-      };
-    }>;
-  };
-}
-
 /**
- * Fetch SPL token balance for a wallet
+ * Fetch SPL token balance for a wallet via our API route
+ * (server-side RPC call to protect API keys)
  */
-export function useTokenBalance(
-  walletAddress: string | null,
-  tokenMint: string = SR_TOKEN_MINT
-): TokenBalance {
+export function useTokenBalance(walletAddress: string | null): TokenBalance {
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,37 +28,17 @@ export function useTokenBalance(
     setError(null);
 
     try {
-      // Use getTokenAccountsByOwner RPC method
-      const response = await fetch(SOLANA_RPC_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "getTokenAccountsByOwner",
-          params: [
-            walletAddress,
-            { mint: tokenMint },
-            { encoding: "jsonParsed" },
-          ],
-        }),
-      });
+      const response = await fetch(
+        `/api/token-balance?wallet=${encodeURIComponent(walletAddress)}`
+      );
+
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(`RPC error: ${response.status}`);
+        throw new Error(data.error || `API error: ${response.status}`);
       }
 
-      const data: TokenAccountResponse = await response.json();
-
-      if (data.result?.value?.length > 0) {
-        const tokenAmount = data.result.value[0].account.data.parsed.info.tokenAmount.uiAmount;
-        setBalance(tokenAmount);
-      } else {
-        // No token account found, balance is 0
-        setBalance(0);
-      }
+      setBalance(data.balance ?? 0);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch balance";
       setError(message);
@@ -87,7 +46,7 @@ export function useTokenBalance(
     } finally {
       setIsLoading(false);
     }
-  }, [walletAddress, tokenMint]);
+  }, [walletAddress]);
 
   // Fetch on mount and when wallet changes
   useEffect(() => {
