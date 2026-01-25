@@ -4,7 +4,7 @@ import { ReactNode } from "react";
 import Image from "next/image";
 import { useWalletContext } from "@/providers/WalletProvider";
 import { useTokenGate } from "@/hooks/useTokenGate";
-import { Loader2, ExternalLink, Sparkles, Download, LogOut } from "lucide-react";
+import { Loader2, ExternalLink, Sparkles, Download, LogOut, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SR_TOKEN_MINT } from "@/lib/config";
 import CountUp from "@/components/CountUp";
@@ -37,16 +37,16 @@ export function TokenGateGuard({
   const { connected, connecting, connect, disconnect, publicKey, walletName, availableWallets, noWalletFound } = useWalletContext();
   const { isGated, isVerifying, balance, minRequired } = useTokenGate();
 
-  // If gated, render children
-  if (connected && isGated) {
-    return <div className={className}>{children}</div>;
-  }
-
   const formatNumber = (n: number) => {
     if (n >= 1_000_000) return `${Math.floor(n / 1_000_000)}M`;
     if (n >= 1_000) return `${Math.floor(n / 1_000)}K`;
     return n.toLocaleString();
   };
+
+  // If gated, render children
+  if (connected && isGated) {
+    return <div className={className}>{children}</div>;
+  }
 
   // Show loading state while connecting or verifying
   if (connecting || isVerifying) {
@@ -61,8 +61,11 @@ export function TokenGateGuard({
             fallbackClassName
           )}
         >
+          {/* Glow effect */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_0%_100%,rgba(196,247,14,0.15),transparent_50%)]" />
+
           {/* Left: Character image anchored to bottom */}
-          <div className="relative flex-shrink-0 self-end">
+          <div className="relative flex-shrink-0 self-end z-10">
             <Image
               src="/character/watching.png"
               alt="Super Router"
@@ -150,8 +153,8 @@ export function TokenGateGuard({
 
             {/* No wallet found message */}
             {noWalletFound && (
-              <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
-                <p className="text-red-400 text-sm font-medium mb-3">
+              <div className="mb-6 p-4 rounded-xl bg-[#c4f70e]/5 border border-[#c4f70e]/20">
+                <p className="text-white/70 text-sm font-medium mb-3">
                   No Solana wallet detected. Install one to continue:
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -205,22 +208,20 @@ export function TokenGateGuard({
     );
   }
 
-  // Connected but insufficient balance
-  const shortfall = minRequired - balance;
-
+  // Connected but insufficient balance - same color palette as other states
   return (
     <div className="flex justify-center">
       <div
         className={cn(
           "relative flex items-end overflow-hidden rounded-2xl",
-          "bg-gradient-to-r from-yellow-500/10 via-black/80 to-black/95",
-          "border border-yellow-500/30",
+          "bg-gradient-to-r from-[#c4f70e]/10 via-black/80 to-black/95",
+          "border border-[#c4f70e]/30",
           "min-h-[320px] max-w-4xl w-full",
           fallbackClassName
         )}
       >
         {/* Glow effect */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_0%_100%,rgba(234,179,8,0.15),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_0%_100%,rgba(196,247,14,0.2),transparent_50%)]" />
 
         {/* Left: Character image anchored to bottom-left */}
         <div className="relative flex-shrink-0 self-end z-10">
@@ -229,7 +230,7 @@ export function TokenGateGuard({
             alt="Super Router"
             width={280}
             height={280}
-            className="opacity-80 w-[180px] h-[180px] md:w-[240px] md:h-[240px] lg:w-[280px] lg:h-[280px]"
+            className="w-[180px] h-[180px] md:w-[240px] md:h-[240px] lg:w-[280px] lg:h-[280px]"
           />
         </div>
 
@@ -237,7 +238,7 @@ export function TokenGateGuard({
         <div className="flex-1 flex flex-col justify-center p-6 md:p-10 z-10">
           {/* Connected wallet info */}
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 border border-white/10">
+            <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 border border-[#c4f70e]/20">
               <div className="flex flex-col">
                 <span className="text-xs text-white/50">{walletName}</span>
                 <span className="text-sm font-mono text-white">
@@ -254,18 +255,42 @@ export function TokenGateGuard({
             </div>
           </div>
 
-          {/* Title */}
-          <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-5">{title}</h3>
+          {/* Not Eligible Message */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-[#c4f70e]/10 border border-[#c4f70e]/30 flex items-center justify-center">
+              <span className="text-xl">🔒</span>
+            </div>
+            <div>
+              <h3 className="text-xl md:text-2xl font-bold text-white">Not Eligible Yet</h3>
+              <p className="text-white/50 text-sm">Requires {formatNumber(minRequired)} $SR</p>
+            </div>
+          </div>
 
-          {/* Balance info */}
-          <div className="flex flex-col gap-2 mb-8">
-            <div className="flex items-center gap-3">
-              <span className="text-white/50 text-base">Your balance:</span>
-              <span className="text-white font-bold text-xl">{formatNumber(balance)} $SR</span>
+          {/* Balance display */}
+          <div className="mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
+            <div className="flex items-center justify-between">
+              <span className="text-white/50 text-sm">Your Balance</span>
+              <span className="text-white font-bold text-lg">
+                <CountUp
+                  to={balance}
+                  from={0}
+                  duration={1}
+                  separator=","
+                  className="tabular-nums"
+                />
+                {" "}$SR
+              </span>
             </div>
-            <div className="text-yellow-500 text-base font-medium">
-              Need {formatNumber(shortfall)} more to unlock
-            </div>
+          </div>
+
+          {/* Cooking message */}
+          <div className="mb-6 p-4 rounded-xl bg-[#c4f70e]/5 border border-[#c4f70e]/20">
+            <p className="text-white/80 text-base font-medium">
+              Come back tomorrow. The team is cooking. 🍳
+            </p>
+            <p className="text-white/50 text-sm mt-1">
+              Get more $SR to unlock exclusive features
+            </p>
           </div>
 
           {/* Buy Button */}
