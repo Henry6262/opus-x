@@ -7,7 +7,7 @@ export const DEVPRNT_CORE_URL =
 
 // Super Router token gating configuration
 export const SR_TOKEN_MINT = process.env.NEXT_PUBLIC_SR_TOKEN_MINT || "48BbwbZHWc8QJBiuGJTQZD5aWZdP3i6xrDw5N9EHpump";
-export const SR_MIN_BALANCE = Number(process.env.NEXT_PUBLIC_SR_MIN_BALANCE) || 1000;
+export const SR_MIN_BALANCE = Number(process.env.NEXT_PUBLIC_SR_MIN_BALANCE) || 250000;
 
 // Token gate session duration (12 hours in milliseconds)
 export const TOKEN_GATE_SESSION_DURATION = 12 * 60 * 60 * 1000;
