@@ -79,14 +79,17 @@ export function WalletEntryChart({ mint, height = 200 }: WalletEntryChartProps) 
         const data = await response.json();
         const pair = data.pairs?.[0];
 
-        if (!pair) {
-          throw new Error("No pair data available");
+        if (!pair || !pair.priceUsd) {
+          // No pair data - show empty state instead of error
+          setOhlcv([]);
+          setIsLoading(false);
+          return;
         }
 
         // Generate synthetic OHLCV from price history if available
         // For now, we'll use the current price to create a simple chart
         const now = Date.now();
-        const priceUsd = pair.priceUsd ? parseFloat(pair.priceUsd) : 0;
+        const priceUsd = parseFloat(pair.priceUsd);
 
         // Create some synthetic candles for visualization
         const candles: OHLCVData[] = [];
@@ -242,13 +245,13 @@ export function WalletEntryChart({ mint, height = 200 }: WalletEntryChartProps) 
     );
   }
 
-  if (error) {
+  if (error || ohlcv.length === 0) {
     return (
       <div
         className="flex items-center justify-center bg-white/5 rounded-lg text-white/40 text-xs"
         style={{ height }}
       >
-        {error}
+        {error || "No chart data available"}
       </div>
     );
   }
