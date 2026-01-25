@@ -4,7 +4,7 @@ import { ReactNode } from "react";
 import Image from "next/image";
 import { useWalletContext } from "@/providers/WalletProvider";
 import { useTokenGate } from "@/hooks/useTokenGate";
-import { Loader2, ExternalLink, Sparkles } from "lucide-react";
+import { Loader2, ExternalLink, Sparkles, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SR_TOKEN_MINT } from "@/lib/config";
 
@@ -19,6 +19,13 @@ interface TokenGateGuardProps {
 const JUPITER_BUY_URL = `https://jup.ag/swap/SOL-${SR_TOKEN_MINT}`;
 const DEXSCREENER_URL = `https://dexscreener.com/solana/${SR_TOKEN_MINT}`;
 
+// Wallet info for download buttons
+const WALLETS = [
+  { name: "Phantom", url: "https://phantom.app/", icon: "👻" },
+  { name: "Solflare", url: "https://solflare.com/", icon: "🔥" },
+  { name: "Backpack", url: "https://backpack.app/", icon: "🎒" },
+];
+
 export function TokenGateGuard({
   children,
   className,
@@ -26,7 +33,7 @@ export function TokenGateGuard({
   title = "Super Router Calls",
   description,
 }: TokenGateGuardProps) {
-  const { connected, connecting, connect } = useWalletContext();
+  const { connected, connecting, connect, availableWallets, noWalletFound } = useWalletContext();
   const { isGated, isVerifying, balance, minRequired } = useTokenGate();
 
   // If gated, render children
@@ -126,14 +133,45 @@ export function TokenGateGuard({
             </p>
 
             {/* Requirement badge */}
-            <div className="flex items-center gap-2 mb-8">
+            <div className="flex items-center gap-2 mb-6">
               <span className="text-white/40 text-base">Requires</span>
               <span className="text-[#c4f70e] font-bold text-lg">{formatNumber(minRequired)} $SR</span>
             </div>
 
+            {/* No wallet found message */}
+            {noWalletFound && (
+              <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
+                <p className="text-red-400 text-sm font-medium mb-3">
+                  No Solana wallet detected. Install one to continue:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {WALLETS.map((wallet) => (
+                    <a
+                      key={wallet.name}
+                      href={wallet.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                    >
+                      <span>{wallet.icon}</span>
+                      <span className="text-white text-sm font-medium">{wallet.name}</span>
+                      <Download className="w-3 h-3 text-white/50" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Available wallets indicator */}
+            {availableWallets.length > 0 && !noWalletFound && (
+              <p className="text-white/40 text-sm mb-4">
+                Detected: {availableWallets.join(", ")}
+              </p>
+            )}
+
             {/* Connect Button */}
             <button
-              onClick={connect}
+              onClick={() => connect()}
               className={cn(
                 "relative z-50 flex items-center justify-center gap-3 px-10 py-4 rounded-xl w-fit",
                 "bg-gradient-to-r from-[#c4f70e] to-[#a8d60d]",
@@ -142,8 +180,15 @@ export function TokenGateGuard({
                 "shadow-[0_0_20px_rgba(196,247,14,0.3)]"
               )}
             >
-              Connect Wallet
+              {noWalletFound ? "Install Wallet" : "Connect Wallet"}
             </button>
+
+            {/* Supported wallets text */}
+            {!noWalletFound && availableWallets.length === 0 && (
+              <p className="mt-4 text-white/30 text-sm">
+                Supports Phantom, Solflare, Backpack
+              </p>
+            )}
           </div>
         </div>
       </div>

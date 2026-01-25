@@ -14,7 +14,9 @@ export interface WalletContextState {
   connecting: boolean;
   publicKey: string | null;
   walletName: string | null;
-  connect: () => Promise<void>;
+  availableWallets: string[];
+  noWalletFound: boolean;
+  connect: (walletType?: string) => Promise<void>;
   disconnect: () => Promise<void>;
   signMessage: (message: Uint8Array) => Promise<Uint8Array | null>;
 }
@@ -24,6 +26,8 @@ const WalletContext = createContext<WalletContextState>({
   connecting: false,
   publicKey: null,
   walletName: null,
+  availableWallets: [],
+  noWalletFound: false,
   connect: async () => {},
   disconnect: async () => {},
   signMessage: async () => null,
@@ -37,6 +41,7 @@ interface SolanaWallet {
   isPhantom?: boolean;
   isSolflare?: boolean;
   isBackpack?: boolean;
+  isCoinbaseWallet?: boolean;
   publicKey: { toBase58: () => string } | null;
   isConnected: boolean;
   connect: () => Promise<{ publicKey: { toBase58: () => string } }>;
@@ -46,35 +51,58 @@ interface SolanaWallet {
   off: (event: string, callback: () => void) => void;
 }
 
-function getWalletProvider(): SolanaWallet | null {
+interface WindowWithWallets {
+  phantom?: { solana?: SolanaWallet };
+  solflare?: SolanaWallet;
+  backpack?: SolanaWallet;
+  coinbaseSolana?: SolanaWallet;
+  solana?: SolanaWallet;
+}
+
+// Wallet download links
+const WALLET_LINKS: Record<string, string> = {
+  phantom: "https://phantom.app/",
+  solflare: "https://solflare.com/",
+  backpack: "https://backpack.app/",
+};
+
+function getWindowWithWallets(): WindowWithWallets | null {
   if (typeof window === "undefined") return null;
+  return window as unknown as WindowWithWallets;
+}
 
-  const windowWithSolana = window as unknown as {
-    phantom?: { solana?: SolanaWallet };
-    solflare?: SolanaWallet;
-    backpack?: SolanaWallet;
-    solana?: SolanaWallet;
-  };
+function getAvailableWallets(): string[] {
+  const win = getWindowWithWallets();
+  if (!win) return [];
 
-  // Try Phantom first
-  if (windowWithSolana.phantom?.solana) {
-    return windowWithSolana.phantom.solana;
+  const available: string[] = [];
+  if (win.phantom?.solana) available.push("Phantom");
+  if (win.solflare?.isSolflare) available.push("Solflare");
+  if (win.backpack?.isBackpack) available.push("Backpack");
+  if (win.coinbaseSolana) available.push("Coinbase");
+
+  return available;
+}
+
+function getWalletProvider(preferredWallet?: string): SolanaWallet | null {
+  const win = getWindowWithWallets();
+  if (!win) return null;
+
+  // If a specific wallet is requested, try that first
+  if (preferredWallet) {
+    const lower = preferredWallet.toLowerCase();
+    if (lower === "phantom" && win.phantom?.solana) return win.phantom.solana;
+    if (lower === "solflare" && win.solflare?.isSolflare) return win.solflare;
+    if (lower === "backpack" && win.backpack?.isBackpack) return win.backpack;
+    if (lower === "coinbase" && win.coinbaseSolana) return win.coinbaseSolana;
   }
 
-  // Try Solflare
-  if (windowWithSolana.solflare?.isSolflare) {
-    return windowWithSolana.solflare;
-  }
-
-  // Try Backpack
-  if (windowWithSolana.backpack?.isBackpack) {
-    return windowWithSolana.backpack;
-  }
-
-  // Try generic solana provider
-  if (windowWithSolana.solana) {
-    return windowWithSolana.solana;
-  }
+  // Auto-detect: try each wallet in order
+  if (win.phantom?.solana) return win.phantom.solana;
+  if (win.solflare?.isSolflare) return win.solflare;
+  if (win.backpack?.isBackpack) return win.backpack;
+  if (win.coinbaseSolana) return win.coinbaseSolana;
+  if (win.solana) return win.solana;
 
   return null;
 }
@@ -84,6 +112,7 @@ function getWalletName(provider: SolanaWallet | null): string | null {
   if (provider.isPhantom) return "Phantom";
   if (provider.isSolflare) return "Solflare";
   if (provider.isBackpack) return "Backpack";
+  if (provider.isCoinbaseWallet) return "Coinbase";
   return "Solana Wallet";
 }
 
@@ -96,15 +125,26 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const [connecting, setConnecting] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [walletName, setWalletName] = useState<string | null>(null);
+  const [availableWallets, setAvailableWallets] = useState<string[]>([]);
+  const [noWalletFound, setNoWalletFound] = useState(false);
 
-  // Check for existing connection on mount
+  // Check for available wallets on mount
   useEffect(() => {
-    const provider = getWalletProvider();
-    if (provider?.isConnected && provider?.publicKey) {
-      setConnected(true);
-      setPublicKey(provider.publicKey.toBase58());
-      setWalletName(getWalletName(provider));
-    }
+    // Small delay to let wallet extensions inject
+    const timer = setTimeout(() => {
+      const wallets = getAvailableWallets();
+      setAvailableWallets(wallets);
+
+      // Check for existing connection
+      const provider = getWalletProvider();
+      if (provider?.isConnected && provider?.publicKey) {
+        setConnected(true);
+        setPublicKey(provider.publicKey.toBase58());
+        setWalletName(getWalletName(provider));
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, []);
 
   // Listen for wallet events
@@ -115,13 +155,16 @@ export function WalletProvider({ children }: WalletProviderProps) {
     const handleConnect = () => {
       if (provider.publicKey) {
         setConnected(true);
+        setConnecting(false);
         setPublicKey(provider.publicKey.toBase58());
         setWalletName(getWalletName(provider));
+        setNoWalletFound(false);
       }
     };
 
     const handleDisconnect = () => {
       setConnected(false);
+      setConnecting(false);
       setPublicKey(null);
       setWalletName(null);
     };
@@ -143,25 +186,49 @@ export function WalletProvider({ children }: WalletProviderProps) {
       provider.off("disconnect", handleDisconnect);
       provider.off("accountChanged", handleAccountChange);
     };
-  }, []);
+  }, [availableWallets]);
 
-  const connect = useCallback(async () => {
-    const provider = getWalletProvider();
+  const connect = useCallback(async (walletType?: string) => {
+    // Re-check available wallets
+    const wallets = getAvailableWallets();
+    setAvailableWallets(wallets);
+
+    const provider = getWalletProvider(walletType);
 
     if (!provider) {
-      window.open("https://phantom.app/", "_blank");
+      // No wallet found - show message and open download link
+      setNoWalletFound(true);
+      setConnecting(false);
+
+      // Open Phantom download page (most popular)
+      const downloadUrl = walletType ? WALLET_LINKS[walletType.toLowerCase()] : WALLET_LINKS.phantom;
+      if (downloadUrl) {
+        window.open(downloadUrl, "_blank");
+      }
       return;
     }
 
+    setNoWalletFound(false);
+    setConnecting(true);
+
     try {
-      setConnecting(true);
-      const response = await provider.connect();
+      // Add timeout to prevent infinite spinning
+      const connectPromise = provider.connect();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Connection timeout")), 30000);
+      });
+
+      const response = await Promise.race([connectPromise, timeoutPromise]);
+
       setConnected(true);
       setPublicKey(response.publicKey.toBase58());
       setWalletName(getWalletName(provider));
     } catch (error) {
       console.error("Failed to connect wallet:", error);
-      throw error;
+      // User rejected or timeout - reset state
+      setConnected(false);
+      setPublicKey(null);
+      setWalletName(null);
     } finally {
       setConnecting(false);
     }
@@ -169,15 +236,22 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   const disconnect = useCallback(async () => {
     const provider = getWalletProvider();
-    if (!provider) return;
-
-    try {
-      await provider.disconnect();
+    if (!provider) {
+      // Just reset state if no provider
       setConnected(false);
       setPublicKey(null);
       setWalletName(null);
+      return;
+    }
+
+    try {
+      await provider.disconnect();
     } catch (error) {
       console.error("Failed to disconnect wallet:", error);
+    } finally {
+      setConnected(false);
+      setPublicKey(null);
+      setWalletName(null);
     }
   }, []);
 
@@ -201,6 +275,8 @@ export function WalletProvider({ children }: WalletProviderProps) {
         connecting,
         publicKey,
         walletName,
+        availableWallets,
+        noWalletFound,
         connect,
         disconnect,
         signMessage,
