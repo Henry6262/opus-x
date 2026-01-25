@@ -7,13 +7,16 @@ import { AiDecisionFeed } from "./components/AiDecisionFeed";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnalyticsDashboard } from "@/components/analytics/AnalyticsDashboard";
+import { SuperRouterCallsSection } from "@/features/super-router-calls";
+import { WalletButton } from "@/components/auth/WalletButton";
 import ShinyText from "@/components/ShinyText";
 
 // ============================================
-// Feature Flag: Enable/disable Analytics tab (hidden by default for production)
-// Set NEXT_PUBLIC_ENABLE_ANALYTICS=true in .env.local to enable
+// Feature Flags: Enable/disable tabs (hidden by default for production)
+// Set in .env.local to enable locally
 // ============================================
 const ANALYTICS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true";
+const SUPER_ROUTER_CALLS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_SUPER_ROUTER_CALLS === "true";
 const STORAGE_KEY = "superrouter-dashboard-tab";
 
 // ============================================
@@ -30,6 +33,10 @@ export function SmartTradingDashboard() {
       setActiveTab("analytics");
       return;
     }
+    if (savedTab === "super-router-calls" && SUPER_ROUTER_CALLS_ENABLED) {
+      setActiveTab("super-router-calls");
+      return;
+    }
     if (savedTab === "trading") {
       setActiveTab("trading");
     }
@@ -38,7 +45,7 @@ export function SmartTradingDashboard() {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (typeof window === "undefined") return;
-    if (value === "trading" || value === "analytics") {
+    if (value === "trading" || value === "analytics" || value === "super-router-calls") {
       window.localStorage.setItem(STORAGE_KEY, value);
     }
   };
@@ -87,6 +94,29 @@ export function SmartTradingDashboard() {
                 </span>
               </TabsTrigger>
             )}
+            {SUPER_ROUTER_CALLS_ENABLED && (
+              <TabsTrigger
+                value="super-router-calls"
+                className="relative flex-1 md:flex-none rounded-full px-6 md:px-10 py-3 md:py-4 text-base md:text-lg font-bold uppercase tracking-widest text-white/40 transition-all duration-300 data-[state=active]:text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500/20 data-[state=active]:to-orange-500/10 data-[state=active]:shadow-[inset_0_0_20px_rgba(234,179,8,0.3),0_0_30px_rgba(234,179,8,0.15)] data-[state=active]:border data-[state=active]:border-yellow-500/30 hover:text-white/60 hover:bg-white/5"
+              >
+                <span className="relative inline-flex items-center justify-center">
+                  {activeTab === "super-router-calls" ? (
+                    <ShinyText
+                      text="SR Calls"
+                      speed={3}
+                      color="#eab308"
+                      shineColor="#ffffff"
+                      className="font-bold"
+                    />
+                  ) : (
+                    "SR Calls"
+                  )}
+                  <span className="absolute -top-4 -right-8 rounded-full bg-yellow-500 px-2 py-0.5 text-[9px] font-bold tracking-[0.15em] text-black shadow-[0_0_12px_rgba(234,179,8,0.35)]">
+                    VIP
+                  </span>
+                </span>
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -119,6 +149,17 @@ export function SmartTradingDashboard() {
         {ANALYTICS_ENABLED && (
           <TabsContent value="analytics">
             <AnalyticsDashboard />
+          </TabsContent>
+        )}
+
+        {SUPER_ROUTER_CALLS_ENABLED && (
+          <TabsContent value="super-router-calls" className="space-y-4">
+            {/* Wallet Connect Button for SR Calls */}
+            <div className="flex justify-end mb-4">
+              <WalletButton />
+            </div>
+            {/* Super Router Calls Content */}
+            <SuperRouterCallsSection />
           </TabsContent>
         )}
       </Tabs>

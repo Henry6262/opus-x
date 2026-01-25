@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { locales, type Locale } from "@/i18n/config";
+import { Providers } from "@/providers/Providers";
 import "../globals.css";
 
 // Font configurations
@@ -134,7 +135,7 @@ export default async function LocaleLayout({ children, params }: Props) {
     >
       <body suppressHydrationWarning>
         <NextIntlClientProvider messages={messages}>
-          {children}
+          <Providers>{children}</Providers>
         </NextIntlClientProvider>
       </body>
     </html>
