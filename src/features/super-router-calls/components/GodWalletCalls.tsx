@@ -126,20 +126,27 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
     const startTime = oldestEntry ? new Date(oldestEntry.timestamp).getTime() : now - 3600000;
     const startMcap = firstEntryMcap || currentMcap * 0.8;
 
-    // Create price line data
+    // Create price line data - ensure unique ascending timestamps
     const lineData: { time: UTCTimestamp; value: number }[] = [];
-    const duration = now - startTime;
+    const duration = Math.max(now - startTime, 3600000); // Minimum 1 hour span
     const steps = 30;
+    let lastTime = 0;
 
     for (let i = 0; i <= steps; i++) {
       const t = startTime + (duration * i) / steps;
+      const timeSeconds = Math.floor(t / 1000);
+
+      // Ensure strictly ascending - skip if same or less than previous
+      if (timeSeconds <= lastTime) continue;
+      lastTime = timeSeconds;
+
       // Interpolate mcap with some noise
       const progress = i / steps;
       const mcap = startMcap + (currentMcap - startMcap) * progress;
       const noise = 1 + (Math.random() - 0.5) * 0.1;
 
       lineData.push({
-        time: Math.floor(t / 1000) as UTCTimestamp,
+        time: timeSeconds as UTCTimestamp,
         value: mcap * noise,
       });
     }
