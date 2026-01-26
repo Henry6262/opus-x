@@ -80,6 +80,12 @@ interface MiniChartProps {
 function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const [tooltipData, setTooltipData] = useState<{ mcap: string; x: number; y: number; visible: boolean }>({
+    mcap: "",
+    x: 0,
+    y: 0,
+    visible: false,
+  });
 
   useEffect(() => {
     if (!chartContainerRef.current || !currentMcap) return;
@@ -111,8 +117,19 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
         visible: false,
       },
       crosshair: {
-        vertLine: { visible: false },
-        horzLine: { visible: false },
+        mode: 1,
+        vertLine: {
+          color: "rgba(196, 247, 14, 0.3)",
+          width: 1,
+          style: 2,
+          labelVisible: false,
+        },
+        horzLine: {
+          color: "rgba(196, 247, 14, 0.3)",
+          width: 1,
+          style: 2,
+          labelVisible: false,
+        },
       },
       handleScale: false,
       handleScroll: false,
@@ -156,7 +173,8 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
     const lineSeries = chart.addSeries(LineSeries, {
       color: isPositive ? "#c4f70e" : "rgba(255, 255, 255, 0.3)",
       lineWidth: 2,
-      crosshairMarkerVisible: false,
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 4,
       priceLineVisible: false,
       lastValueVisible: false,
     });
@@ -164,6 +182,29 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
     lineSeries.setData(lineData);
 
     chart.timeScale().fitContent();
+
+    // Crosshair move handler for tooltip
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleCrosshairMove = (param: any) => {
+      if (!param.time || !param.point) {
+        setTooltipData((prev) => ({ ...prev, visible: false }));
+        return;
+      }
+
+      const data = param.seriesData.get(lineSeries);
+      if (data) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const value = (data as any).value ?? 0;
+        setTooltipData({
+          mcap: formatMcap(value),
+          x: param.point.x,
+          y: param.point.y,
+          visible: true,
+        });
+      }
+    };
+
+    chart.subscribeCrosshairMove(handleCrosshairMove);
 
     // Handle resize
     const handleResize = () => {
@@ -178,6 +219,7 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      chart.unsubscribeCrosshairMove(handleCrosshairMove);
       chart.remove();
       chartRef.current = null;
     };
@@ -206,6 +248,21 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
   return (
     <div className="relative h-full min-h-[120px]">
       <div ref={chartContainerRef} className="h-full" />
+
+      {/* Tooltip */}
+      {tooltipData.visible && (
+        <div
+          className="absolute pointer-events-none z-20 bg-black/90 backdrop-blur-sm border border-[#c4f70e]/40 rounded-lg px-2.5 py-1.5 text-xs shadow-lg"
+          style={{
+            left: Math.min(tooltipData.x + 10, (chartContainerRef.current?.clientWidth || 150) - 70),
+            top: Math.max(5, tooltipData.y - 30),
+          }}
+        >
+          <div className="text-[#c4f70e] font-bold">{tooltipData.mcap}</div>
+          <div className="text-white/40 text-[9px]">Market Cap</div>
+        </div>
+      )}
+
       {/* Entry markers overlay - Wallet PFPs with brand green */}
       <div className="absolute inset-0 pointer-events-none">
         {markers.map((marker, idx) => (
