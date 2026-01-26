@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useLayoutEffect } from "react";
+import { motion } from "motion/react";
 import { PortfolioHoldingsPanel } from "./components/PortfolioHoldingsPanel";
 import { WatchlistPanel } from "./components/WatchlistPanel";
 import { AiDecisionFeed } from "./components/AiDecisionFeed";
@@ -17,6 +18,180 @@ import ShinyText from "@/components/ShinyText";
 const ANALYTICS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true";
 const SUPER_ROUTER_CALLS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_SUPER_ROUTER_CALLS === "true";
 const STORAGE_KEY = "superrouter-dashboard-tab";
+
+// ============================================
+// Tab configuration
+// ============================================
+interface TabConfig {
+  value: string;
+  label: string;
+  activeLabel?: string;
+  color: string;
+  shineColor: string;
+  badge?: string;
+  enabled: boolean;
+}
+
+const TABS_CONFIG: TabConfig[] = [
+  {
+    value: "trading",
+    label: "Trading",
+    color: "#c4f70e",
+    shineColor: "#ffffff",
+    enabled: true,
+  },
+  {
+    value: "analytics",
+    label: "Analytics",
+    color: "#c4f70e",
+    shineColor: "#ffffff",
+    enabled: ANALYTICS_ENABLED,
+  },
+  {
+    value: "super-router-calls",
+    label: "SR Calls",
+    color: "#eab308",
+    shineColor: "#ffffff",
+    badge: "VIP",
+    enabled: SUPER_ROUTER_CALLS_ENABLED,
+  },
+];
+
+// ============================================
+// Animated Tab Button
+// ============================================
+interface AnimatedTabButtonProps {
+  tab: TabConfig;
+  isActive: boolean;
+  onClick: () => void;
+  tabRef: (el: HTMLButtonElement | null) => void;
+}
+
+function AnimatedTabButton({ tab, isActive, onClick, tabRef }: AnimatedTabButtonProps) {
+  return (
+    <button
+      ref={tabRef}
+      onClick={onClick}
+      className="relative z-10 flex-1 md:flex-none rounded-full px-6 md:px-10 py-3 md:py-4 text-base md:text-lg font-bold uppercase tracking-widest transition-colors duration-200 cursor-pointer"
+      style={{
+        color: isActive ? "white" : "rgba(255,255,255,0.4)",
+      }}
+    >
+      <span className="relative inline-flex items-center justify-center">
+        {isActive ? (
+          <ShinyText
+            text={tab.label}
+            speed={3}
+            color={tab.color}
+            shineColor={tab.shineColor}
+            className="font-bold"
+          />
+        ) : (
+          tab.label
+        )}
+        {tab.badge && (
+          <span
+            className="absolute -top-4 -right-8 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-[0.15em] text-black shadow-[0_0_12px_rgba(234,179,8,0.35)]"
+            style={{ backgroundColor: tab.color }}
+          >
+            {tab.badge}
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
+
+// ============================================
+// Animated Tabs Navigation
+// ============================================
+interface AnimatedTabsNavProps {
+  activeTab: string;
+  onTabChange: (value: string) => void;
+}
+
+function AnimatedTabsNav({ activeTab, onTabChange }: AnimatedTabsNavProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const enabledTabs = TABS_CONFIG.filter((t) => t.enabled);
+
+  // Calculate indicator position
+  const updateIndicator = () => {
+    const activeButton = tabRefs.current.get(activeTab);
+    const container = containerRef.current;
+    if (activeButton && container) {
+      const containerRect = container.getBoundingClientRect();
+      const buttonRect = activeButton.getBoundingClientRect();
+      setIndicatorStyle({
+        left: buttonRect.left - containerRect.left,
+        width: buttonRect.width,
+      });
+      if (!isInitialized) setIsInitialized(true);
+    }
+  };
+
+  useLayoutEffect(() => {
+    updateIndicator();
+  }, [activeTab]);
+
+  useEffect(() => {
+    window.addEventListener("resize", updateIndicator);
+    return () => window.removeEventListener("resize", updateIndicator);
+  }, []);
+
+  // Get active tab color for indicator
+  const activeTabConfig = enabledTabs.find((t) => t.value === activeTab);
+  const activeColor = activeTabConfig?.color || "#c4f70e";
+
+  return (
+    <div className="flex justify-center mb-6">
+      <div
+        ref={containerRef}
+        className="relative w-full md:w-auto bg-black/40 backdrop-blur-xl border border-white/10 rounded-full p-1 flex overflow-visible"
+      >
+        {/* Sliding indicator - bigger than container, extends outside */}
+        <motion.div
+          className="absolute rounded-full z-0 pointer-events-none"
+          initial={false}
+          animate={{
+            left: indicatorStyle.left - 6,
+            width: indicatorStyle.width + 8,
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 350,
+            damping: 28,
+            mass: 0.9,
+          }}
+          style={{
+            top: -4,
+            bottom: -4,
+            background: `linear-gradient(135deg, ${activeColor}25 0%, ${activeColor}15 50%, ${activeColor}05 100%)`,
+            boxShadow: `inset 0 0 24px ${activeColor}50, 0 0 40px ${activeColor}30, 0 4px 20px ${activeColor}20`,
+            border: `1px solid ${activeColor}50`,
+            opacity: isInitialized ? 1 : 0,
+          }}
+        />
+
+        {/* Tab buttons */}
+        {enabledTabs.map((tab) => (
+          <AnimatedTabButton
+            key={tab.value}
+            tab={tab}
+            isActive={activeTab === tab.value}
+            onClick={() => onTabChange(tab.value)}
+            tabRef={(el) => {
+              if (el) tabRefs.current.set(tab.value, el);
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ============================================
 // Main Dashboard
@@ -51,70 +226,16 @@ export function SmartTradingDashboard() {
 
   return (
     <div className="space-y-4 -mt-12 px-2 sm:px-4 lg:px-8">
+      {/* Custom animated tabs navigation */}
+      <AnimatedTabsNav activeTab={activeTab} onTabChange={handleTabChange} />
+
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <div className="flex justify-center mb-6">
-          <TabsList className="w-full md:w-auto bg-black/40 backdrop-blur-xl border border-white/10 rounded-full p-0 gap-0">
-            <TabsTrigger
-              value="trading"
-              className="flex-1 md:flex-none rounded-full px-10 md:px-12 py-3 md:py-4 text-base md:text-lg font-bold uppercase tracking-widest text-white/40 transition-all duration-300 data-[state=active]:text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#c4f70e]/20 data-[state=active]:to-cyan-500/10 data-[state=active]:shadow-[inset_0_0_20px_rgba(196,247,14,0.3),0_0_30px_rgba(196,247,14,0.15)] data-[state=active]:border data-[state=active]:border-[#c4f70e]/30 hover:text-white/60 hover:bg-white/5"
-            >
-              {activeTab === "trading" ? (
-                <ShinyText
-                  text="Trading"
-                  speed={3}
-                  color="#c4f70e"
-                  shineColor="#ffffff"
-                  className="font-bold"
-                />
-              ) : (
-                "Trading"
-              )}
-            </TabsTrigger>
-            {ANALYTICS_ENABLED && (
-              <TabsTrigger
-                value="analytics"
-                className="relative flex-1 md:flex-none rounded-full px-10 md:px-12 py-3 md:py-4 text-base md:text-lg font-bold uppercase tracking-widest text-white/40 transition-all duration-300 data-[state=active]:text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#c4f70e]/20 data-[state=active]:to-cyan-500/10 data-[state=active]:shadow-[inset_0_0_20px_rgba(196,247,14,0.3),0_0_30px_rgba(196,247,14,0.15)] data-[state=active]:border data-[state=active]:border-[#c4f70e]/30 hover:text-white/60 hover:bg-white/5"
-              >
-                <span className="relative inline-flex items-center justify-center">
-                  {activeTab === "analytics" ? (
-                    <ShinyText
-                      text="Analytics"
-                      speed={3}
-                      color="#c4f70e"
-                      shineColor="#ffffff"
-                      className="font-bold"
-                    />
-                  ) : (
-                    "Analytics"
-                  )}
-                </span>
-              </TabsTrigger>
-            )}
-            {SUPER_ROUTER_CALLS_ENABLED && (
-              <TabsTrigger
-                value="super-router-calls"
-                className="relative flex-1 md:flex-none rounded-full px-6 md:px-10 py-3 md:py-4 text-base md:text-lg font-bold uppercase tracking-widest text-white/40 transition-all duration-300 data-[state=active]:text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500/20 data-[state=active]:to-orange-500/10 data-[state=active]:shadow-[inset_0_0_20px_rgba(234,179,8,0.3),0_0_30px_rgba(234,179,8,0.15)] data-[state=active]:border data-[state=active]:border-yellow-500/30 hover:text-white/60 hover:bg-white/5"
-              >
-                <span className="relative inline-flex items-center justify-center">
-                  {activeTab === "super-router-calls" ? (
-                    <ShinyText
-                      text="SR Calls"
-                      speed={3}
-                      color="#eab308"
-                      shineColor="#ffffff"
-                      className="font-bold"
-                    />
-                  ) : (
-                    "SR Calls"
-                  )}
-                  <span className="absolute -top-4 -right-8 rounded-full bg-yellow-500 px-2 py-0.5 text-[9px] font-bold tracking-[0.15em] text-black shadow-[0_0_12px_rgba(234,179,8,0.35)]">
-                    VIP
-                  </span>
-                </span>
-              </TabsTrigger>
-            )}
-          </TabsList>
-        </div>
+        {/* Hidden TabsList for Radix state management */}
+        <TabsList className="hidden">
+          <TabsTrigger value="trading">Trading</TabsTrigger>
+          {ANALYTICS_ENABLED && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
+          {SUPER_ROUTER_CALLS_ENABLED && <TabsTrigger value="super-router-calls">SR Calls</TabsTrigger>}
+        </TabsList>
 
         <TabsContent value="trading" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
