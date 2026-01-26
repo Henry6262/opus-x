@@ -250,13 +250,7 @@ function CallCard({ call }: CallCardProps) {
   const isRunner = call.performancePct !== null && call.performancePct > 0;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      className="relative h-full"
-    >
+    <div className="relative h-full">
       {/* Card content - gradient bg for runners, subtle border for depth */}
       <div
         className="relative rounded-xl overflow-hidden h-full border border-zinc-800/80"
@@ -266,13 +260,118 @@ function CallCard({ call }: CallCardProps) {
             : "rgba(255,255,255,0.03)"
         }}
       >
-        {/* Main content - 50/50 split, fixed height for consistency */}
-        <div className="flex flex-col lg:flex-row h-full lg:min-h-[160px]">
+        {/* MOBILE LAYOUT */}
+        <div className="lg:hidden">
+          {/* Top row: Token info (left) + Wallet entries (right) */}
+          <div className="flex items-start justify-between p-3 gap-2">
+            {/* Left: Token image + name + mcap */}
+            <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+              <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-black border border-zinc-700/50 flex-shrink-0">
+                {!imgError ? (
+                  <Image
+                    src={call.imageUrl || dexScreenerImg}
+                    alt={call.symbol}
+                    fill
+                    className="object-cover"
+                    onError={() => setImgError(true)}
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/40 text-xs font-bold">
+                    {call.symbol.slice(0, 2)}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-1">
+                  <a
+                    href={chartUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`font-bold text-sm transition-colors ${isRunner ? "text-white hover:text-[#c4f70e]" : "text-white/60 hover:text-white/80"}`}
+                  >
+                    {isRunner ? (
+                      <ShinyText
+                        text={call.symbol}
+                        speed={3}
+                        color="#ffffff"
+                        shineColor="#c4f70e"
+                        className="font-bold text-sm"
+                      />
+                    ) : (
+                      call.symbol
+                    )}
+                  </a>
+                  <button
+                    onClick={handleCopy}
+                    className="p-0.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    {copied ? (
+                      <Check className="w-2.5 h-2.5 text-[#c4f70e]" />
+                    ) : (
+                      <Copy className="w-2.5 h-2.5 text-white/30 hover:text-white/50" />
+                    )}
+                  </button>
+                </div>
+                {call.currentMcap && (
+                  <span className="text-[10px] font-medium text-white/60">
+                    {formatMcap(call.currentMcap)}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Compact wallet entries - horizontal scroll */}
+            <div className="flex items-center gap-1 overflow-x-auto flex-shrink min-w-0 max-w-[60%]">
+              {call.entries.slice(0, 3).map((entry, idx) => (
+                <div
+                  key={`${entry.wallet.id}-${idx}`}
+                  className="flex items-center gap-1 py-0.5 px-1.5 rounded-md bg-white/[0.04] flex-shrink-0"
+                >
+                  {entry.wallet.pfpUrl ? (
+                    <Image
+                      src={entry.wallet.pfpUrl}
+                      alt={entry.wallet.label || "Wallet"}
+                      width={16}
+                      height={16}
+                      className={`rounded-full ring-1 ${isRunner ? "ring-[#c4f70e]/50" : "ring-white/20"}`}
+                      unoptimized
+                    />
+                  ) : (
+                    <div className={`w-[16px] h-[16px] rounded-full flex items-center justify-center ${isRunner ? "bg-[#c4f70e]/20 ring-1 ring-[#c4f70e]/50" : "bg-white/10 ring-1 ring-white/20"}`}>
+                      <Crown className={`w-2 h-2 ${isRunner ? "text-[#c4f70e]" : "text-white/40"}`} />
+                    </div>
+                  )}
+                  <span className="text-[9px] font-mono text-white/60">
+                    {entry.entryMcap ? formatMcap(entry.entryMcap) : formatAmount(entry.amountUsd)}
+                  </span>
+                </div>
+              ))}
+              {call.entries.length > 3 && (
+                <span className="text-[9px] text-white/40 flex-shrink-0">+{call.entries.length - 3}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Chart - full width on mobile */}
+          <div className={`border-t ${isRunner ? "border-[#c4f70e]/20" : "border-white/5"}`}>
+            <div className="w-full h-[100px]">
+              <MiniChart
+                mint={call.mint}
+                entries={call.entries}
+                currentMcap={call.currentMcap}
+                firstEntryMcap={call.firstEntryMcap}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* DESKTOP LAYOUT - 50/50 split */}
+        <div className="hidden lg:flex flex-row h-full min-h-[160px]">
           {/* Left side - 50% */}
-          <div className="lg:w-[50%] p-4 flex flex-col justify-between">
+          <div className="w-[50%] p-4 flex flex-col justify-between">
             {/* Header row: Image + Title */}
             <div className="flex items-center gap-3 mb-3">
-              {/* Token image - bigger, no shadow */}
               <div className="relative flex-shrink-0">
                 <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-black border border-zinc-700/50">
                   {!imgError ? (
@@ -292,7 +391,6 @@ function CallCard({ call }: CallCardProps) {
                 </div>
               </div>
 
-              {/* Title + Performance */}
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
                   <a
@@ -325,7 +423,6 @@ function CallCard({ call }: CallCardProps) {
                   </button>
                 </div>
 
-                {/* Market cap display */}
                 {call.currentMcap && (
                   <span className="text-xs font-medium text-white/80">
                     {formatMcap(call.currentMcap)} mcap
@@ -334,7 +431,7 @@ function CallCard({ call }: CallCardProps) {
               </div>
             </div>
 
-            {/* Wallet entries - fixed height for 2 entries, scrollable */}
+            {/* Wallet entries - desktop */}
             <div className="overflow-hidden">
               <div
                 className="space-y-2 h-[88px] overflow-y-auto pr-1"
@@ -377,8 +474,8 @@ function CallCard({ call }: CallCardProps) {
           </div>
 
           {/* Right side - 50% - Chart */}
-          <div className={`lg:w-[50%] border-t lg:border-t-0 lg:border-l ${isRunner ? "border-[#c4f70e]/20" : "border-white/5"} overflow-hidden`}>
-            <div className="w-full h-[120px] lg:h-full lg:min-h-[140px]">
+          <div className={`w-[50%] border-l ${isRunner ? "border-[#c4f70e]/20" : "border-white/5"} overflow-hidden`}>
+            <div className="w-full h-full min-h-[140px]">
               <MiniChart
                 mint={call.mint}
                 entries={call.entries}
@@ -389,7 +486,7 @@ function CallCard({ call }: CallCardProps) {
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -612,15 +709,16 @@ export function GodWalletCalls() {
   }
 
   // Grid of cards - runners first, then cold items
-  // Using layout animation for smooth reordering
+  // Using layout animation for smooth reordering (initial=false prevents jump on first render)
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <AnimatePresence mode="popLayout">
+      <AnimatePresence mode="popLayout" initial={false}>
         {sortedCalls.slice(0, 10).map((call) => (
           <motion.div
             key={call.mint}
             layout
             layoutId={call.mint}
+            initial={false}
             transition={{
               layout: { duration: 0.4, ease: "easeInOut" },
             }}

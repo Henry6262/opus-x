@@ -72,7 +72,7 @@ function AnimatedTabButton({ tab, isActive, onClick, tabRef }: AnimatedTabButton
     <button
       ref={tabRef}
       onClick={onClick}
-      className="relative z-10 flex-1 md:flex-none rounded-full px-6 md:px-10 py-3 md:py-4 text-base md:text-lg font-bold uppercase tracking-widest transition-colors duration-200 cursor-pointer"
+      className="relative z-10 flex-1 md:flex-none rounded-full px-5 md:px-8 py-2 md:py-2.5 text-sm md:text-base font-bold uppercase tracking-widest transition-colors duration-200 cursor-pointer"
       style={{
         color: isActive ? "white" : "rgba(255,255,255,0.4)",
       }}
@@ -157,7 +157,7 @@ function AnimatedTabsNav({ activeTab, onTabChange }: AnimatedTabsNavProps) {
           className="absolute rounded-full z-0 pointer-events-none"
           initial={false}
           animate={{
-            left: indicatorStyle.left - 6,
+            left: indicatorStyle.left - 4,
             width: indicatorStyle.width + 8,
           }}
           transition={{
@@ -167,8 +167,8 @@ function AnimatedTabsNav({ activeTab, onTabChange }: AnimatedTabsNavProps) {
             mass: 0.9,
           }}
           style={{
-            top: -4,
-            bottom: -4,
+            top: -3,
+            bottom: -3,
             background: `linear-gradient(135deg, ${activeColor}25 0%, ${activeColor}15 50%, ${activeColor}05 100%)`,
             boxShadow: `inset 0 0 24px ${activeColor}50, 0 0 40px ${activeColor}30, 0 4px 20px ${activeColor}20`,
             border: `1px solid ${activeColor}50`,

@@ -160,7 +160,7 @@ export function TradingAnalyticsDashboard() {
         positionId: p.id,
         mint: p.tokenMint,
         tokenName: p.tokenSymbol || 'Unknown',
-        ticker: p.tokenSymbol || p.tokenMint.slice(0, 6),
+        ticker: p.tokenSymbol || (p.tokenMint ? p.tokenMint.slice(0, 6) : 'UNKNOWN'),
         entryTime: p.createdAt,
         exitTime: p.closedAt || null,
         investedSol: p.entryAmountSol || 0,

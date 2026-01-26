@@ -67,7 +67,7 @@ export function SuperRouterCallsSection({ className }: SuperRouterCallsSectionPr
               transition={{ duration: 2, repeat: Infinity }}
             >
               <ShinyText
-                text="$SR Holders Only"
+                text="$SR Holders"
                 speed={2}
                 color="#c4f70e"
                 shineColor="#ffffff"
