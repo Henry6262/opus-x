@@ -73,7 +73,18 @@ export function useVersionComparison({
   );
 
   const loadComparison = useCallback(async (force = false) => {
+    // Debug logging to trace data flow
+    console.log('[useVersionComparison] loadComparison called', {
+      force,
+      bucket,
+      dateRange,
+      lastRequestKey: lastRequestKeyRef.current,
+      currentRequestKey: requestKey,
+      versionIds: stableVersionIds,
+    });
+
     if (!force && lastRequestKeyRef.current === requestKey) {
+      console.log('[useVersionComparison] Skipping - same request key');
       return;
     }
     lastRequestKeyRef.current = requestKey;
@@ -89,6 +100,14 @@ export function useVersionComparison({
       setLoading(true);
       setError(null);
 
+      console.log('[useVersionComparison] Fetching with params:', {
+        versionIds: stableVersionIds,
+        metric: selectedMetric,
+        startDate: dateRange?.start,
+        endDate: dateRange?.end,
+        bucket,
+      });
+
       const result = await versioningApi.compareVersions(
         stableVersionIds,
         selectedMetric,
@@ -96,6 +115,14 @@ export function useVersionComparison({
         dateRange?.end,
         bucket
       );
+
+      // Debug: Log how many metrics were returned for each version
+      console.log('[useVersionComparison] Received data:', {
+        versionsCount: result.versions.length,
+        metricsPerVersion: Object.fromEntries(
+          Object.entries(result.metricsByVersion).map(([k, v]) => [k, (v as any[]).length])
+        ),
+      });
 
       setData(result);
     } catch (err: any) {

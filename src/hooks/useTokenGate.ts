@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useWalletContext } from "@/providers/WalletProvider";
 import { useTokenBalance } from "./useTokenBalance";
-import { SR_MIN_BALANCE, TOKEN_GATE_SESSION_DURATION } from "@/lib/config";
+import { SR_MIN_USD_VALUE, TOKEN_GATE_SESSION_DURATION } from "@/lib/config";
 import {
   getTokenGateSession,
   setTokenGateSession,
@@ -18,9 +18,11 @@ interface TokenGateState {
   isGated: boolean;
   isVerifying: boolean;
 
-  // Balance info
-  balance: number;
-  minRequired: number;
+  // Balance info (USD-based)
+  balance: number;        // Token balance
+  usdValue: number;       // USD value of holdings
+  priceUsd: number;       // Current token price
+  minRequiredUsd: number; // Min USD required ($100)
 
   // Session info
   lastVerified: number | null;
@@ -33,16 +35,23 @@ interface TokenGateState {
 
 /**
  * Token gate hook that manages wallet verification and session state
+ * Now uses USD value ($100 minimum) instead of token count
  *
  * Flow:
  * 1. On mount: Check cookie for existing session
- * 2. If session exists and not expired (12h) AND wallet matches: use cached balance
- * 3. If session expired OR wallet changed: re-verify balance on chain
+ * 2. If session exists and not expired (12h) AND wallet matches: use cached values
+ * 3. If session expired OR wallet changed: re-verify balance + price on chain
  * 4. Auto re-verify silently when session nears expiration
  */
 export function useTokenGate(): TokenGateState {
   const { connected, publicKey } = useWalletContext();
-  const { balance: chainBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useTokenBalance(publicKey);
+  const {
+    balance: chainBalance,
+    usdValue: chainUsdValue,
+    priceUsd: chainPriceUsd,
+    isLoading: isLoadingBalance,
+    refetch: refetchBalance,
+  } = useTokenBalance(publicKey);
 
   const [session, setSession] = useState<TokenGateSession | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -91,13 +100,15 @@ export function useTokenGate(): TokenGateState {
     setIsVerifying(true);
 
     try {
-      // Refetch balance from chain - returns the actual balance
-      const freshBalance = await refetchBalance();
+      // Refetch balance + price from chain
+      const { balance, usdValue, priceUsd } = await refetchBalance();
 
-      // Create new session with the fresh balance
+      // Create new session with the fresh values
       const newSession: TokenGateSession = {
         walletAddress: publicKey,
-        balance: freshBalance,
+        balance,
+        usdValue,
+        priceUsd,
         verifiedAt: Date.now(),
       };
 
@@ -105,7 +116,8 @@ export function useTokenGate(): TokenGateState {
       setTokenGateSession(newSession);
       setSessionTimeRemaining(TOKEN_GATE_SESSION_DURATION);
 
-      return freshBalance >= SR_MIN_BALANCE;
+      // Gate based on USD value, not token count
+      return usdValue >= SR_MIN_USD_VALUE;
     } catch (error) {
       console.error("Token gate verification failed:", error);
       return false;
@@ -121,15 +133,19 @@ export function useTokenGate(): TokenGateState {
     setSessionTimeRemaining(0);
   }, []);
 
-  // Determine if user passes the gate
+  // Determine if user passes the gate (USD-based)
   const effectiveBalance = session?.balance ?? chainBalance;
-  const isGated = connected && effectiveBalance >= SR_MIN_BALANCE;
+  const effectiveUsdValue = session?.usdValue ?? chainUsdValue;
+  const effectivePriceUsd = session?.priceUsd ?? chainPriceUsd;
+  const isGated = connected && effectiveUsdValue >= SR_MIN_USD_VALUE;
 
   return {
     isGated,
     isVerifying: isVerifying || isLoadingBalance,
     balance: effectiveBalance,
-    minRequired: SR_MIN_BALANCE,
+    usdValue: effectiveUsdValue,
+    priceUsd: effectivePriceUsd,
+    minRequiredUsd: SR_MIN_USD_VALUE,
     lastVerified: session?.verifiedAt ?? null,
     sessionTimeRemaining,
     verify,

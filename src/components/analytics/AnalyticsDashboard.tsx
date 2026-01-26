@@ -20,6 +20,7 @@ import {
   Clock,
   BarChart3,
   Sparkles,
+  RefreshCw,
 } from 'lucide-react';
 import { subDays } from 'date-fns';
 import {
@@ -281,10 +282,25 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
 
   // Build chart data - combine all version data by date
   const chartData = useMemo(() => {
+    console.log('[VersionChart] Building chart data:', {
+      displayVersionsCount: displayVersions.length,
+      displayVersionIds: displayVersions.map((v) => v.id),
+      metricsByVersionKeys: Object.keys(metricsByVersion),
+      selectedVersionId,
+    });
+
     const dateMap = new Map<string, Record<string, number | string>>();
 
     displayVersions.forEach((version) => {
       const metrics = metricsByVersion[version.id] || [];
+      const metricsExist = version.id in metricsByVersion;
+      console.log('[VersionChart] Processing version:', {
+        versionId: version.id,
+        versionCode: version.versionCode,
+        keyExistsInMetrics: metricsExist,
+        metricsCount: metrics.length,
+        dates: metrics.map((m) => m.date),
+      });
       metrics.forEach((m) => {
         const existing = dateMap.get(m.date) || { date: m.date };
         // Extract the metric value
@@ -298,9 +314,16 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
       });
     });
 
-    return Array.from(dateMap.values()).sort((a, b) =>
+    const result = Array.from(dateMap.values()).sort((a, b) =>
       new Date(a.date as string).getTime() - new Date(b.date as string).getTime()
     );
+
+    console.log('[VersionChart] chartData FINAL:', {
+      dataPoints: result.length,
+      dates: result.map((d) => d.date),
+    });
+
+    return result;
   }, [displayVersions, metricsByVersion, selectedMetric]);
 
   // Build chart config
@@ -330,7 +353,7 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
   return (
     <ChartContainer config={chartConfig} className="h-[230px] w-full md:h-[250px]">
       <LineChart
-        key={`${selectedVersionId ?? "all"}-${selectedMetric}`}
+        key={`${selectedVersionId ?? "all"}-${selectedMetric}-${chartData.length}`}
         data={chartData}
         margin={{ top: 6, right: 8, left: 8, bottom: 0 }}
       >
@@ -445,12 +468,42 @@ export function AnalyticsDashboard() {
   const {
     data: comparisonData,
     loading: comparisonLoading,
+    reload: reloadComparison,
   } = useVersionComparison({
     versionIds: versions.map((v) => v.id),
     selectedMetric,
     dateRange,
     bucket,
   });
+
+  // Debug: Log all key values
+  useEffect(() => {
+    console.log('[AnalyticsDashboard] STATE:', {
+      versionsCount: versions.length,
+      versionIds: versions.map((v) => ({ id: v.id, code: v.versionCode })),
+      selectedVersionId,
+      bucket,
+      dateRange,
+      comparisonLoading,
+      hasComparisonData: !!comparisonData,
+    });
+  }, [versions, selectedVersionId, bucket, dateRange, comparisonLoading, comparisonData]);
+
+  // Debug: Log chart data when it changes
+  useEffect(() => {
+    if (comparisonData) {
+      console.log('[AnalyticsDashboard] comparisonData received:', {
+        versions: comparisonData.versions.map((v) => v.versionCode),
+        metricsPerVersion: Object.fromEntries(
+          Object.entries(comparisonData.metricsByVersion).map(([k, v]) => [k, v.length])
+        ),
+        // Show ALL dates for selected version
+        allDatesForSelectedVersion: selectedVersionId
+          ? (comparisonData.metricsByVersion[selectedVersionId] || []).map((m) => m.date)
+          : [],
+      });
+    }
+  }, [comparisonData, selectedVersionId]);
 
   // Auto-select active version or first version
   useEffect(() => {
@@ -502,6 +555,18 @@ export function AnalyticsDashboard() {
               </h3>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => reloadComparison()}
+                disabled={comparisonLoading}
+                className={cn(
+                  "p-2 rounded-lg border border-white/10 bg-black/40 text-white/60",
+                  "hover:bg-white/5 hover:text-white/90 transition cursor-pointer",
+                  "disabled:opacity-50 disabled:cursor-not-allowed"
+                )}
+                title="Refresh data"
+              >
+                <RefreshCw className={cn("w-4 h-4", comparisonLoading && "animate-spin")} />
+              </button>
               <TimeframeSelector
                 selectedBucket={bucket}
                 onChange={setBucket}

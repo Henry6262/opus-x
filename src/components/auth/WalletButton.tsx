@@ -12,16 +12,14 @@ interface WalletButtonProps {
 
 export function WalletButton({ className, showBalance = true }: WalletButtonProps) {
   const { connected, connecting, publicKey, walletName, connect, disconnect } = useWalletContext();
-  const { isGated, balance, minRequired, isVerifying } = useTokenGate();
+  const { isGated, usdValue, minRequiredUsd, isVerifying } = useTokenGate();
 
   const truncatedAddress = publicKey
     ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}`
     : null;
 
-  const formatBalance = (bal: number) => {
-    if (bal >= 1_000_000) return `${(bal / 1_000_000).toFixed(1)}M`;
-    if (bal >= 1_000) return `${(bal / 1_000).toFixed(1)}K`;
-    return bal.toFixed(0);
+  const formatUsd = (val: number) => {
+    return `$${val.toFixed(0)}`;
   };
 
   if (!connected) {
@@ -73,10 +71,10 @@ export function WalletButton({ className, showBalance = true }: WalletButtonProp
         <span className="text-sm font-mono text-white">{truncatedAddress}</span>
       </div>
 
-      {/* Balance */}
+      {/* USD Value */}
       {showBalance && (
         <div className="flex flex-col items-end border-l border-white/10 pl-3">
-          <span className="text-xs text-white/60">$SR</span>
+          <span className="text-xs text-white/60">$SR Value</span>
           <div className="flex items-center gap-1">
             {isVerifying ? (
               <Loader2 className="w-3 h-3 animate-spin text-white/60" />
@@ -85,14 +83,14 @@ export function WalletButton({ className, showBalance = true }: WalletButtonProp
                 <span
                   className={cn(
                     "text-sm font-medium",
-                    balance >= minRequired ? "text-green-500" : "text-yellow-500"
+                    usdValue >= minRequiredUsd ? "text-green-500" : "text-yellow-500"
                   )}
                 >
-                  {formatBalance(balance)}
+                  {formatUsd(usdValue)}
                 </span>
-                {balance < minRequired && (
+                {usdValue < minRequiredUsd && (
                   <span className="text-xs text-white/40">
-                    /{formatBalance(minRequired)}
+                    /{formatUsd(minRequiredUsd)}
                   </span>
                 )}
               </>

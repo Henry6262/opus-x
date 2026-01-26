@@ -780,7 +780,7 @@ GOD WALLET SELL DETECTED
 └─────────────────────────────────────────────────┘
 ```
 
-### Position Tracking (Partial Sells)
+### Position Tracking (Partial Sells) - IMPLEMENTED ✅
 
 **Problem:** God wallets don't sell 100% at once. They scale out:
 - Buy 1M tokens
@@ -788,74 +788,111 @@ GOD WALLET SELL DETECTED
 - Sell 50% at +100%
 - Sell remaining 25% at +200%
 
-**We need to track:**
-- Total tokens bought (sum of all buys)
-- Total tokens sold (sum of all sells)
-- Current position = bought - sold
-- Position % remaining = (bought - sold) / bought * 100
-- Average entry price (weighted by amount)
-- Average exit price (weighted by amount)
+**Robustness Guarantees:**
 
-#### New Table: `god_wallet_positions`
+| Requirement | Solution |
+|-------------|----------|
+| **Idempotency** | UNIQUE constraint on `wallet_trades.tx_hash` (DB-level) |
+| **Atomicity** | SQL triggers update positions in same transaction as trade insert |
+| **Concurrency** | `pg_advisory_xact_lock()` prevents race conditions |
+| **Data integrity** | Computed columns + diagnostic functions ensure consistency |
+
+**Migration file:** `packages/supabase/migrations/060_god_wallet_positions.sql`
+
+#### Table: `god_wallet_positions`
 
 ```sql
 CREATE TABLE god_wallet_positions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    -- Wallet + Token
-    wallet_id UUID REFERENCES tracked_wallets(id),
+    -- Wallet + Token (unique pair)
+    wallet_id UUID NOT NULL REFERENCES tracked_wallets(id),
+    wallet_address TEXT NOT NULL,
     wallet_label TEXT,
     mint TEXT NOT NULL,
     token_symbol TEXT,
     token_name TEXT,
+    chain TEXT DEFAULT 'solana',
 
     -- Aggregated Buy Side
-    total_tokens_bought FLOAT DEFAULT 0,      -- Sum of all buy amounts
-    total_sol_spent FLOAT DEFAULT 0,          -- Sum of all SOL spent
-    total_usd_spent FLOAT DEFAULT 0,          -- Sum of all USD spent
-    avg_entry_price FLOAT,                    -- Weighted average entry
+    total_tokens_bought DOUBLE PRECISION DEFAULT 0,
+    total_sol_spent DOUBLE PRECISION DEFAULT 0,
+    total_usd_spent DOUBLE PRECISION DEFAULT 0,
+    avg_entry_price_usd DOUBLE PRECISION,
     first_buy_at TIMESTAMPTZ,
     last_buy_at TIMESTAMPTZ,
-    buy_tx_count INT DEFAULT 0,               -- Number of buy transactions
+    buy_tx_count INTEGER DEFAULT 0,
 
     -- Aggregated Sell Side
-    total_tokens_sold FLOAT DEFAULT 0,        -- Sum of all sell amounts
-    total_sol_received FLOAT DEFAULT 0,       -- Sum of all SOL received
-    total_usd_received FLOAT DEFAULT 0,       -- Sum of all USD received
-    avg_exit_price FLOAT,                     -- Weighted average exit
+    total_tokens_sold DOUBLE PRECISION DEFAULT 0,
+    total_sol_received DOUBLE PRECISION DEFAULT 0,
+    total_usd_received DOUBLE PRECISION DEFAULT 0,
+    avg_exit_price_usd DOUBLE PRECISION,
     first_sell_at TIMESTAMPTZ,
     last_sell_at TIMESTAMPTZ,
-    sell_tx_count INT DEFAULT 0,              -- Number of sell transactions
+    sell_tx_count INTEGER DEFAULT 0,
 
-    -- Current State
-    current_tokens FLOAT GENERATED ALWAYS AS (total_tokens_bought - total_tokens_sold) STORED,
-    position_remaining_pct FLOAT GENERATED ALWAYS AS (
+    -- Current State (STORED computed columns)
+    current_tokens DOUBLE PRECISION GENERATED ALWAYS AS (
+        GREATEST(0, total_tokens_bought - total_tokens_sold)
+    ) STORED,
+    position_remaining_pct DOUBLE PRECISION GENERATED ALWAYS AS (
         CASE WHEN total_tokens_bought > 0
-        THEN ((total_tokens_bought - total_tokens_sold) / total_tokens_bought) * 100
+        THEN GREATEST(0, LEAST(100, ((total_tokens_bought - total_tokens_sold) / total_tokens_bought) * 100))
         ELSE 0 END
     ) STORED,
 
     -- PnL (updated on each sell)
-    realized_pnl_sol FLOAT DEFAULT 0,
-    realized_pnl_usd FLOAT DEFAULT 0,
-    realized_pnl_pct FLOAT DEFAULT 0,
-    unrealized_pnl_pct FLOAT,                 -- Based on current price
+    realized_pnl_sol DOUBLE PRECISION DEFAULT 0,
+    realized_pnl_usd DOUBLE PRECISION DEFAULT 0,
+    realized_pnl_pct DOUBLE PRECISION DEFAULT 0,
 
     -- Status
-    status TEXT DEFAULT 'open',               -- 'open', 'partial', 'closed'
-    -- open = has tokens, no sells yet
-    -- partial = has tokens, some sells
-    -- closed = no tokens left (sold everything)
+    status TEXT DEFAULT 'open' CHECK (status IN ('open', 'partial', 'closed')),
+    version INTEGER DEFAULT 1,  -- Optimistic locking
 
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+    UNIQUE(wallet_id, mint)
 );
-
--- Indexes
-CREATE UNIQUE INDEX idx_wallet_positions_unique ON god_wallet_positions(wallet_id, mint);
-CREATE INDEX idx_wallet_positions_status ON god_wallet_positions(status);
-CREATE INDEX idx_wallet_positions_wallet ON god_wallet_positions(wallet_id);
 ```
+
+#### Automatic Position Updates via Trigger
+
+When a trade is inserted into `wallet_trades`, a trigger automatically:
+1. Acquires advisory lock for wallet+mint (prevents race conditions)
+2. Creates or updates the position record
+3. Recalculates weighted averages
+4. Updates status (open → partial → closed)
+
+```sql
+-- Trigger fires AFTER INSERT on wallet_trades
+CREATE TRIGGER update_god_wallet_position_trigger
+    AFTER INSERT ON wallet_trades
+    FOR EACH ROW
+    EXECUTE FUNCTION update_god_wallet_position();
+```
+
+#### Diagnostic & Recovery Functions
+
+```sql
+-- Check if position aggregates match actual trades
+SELECT * FROM verify_position_integrity(wallet_id, mint);
+
+-- Rebuild position from source trades (recovery)
+SELECT * FROM rebuild_god_wallet_position(wallet_id, mint);
+```
+
+#### API Endpoints (DevPrint)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/god-wallet-positions` | GET | All positions (?status=open/partial/closed) |
+| `/api/god-wallet-positions/active` | GET | Open + partial positions |
+| `/api/god-wallet-positions/token/:mint` | GET | Positions for a token |
+| `/api/god-wallet-positions/wallet/:id` | GET | Positions for a wallet |
+| `/api/god-wallet-positions/wallet/:id/token/:mint` | GET | Single position |
 
 #### Position Update Logic
 

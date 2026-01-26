@@ -7,6 +7,8 @@ const COOKIE_NAME = "sr_token_gate_session";
 export interface TokenGateSession {
   walletAddress: string;
   balance: number;
+  usdValue?: number;   // USD value of holdings
+  priceUsd?: number;   // Token price at verification time
   verifiedAt: number;
 }
 

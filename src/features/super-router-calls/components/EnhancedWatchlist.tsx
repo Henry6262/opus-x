@@ -206,7 +206,7 @@ function EnhancedWatchlistCard({ token, walletEntries, aiReasoning, onOpenChart 
 
         {/* Mini Chart Preview */}
         <div className="mb-3 rounded-lg overflow-hidden border border-white/5">
-          <WalletEntryChart mint={token.mint} height={100} />
+          <WalletEntryChart mint={token.mint} height={140} showTooltip={false} />
         </div>
 
         {/* AI Reasoning preview */}
@@ -510,18 +510,18 @@ export function EnhancedWatchlist() {
                 </div>
               </div>
 
-              {/* Chart */}
-              <WalletEntryChart mint={selectedToken.mint} height={300} />
+              {/* Chart - larger height with full tooltip */}
+              <WalletEntryChart mint={selectedToken.mint} height={380} showTooltip={true} />
 
-              {/* Legend info */}
-              <div className="flex items-center justify-center gap-6 text-xs text-white/60 pt-2 border-t border-white/10">
+              {/* Legend info - simplified since chart now shows entries */}
+              <div className="flex items-center justify-center gap-6 text-xs text-white/60 pt-3 border-t border-white/10">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <span>Whale (God Wallet)</span>
+                  <div className="w-4 h-0.5 bg-yellow-500 rounded-full" />
+                  <span>Whale Entry Price</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500" />
-                  <span>Tracked Wallet</span>
+                  <div className="w-4 h-0.5 bg-blue-500 rounded-full" />
+                  <span>Tracked Wallet Entry</span>
                 </div>
               </div>
             </div>

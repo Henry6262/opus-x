@@ -7,6 +7,9 @@ export const DEVPRNT_CORE_URL =
 
 // Super Router token gating configuration
 export const SR_TOKEN_MINT = process.env.NEXT_PUBLIC_SR_TOKEN_MINT || "48BbwbZHWc8QJBiuGJTQZD5aWZdP3i6xrDw5N9EHpump";
+// USD-based gating: user must hold at least $100 worth of $SR token
+export const SR_MIN_USD_VALUE = Number(process.env.NEXT_PUBLIC_SR_MIN_USD_VALUE) || 100;
+// Legacy token count threshold (deprecated, use USD value instead)
 export const SR_MIN_BALANCE = Number(process.env.NEXT_PUBLIC_SR_MIN_BALANCE) || 250000;
 
 // Token gate session duration (12 hours in milliseconds)

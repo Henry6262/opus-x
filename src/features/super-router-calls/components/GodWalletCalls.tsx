@@ -8,7 +8,6 @@ import { createChart, LineSeries, type IChartApi, type UTCTimestamp } from "ligh
 import { useGodWallets } from "../hooks/useGodWallets";
 import type { GodWalletBuy } from "../types";
 import ShinyText from "@/components/ShinyText";
-import GradientText from "@/components/GradientText";
 
 // Market data cache
 const marketDataCache = new Map<string, { mcap: number; price: number; priceChange24h: number; totalSupply: number }>();
@@ -236,7 +235,6 @@ interface CallCardProps {
 function CallCard({ call }: CallCardProps) {
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -256,57 +254,27 @@ function CallCard({ call }: CallCardProps) {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ scale: isRunner ? 1.01 : 1.005 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="relative group h-full"
+      className="relative h-full"
     >
-      {/* Border - Animated gradient for runners, muted for disabled */}
-      <div className="absolute -inset-[1px] rounded-xl overflow-hidden">
-        {isRunner ? (
-          <motion.div
-            className="absolute inset-0"
-            style={{
-              background: "linear-gradient(90deg, #c4f70e, #22c55e, #c4f70e)",
-              backgroundSize: "200% 100%",
-            }}
-            animate={{
-              backgroundPosition: isHovered ? ["0% 50%", "100% 50%", "0% 50%"] : "0% 50%",
-            }}
-            transition={{
-              duration: 2,
-              repeat: isHovered ? Infinity : 0,
-              ease: "linear",
-            }}
-          />
-        ) : (
-          <div className="absolute inset-0 bg-white/10" />
-        )}
-      </div>
-
-      {/* Glow effect - only for runners */}
-      {isRunner && (
-        <motion.div
-          className="absolute -inset-2 rounded-xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-300 pointer-events-none"
-          style={{ background: "radial-gradient(circle at center, #c4f70e, transparent 70%)" }}
-        />
-      )}
-
-      {/* Card content */}
-      <div className="relative rounded-xl bg-black overflow-hidden h-full">
+      {/* Card content - gradient bg for runners, subtle border for depth */}
+      <div
+        className="relative rounded-xl overflow-hidden h-full border border-zinc-800/80"
+        style={{
+          background: isRunner
+            ? "linear-gradient(135deg, #000 0%, rgba(0,0,0,0.95) 30%, rgba(34,197,94,0.08) 70%, rgba(196,247,14,0.15) 100%)"
+            : "rgba(255,255,255,0.03)"
+        }}
+      >
         {/* Main content - 50/50 split, fixed height for consistency */}
         <div className="flex flex-col lg:flex-row h-full lg:min-h-[160px]">
           {/* Left side - 50% */}
           <div className="lg:w-[50%] p-4 flex flex-col justify-between">
             {/* Header row: Image + Title */}
             <div className="flex items-center gap-3 mb-3">
-              {/* Token image */}
+              {/* Token image - bigger, no shadow */}
               <div className="relative flex-shrink-0">
-                {isRunner && (
-                  <div className="absolute -inset-1 rounded-xl blur-md opacity-60 bg-[#c4f70e]" />
-                )}
-                <div className={`relative w-11 h-11 rounded-xl overflow-hidden bg-black border ${isRunner ? "border-[#c4f70e]/50" : "border-white/10"}`}>
+                <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-black border border-zinc-700/50">
                   {!imgError ? (
                     <Image
                       src={call.imageUrl || dexScreenerImg}
@@ -317,7 +285,7 @@ function CallCard({ call }: CallCardProps) {
                       unoptimized
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white/40 text-sm font-bold">
+                    <div className="w-full h-full flex items-center justify-center text-white/40 text-base font-bold">
                       {call.symbol.slice(0, 2)}
                     </div>
                   )}
@@ -347,7 +315,7 @@ function CallCard({ call }: CallCardProps) {
                   </a>
                   <button
                     onClick={handleCopy}
-                    className="p-1 rounded hover:bg-white/10 transition-colors"
+                    className="p-1 rounded hover:bg-white/10 transition-colors cursor-pointer"
                   >
                     {copied ? (
                       <Check className="w-3 h-3 text-[#c4f70e]" />
@@ -357,21 +325,11 @@ function CallCard({ call }: CallCardProps) {
                   </button>
                 </div>
 
-                {/* Performance */}
-                {call.performancePct !== null && (
-                  isRunner ? (
-                    <GradientText
-                      colors={["#c4f70e", "#22c55e", "#c4f70e"]}
-                      animationSpeed={3}
-                      className="text-xs font-bold"
-                    >
-                      +{call.performancePct.toFixed(0)}%
-                    </GradientText>
-                  ) : (
-                    <span className="text-xs font-medium text-white/40">
-                      {call.performancePct >= 0 ? "+" : ""}{call.performancePct.toFixed(0)}%
-                    </span>
-                  )
+                {/* Market cap display */}
+                {call.currentMcap && (
+                  <span className="text-xs font-medium text-white/80">
+                    {formatMcap(call.currentMcap)} mcap
+                  </span>
                 )}
               </div>
             </div>
@@ -379,7 +337,7 @@ function CallCard({ call }: CallCardProps) {
             {/* Wallet entries - fixed height for 2 entries, scrollable */}
             <div className="overflow-hidden">
               <div
-                className="space-y-1.5 h-[72px] overflow-y-auto pr-1"
+                className="space-y-2 h-[88px] overflow-y-auto pr-1"
                 style={{
                   scrollbarWidth: 'thin',
                   scrollbarColor: 'rgba(255,255,255,0.15) transparent',
@@ -388,29 +346,29 @@ function CallCard({ call }: CallCardProps) {
                 {call.entries.map((entry, idx) => (
                   <div
                     key={`${entry.wallet.id}-${idx}`}
-                    className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                    className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/[0.03]"
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-3">
                       {entry.wallet.pfpUrl ? (
                         <Image
                           src={entry.wallet.pfpUrl}
                           alt={entry.wallet.label || "Wallet"}
-                          width={22}
-                          height={22}
+                          width={26}
+                          height={26}
                           className={`rounded-full ring-1 ${isRunner ? "ring-[#c4f70e]/50" : "ring-white/20"}`}
                           unoptimized
                         />
                       ) : (
-                        <div className={`w-[22px] h-[22px] rounded-full flex items-center justify-center ${isRunner ? "bg-[#c4f70e]/20 ring-1 ring-[#c4f70e]/50" : "bg-white/10 ring-1 ring-white/20"}`}>
-                          <Crown className={`w-2.5 h-2.5 ${isRunner ? "text-[#c4f70e]" : "text-white/40"}`} />
+                        <div className={`w-[26px] h-[26px] rounded-full flex items-center justify-center ${isRunner ? "bg-[#c4f70e]/20 ring-1 ring-[#c4f70e]/50" : "bg-white/10 ring-1 ring-white/20"}`}>
+                          <Crown className={`w-3 h-3 ${isRunner ? "text-[#c4f70e]" : "text-white/40"}`} />
                         </div>
                       )}
-                      <span className="text-white/70 text-sm font-medium truncate max-w-[80px]">
+                      <span className={`text-base font-semibold truncate max-w-[90px] ${isRunner ? "text-white" : "text-white/70"}`}>
                         {entry.wallet.label || `${entry.wallet.address.slice(0, 4)}...`}
                       </span>
                     </div>
-                    <span className="text-white/40 text-xs font-mono">
-                      @{entry.entryMcap ? formatMcap(entry.entryMcap) : formatAmount(entry.amountUsd)}
+                    <span className="text-sm font-mono text-white/70">
+                      {entry.entryMcap ? formatMcap(entry.entryMcap) : formatAmount(entry.amountUsd)}
                     </span>
                   </div>
                 ))}

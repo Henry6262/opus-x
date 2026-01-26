@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { createChart, CandlestickSeries, CandlestickData, UTCTimestamp, type IChartApi, type ISeriesApi } from "lightweight-charts";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { createChart, CandlestickSeries, CandlestickData, UTCTimestamp, type IChartApi, type ISeriesApi, createSeriesMarkers, type SeriesMarker, LineSeries, type LineData } from "lightweight-charts";
 import { Loader2 } from "lucide-react";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 
@@ -27,9 +27,10 @@ interface OHLCVData {
 interface WalletEntryChartProps {
   mint: string;
   height?: number;
+  showTooltip?: boolean;
 }
 
-export function WalletEntryChart({ mint, height = 200 }: WalletEntryChartProps) {
+export function WalletEntryChart({ mint, height = 200, showTooltip = true }: WalletEntryChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,6 +40,13 @@ export function WalletEntryChart({ mint, height = 200 }: WalletEntryChartProps) 
   const [ohlcv, setOhlcv] = useState<OHLCVData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tooltipData, setTooltipData] = useState<{
+    price: string;
+    time: string;
+    x: number;
+    y: number;
+    visible: boolean;
+  }>({ price: "", time: "", x: 0, y: 0, visible: false });
 
   // Fetch wallet entries
   useEffect(() => {
@@ -135,10 +143,11 @@ export function WalletEntryChart({ mint, height = 200 }: WalletEntryChartProps) 
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { color: "transparent" },
-        textColor: "rgba(255, 255, 255, 0.5)",
+        textColor: "rgba(255, 255, 255, 0.6)",
+        fontFamily: "'Inter', sans-serif",
       },
       grid: {
-        vertLines: { color: "rgba(255, 255, 255, 0.05)" },
+        vertLines: { color: "rgba(255, 255, 255, 0.03)" },
         horzLines: { color: "rgba(255, 255, 255, 0.05)" },
       },
       width: chartContainerRef.current.clientWidth,
@@ -147,13 +156,37 @@ export function WalletEntryChart({ mint, height = 200 }: WalletEntryChartProps) 
         timeVisible: true,
         secondsVisible: false,
         borderColor: "rgba(255, 255, 255, 0.1)",
+        rightOffset: 5,
       },
       rightPriceScale: {
         borderColor: "rgba(255, 255, 255, 0.1)",
+        scaleMargins: {
+          top: 0.1,
+          bottom: 0.1,
+        },
       },
       crosshair: {
-        vertLine: { color: "rgba(255, 255, 255, 0.2)" },
-        horzLine: { color: "rgba(255, 255, 255, 0.2)" },
+        mode: 1, // Normal mode - shows both lines
+        vertLine: {
+          color: "rgba(196, 247, 14, 0.4)",
+          width: 1,
+          style: 2, // Dashed
+          labelBackgroundColor: "rgba(196, 247, 14, 0.9)",
+        },
+        horzLine: {
+          color: "rgba(196, 247, 14, 0.4)",
+          width: 1,
+          style: 2, // Dashed
+          labelBackgroundColor: "rgba(196, 247, 14, 0.9)",
+        },
+      },
+      localization: {
+        priceFormatter: (price: number) => {
+          if (price < 0.00001) return price.toExponential(2);
+          if (price < 0.01) return price.toFixed(6);
+          if (price < 1) return price.toFixed(4);
+          return price.toFixed(2);
+        },
       },
     });
 
@@ -182,9 +215,12 @@ export function WalletEntryChart({ mint, height = 200 }: WalletEntryChartProps) 
 
     candleSeries.setData(candleData);
 
-    // Add markers for wallet entries (v5 uses attachPrimitive or we use series markers)
+    // Add markers for wallet entries (v5 uses createSeriesMarkers)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let markersPlugin: any = null;
+
     if (entries.length > 0) {
-      const markers = entries.map((entry) => {
+      const markers: SeriesMarker<UTCTimestamp>[] = entries.map((entry) => {
         const entryTime = Math.floor(entry.timestamp / 1000);
 
         return {
@@ -208,14 +244,56 @@ export function WalletEntryChart({ mint, height = 200 }: WalletEntryChartProps) 
       );
 
       if (validMarkers.length > 0) {
-        // v5: markers via series markers method
-        // @ts-expect-error - v5 typing issue with markers
-        candleSeries.setMarkers(validMarkers);
+        // v5: use createSeriesMarkers to attach markers to a series
+        markersPlugin = createSeriesMarkers(candleSeries, validMarkers);
       }
+    }
+
+    // Add horizontal price lines for wallet entries (simpler visualization)
+    if (entries.length > 0 && showTooltip) {
+      entries.forEach((entry) => {
+        if (entry.price > 0) {
+          candleSeries.createPriceLine({
+            price: entry.price,
+            color: entry.is_god_wallet ? "rgba(234, 179, 8, 0.6)" : "rgba(59, 130, 246, 0.5)",
+            lineWidth: 1,
+            lineStyle: 2, // Dashed
+            axisLabelVisible: true,
+            title: entry.is_god_wallet ? "🐋" : entry.wallet_label?.slice(0, 4) || "👛",
+          });
+        }
+      });
     }
 
     // Fit content
     chart.timeScale().fitContent();
+
+    // Crosshair move handler for custom tooltip
+    const handleCrosshairMove = (param: any) => {
+      if (!param.time || !param.point) {
+        setTooltipData(prev => ({ ...prev, visible: false }));
+        return;
+      }
+
+      const data = param.seriesData.get(candleSeries);
+      if (data) {
+        const price = (data as any).close ?? (data as any).value ?? 0;
+        const formattedPrice = formatPrice(price);
+        const formattedTime = new Date((param.time as number) * 1000).toLocaleTimeString();
+
+        setTooltipData({
+          price: formattedPrice,
+          time: formattedTime,
+          x: param.point.x,
+          y: param.point.y,
+          visible: true,
+        });
+      }
+    };
+
+    if (showTooltip) {
+      chart.subscribeCrosshairMove(handleCrosshairMove);
+    }
 
     // Handle resize
     const handleResize = () => {
@@ -228,11 +306,18 @@ export function WalletEntryChart({ mint, height = 200 }: WalletEntryChartProps) 
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      if (showTooltip) {
+        chart.unsubscribeCrosshairMove(handleCrosshairMove);
+      }
+      // Clear markers before removing chart
+      if (markersPlugin) {
+        markersPlugin.setMarkers([]);
+      }
       chart.remove();
       chartRef.current = null;
       candleSeriesRef.current = null;
     };
-  }, [ohlcv, entries, isLoading, height]);
+  }, [ohlcv, entries, isLoading, height, showTooltip]);
 
   if (isLoading) {
     return (
@@ -260,17 +345,56 @@ export function WalletEntryChart({ mint, height = 200 }: WalletEntryChartProps) 
     <div className="relative">
       <div ref={chartContainerRef} className="rounded-lg overflow-hidden" />
 
+      {/* Custom Tooltip */}
+      {showTooltip && tooltipData.visible && (
+        <div
+          className="absolute pointer-events-none z-20 bg-black/90 backdrop-blur-sm border border-[#c4f70e]/30 rounded-lg px-3 py-2 text-xs shadow-lg"
+          style={{
+            left: Math.min(tooltipData.x + 10, (chartContainerRef.current?.clientWidth || 200) - 100),
+            top: Math.max(10, tooltipData.y - 50),
+          }}
+        >
+          <div className="text-[#c4f70e] font-bold text-sm">{tooltipData.price}</div>
+          <div className="text-white/50 text-[10px]">{tooltipData.time}</div>
+        </div>
+      )}
+
       {/* Legend */}
       {entries.length > 0 && (
-        <div className="absolute top-2 right-2 flex items-center gap-3 text-[10px] bg-black/60 backdrop-blur-sm rounded px-2 py-1">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-yellow-500" />
-            <span className="text-white/60">Whale</span>
+        <div className="absolute top-2 right-2 flex items-center gap-3 text-[10px] bg-black/80 backdrop-blur-sm rounded-lg px-2.5 py-1.5 border border-white/10">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-0.5 bg-yellow-500 rounded-full" />
+            <span className="text-white/70">Whale Entry</span>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-blue-500" />
-            <span className="text-white/60">Tracked</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-0.5 bg-blue-500 rounded-full" />
+            <span className="text-white/70">Tracked</span>
           </div>
+        </div>
+      )}
+
+      {/* Wallet Entries List (compact) */}
+      {entries.length > 0 && height >= 200 && (
+        <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1.5">
+          {entries.slice(0, 5).map((entry, i) => (
+            <div
+              key={i}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium ${
+                entry.is_god_wallet
+                  ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                  : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+              }`}
+            >
+              <span>{entry.is_god_wallet ? "🐋" : "👛"}</span>
+              <span>${formatAmount(entry.amount_usd)}</span>
+              <span className="text-white/40">@{formatPrice(entry.price)}</span>
+            </div>
+          ))}
+          {entries.length > 5 && (
+            <div className="px-2 py-1 rounded-full bg-white/10 text-white/50 text-[10px]">
+              +{entries.length - 5} more
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -280,4 +404,12 @@ export function WalletEntryChart({ mint, height = 200 }: WalletEntryChartProps) 
 function formatAmount(usd: number): string {
   if (usd >= 1000) return `${(usd / 1000).toFixed(1)}K`;
   return usd.toFixed(0);
+}
+
+function formatPrice(price: number): string {
+  if (price < 0.00001) return price.toExponential(2);
+  if (price < 0.001) return price.toFixed(6);
+  if (price < 0.01) return price.toFixed(5);
+  if (price < 1) return price.toFixed(4);
+  return `$${price.toFixed(2)}`;
 }

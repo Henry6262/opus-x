@@ -77,6 +77,7 @@ class ProductionVersioningAPI {
 
     const response = await fetch(url, {
       ...options,
+      cache: 'no-store', // Prevent browser caching of API responses
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -133,9 +134,19 @@ class ProductionVersioningAPI {
     if (endDate) params.set('end_date', endDate);
     if (bucket) params.set('bucket', bucket);
     const query = params.toString();
-    const data = await this.fetch<any[]>(
-      `/api/versions/${versionId}/metrics${query ? '?' + query : ''}`
-    );
+    const url = `/api/versions/${versionId}/metrics${query ? '?' + query : ''}`;
+
+    console.log('[versioning-api] getVersionMetrics request:', { url, versionId, startDate, endDate, bucket });
+
+    const data = await this.fetch<any[]>(url);
+
+    console.log('[versioning-api] getVersionMetrics response:', {
+      versionId,
+      bucket,
+      rawCount: data.length,
+      sampleDates: data.slice(0, 3).map((d: any) => d.date || d.bucket_start),
+    });
+
     return data.map((metric) => this.mapVersionMetrics(metric));
   }
 
