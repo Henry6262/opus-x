@@ -54,6 +54,7 @@ interface OnChainHolding {
     entry_price: number;
     entry_time: string;
     entry_sol_value: number;
+    entry_mcap: number | null;  // Market cap at entry (stored directly to avoid data source mismatch)
     initial_quantity: number;
     current_quantity: number;
     current_price: number;
@@ -575,11 +576,16 @@ function HoldingCard({ holding, index, onClick, onAiClick }: HoldingCardProps) {
     // Market cap data for progress bar
     const currentMarketCap = holding.market_cap ?? undefined;
     const entryMarketCap = useMemo(() => {
+        // Use stored entry_mcap if available (accurate, stored at position creation)
+        if (holding.entry_mcap && holding.entry_mcap > 0) {
+            return holding.entry_mcap;
+        }
+        // Fallback: calculate from prices (may be inaccurate due to data source mismatch)
         if (!holding.entry_price || !holding.current_price || !currentMarketCap || holding.current_price === 0) {
             return undefined;
         }
         return holding.entry_price * (currentMarketCap / holding.current_price);
-    }, [holding.entry_price, holding.current_price, currentMarketCap]);
+    }, [holding.entry_mcap, holding.entry_price, holding.current_price, currentMarketCap]);
 
     // Always show progress bar (TP tracking)
     const showProgressBar = true;
