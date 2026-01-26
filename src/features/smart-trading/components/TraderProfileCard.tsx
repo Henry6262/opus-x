@@ -109,10 +109,10 @@ export function TraderProfileCard({
   );
 
   return (
-    <div className="relative mt-0 md:mt-3 pt-2 md:pt-3 pb-3 md:pb-2 overflow-hidden md:overflow-visible">
+    <div className="relative mt-0 md:mt-0 pt-0 md:pt-1 pb-3 md:pb-2 overflow-hidden md:overflow-visible">
 
       {/* Main pill container */}
-      <div className="relative mt-2 md:mt-5 rounded-full bg-black/50 backdrop-blur-xl border-2 border-[#c4f70e]/30 h-12 md:h-16 ml-16 md:ml-20 w-fit max-w-[700px] overflow-visible flex items-center shadow-[0_0_20px_rgba(196,247,14,0.1)] animate-[profile-ambient-breathing_3s_ease-in-out_infinite] z-[20]">
+      <div className="relative mt-6 md:mt-8 rounded-full bg-black/50 backdrop-blur-xl border-2 border-[#c4f70e]/30 h-12 md:h-16 ml-16 md:ml-20 w-fit max-w-[700px] overflow-visible flex items-center shadow-[0_0_20px_rgba(196,247,14,0.1)] animate-[profile-ambient-breathing_3s_ease-in-out_infinite] z-[20]">
           {/* Subtle glow effects */}
           <div className="absolute -top-20 right-1/4 w-48 h-48 bg-[#c4f70e]/5 rounded-full blur-3xl pointer-events-none" />
 
