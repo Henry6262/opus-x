@@ -25,6 +25,7 @@ const STORAGE_KEY = "superrouter-dashboard-tab";
 interface TabConfig {
   value: string;
   label: string;
+  mobileLabel?: string;
   activeLabel?: string;
   color: string;
   shineColor: string;
@@ -43,6 +44,7 @@ const TABS_CONFIG: TabConfig[] = [
   {
     value: "analytics",
     label: "Analytics",
+    mobileLabel: "Stats",
     color: "#c4f70e",
     shineColor: "#ffffff",
     enabled: ANALYTICS_ENABLED,
@@ -50,6 +52,7 @@ const TABS_CONFIG: TabConfig[] = [
   {
     value: "super-router-calls",
     label: "SR Calls",
+    mobileLabel: "Calls",
     color: "#eab308",
     shineColor: "#ffffff",
     badge: "VIP",
@@ -68,26 +71,46 @@ interface AnimatedTabButtonProps {
 }
 
 function AnimatedTabButton({ tab, isActive, onClick, tabRef }: AnimatedTabButtonProps) {
+  const mobileLabel = tab.mobileLabel || tab.label;
+
   return (
     <button
       ref={tabRef}
       onClick={onClick}
-      className="relative z-10 flex-1 md:flex-none rounded-full px-5 md:px-8 py-2 md:py-2.5 text-sm md:text-base font-bold uppercase tracking-widest transition-colors duration-200 cursor-pointer"
+      className="relative z-10 flex-1 md:flex-none rounded-full px-5 md:px-8 py-1 md:py-2.5 text-sm md:text-base font-bold uppercase tracking-widest transition-colors duration-200 cursor-pointer"
       style={{
         color: isActive ? "white" : "rgba(255,255,255,0.4)",
       }}
     >
       <span className="relative inline-flex items-center justify-center">
         {isActive ? (
-          <ShinyText
-            text={tab.label}
-            speed={3}
-            color={tab.color}
-            shineColor={tab.shineColor}
-            className="font-bold"
-          />
+          <>
+            {/* Mobile label */}
+            <span className="md:hidden">
+              <ShinyText
+                text={mobileLabel}
+                speed={3}
+                color={tab.color}
+                shineColor={tab.shineColor}
+                className="font-bold"
+              />
+            </span>
+            {/* Desktop label */}
+            <span className="hidden md:inline">
+              <ShinyText
+                text={tab.label}
+                speed={3}
+                color={tab.color}
+                shineColor={tab.shineColor}
+                className="font-bold"
+              />
+            </span>
+          </>
         ) : (
-          tab.label
+          <>
+            <span className="md:hidden">{mobileLabel}</span>
+            <span className="hidden md:inline">{tab.label}</span>
+          </>
         )}
         {tab.badge && (
           <span

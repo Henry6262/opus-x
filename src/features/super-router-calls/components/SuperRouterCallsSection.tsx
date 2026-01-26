@@ -24,8 +24,19 @@ export function SuperRouterCallsSection({ className }: SuperRouterCallsSectionPr
           animate={{ opacity: 1, y: 0 }}
           className="space-y-4"
         >
-          {/* Epic Header */}
-          <div className="flex items-center justify-between">
+          {/* Epic Header - relative container for absolute badge */}
+          <div className="relative w-full">
+            {/* Badge - absolute top right */}
+            <div className="absolute top-0 right-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#c4f70e]/10 whitespace-nowrap">
+              <ShinyText
+                text="$SR Holders"
+                speed={2}
+                color="#c4f70e"
+                shineColor="#ffffff"
+                className="text-xs font-bold whitespace-nowrap"
+              />
+            </div>
+
             <div className="flex items-center gap-4">
               {/* Scouting GIF Icon - Vertical aspect ratio */}
               <motion.div
@@ -49,7 +60,7 @@ export function SuperRouterCallsSection({ className }: SuperRouterCallsSectionPr
               <div className="flex flex-col justify-center">
                 <h2 className="flex items-center gap-3">
                   <ShinyText
-                    text="SUPER ROUTER CALLS"
+                    text="SR CALLS"
                     speed={4}
                     color="#ffffff"
                     shineColor="#c4f70e"
@@ -58,17 +69,6 @@ export function SuperRouterCallsSection({ className }: SuperRouterCallsSectionPr
                 </h2>
                 <p className="text-sm text-white/50 mt-1">God wallet tracking & enhanced signals</p>
               </div>
-            </div>
-
-            {/* Badge - no box shadow */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#c4f70e]/10 border border-[#c4f70e]/30">
-              <ShinyText
-                text="$SR Holders"
-                speed={2}
-                color="#c4f70e"
-                shineColor="#ffffff"
-                className="text-xs font-bold"
-              />
             </div>
           </div>
 

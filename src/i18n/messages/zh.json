@@ -34,9 +34,11 @@
     "superRouter": "SUPER ROUTER",
     "todaysProfits": "今日收益",
     "winRate": "胜率",
+    "balance": "余额",
+    "total": "总计",
     "trades": "交易",
     "bestTrade": "最佳",
-    "winsAbbrev": "胜"
+    "winsAbbrev": " 胜"
   },
   "smartTrading": {
     "title": "智能资金跟单",
@@ -261,7 +263,7 @@
     "sold": "卖出",
     "held": "持有",
     "tx": "交易",
-    "winsAbbrev": "胜",
+    "winsAbbrev": " 胜",
     "lossesAbbrev": "负"
   },
   "time": {

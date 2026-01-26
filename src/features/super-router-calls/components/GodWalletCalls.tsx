@@ -76,12 +76,12 @@ function CallCardSkeleton() {
         </div>
 
         {/* DESKTOP LAYOUT */}
-        <div className="hidden lg:flex flex-row h-full min-h-[160px]">
-          {/* Left side - 50% */}
-          <div className="w-[50%] p-4 flex flex-col justify-between">
+        <div className="hidden lg:flex flex-row h-full min-h-[120px]">
+          {/* Left side - 70% */}
+          <div className="w-[70%] p-3 flex flex-col justify-between">
             {/* Header row: Image + Title */}
-            <div className="flex items-center gap-3 mb-3">
-              <Shimmer className="w-14 h-14 rounded-xl bg-white/[0.06] flex-shrink-0" />
+            <div className="flex items-center gap-2 mb-2">
+              <Shimmer className="w-10 h-10 rounded-lg bg-white/[0.06] flex-shrink-0" />
               <div className="flex flex-col gap-2">
                 <Shimmer className="h-5 w-20 rounded bg-white/[0.06]" />
                 <Shimmer className="h-3 w-16 rounded bg-white/[0.04]" />
@@ -89,7 +89,7 @@ function CallCardSkeleton() {
             </div>
 
             {/* Wallet entries skeleton */}
-            <div className="space-y-2 h-[88px] overflow-hidden">
+            <div className="space-y-2 h-[60px] overflow-hidden">
               {[1, 2].map((i) => (
                 <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/[0.03]">
                   <div className="flex items-center gap-3">
@@ -108,8 +108,8 @@ function CallCardSkeleton() {
             </div>
           </div>
 
-          {/* Right side - 50% - Chart */}
-          <div className="w-[50%] border-l border-white/5 overflow-hidden relative">
+          {/* Right side - 30% - Chart */}
+          <div className="w-[30%] border-l border-white/5 overflow-hidden relative">
             <Shimmer className="absolute inset-0 bg-white/[0.02]" />
             {/* Fake chart line */}
             <svg className="absolute inset-0 w-full h-full opacity-20" preserveAspectRatio="none">
@@ -136,10 +136,12 @@ function CallCardSkeleton() {
 
 function GodWalletCallsSkeleton() {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {[1, 2, 3, 4].map((i) => (
-        <CallCardSkeleton key={i} />
-      ))}
+    <div className="relative rounded-xl shadow-[4px_4px_20px_rgba(0,0,0,0.4),inset_-1px_-1px_0_rgba(255,255,255,0.05)]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 max-h-[640px] lg:max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <CallCardSkeleton key={i} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -336,7 +338,7 @@ function MiniChart({ mint, aggregatedEntries, currentMcap, firstEntryMcap }: Min
   }, [mint, aggregatedEntries, currentMcap, firstEntryMcap]);
 
   if (!currentMcap) {
-    return <div className="h-full min-h-[120px] bg-white/[0.02]" />;
+    return <div className="h-full min-h-[80px] bg-white/[0.02]" />;
   }
 
   // Calculate marker positions (% along the timeline) with wallet info
@@ -361,7 +363,7 @@ function MiniChart({ mint, aggregatedEntries, currentMcap, firstEntryMcap }: Min
   });
 
   return (
-    <div className="relative h-full min-h-[120px]">
+    <div className="relative h-full min-h-[80px]">
       <div ref={chartContainerRef} className="h-full" />
 
       {/* Tooltip */}
@@ -565,38 +567,35 @@ function CallCard({ call }: CallCardProps) {
           </div>
         </div>
 
-        {/* DESKTOP LAYOUT - 50/50 split */}
-        <div className="hidden lg:flex flex-row h-full min-h-[160px]">
-          {/* Left side - 50% */}
-          <div className="w-[50%] p-4 flex flex-col justify-between">
-            {/* Header row: Image + Title */}
-            <div className="flex items-center gap-3 mb-3">
-              <div className="relative flex-shrink-0">
-                <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-black border border-zinc-700/50">
-                  {!imgError ? (
-                    <Image
-                      src={call.imageUrl || dexScreenerImg}
-                      alt={call.symbol}
-                      fill
-                      className="object-cover"
-                      onError={() => setImgError(true)}
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white/40 text-base font-bold">
-                      {call.symbol.slice(0, 2)}
-                    </div>
-                  )}
-                </div>
+        {/* DESKTOP LAYOUT - Full width with chart below */}
+        <div className="hidden lg:flex flex-col">
+          {/* Top section: Token info + Wallet entries side by side */}
+          <div className="flex items-start gap-4 p-3">
+            {/* Left: Token image + name + mcap */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-black border border-zinc-700/50">
+                {!imgError ? (
+                  <Image
+                    src={call.imageUrl || dexScreenerImg}
+                    alt={call.symbol}
+                    fill
+                    className="object-cover"
+                    onError={() => setImgError(true)}
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/40 text-xs font-bold">
+                    {call.symbol.slice(0, 2)}
+                  </div>
+                )}
               </div>
-
               <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <a
                     href={chartUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`font-bold text-base transition-colors ${isRunner ? "text-white hover:text-[#c4f70e]" : "text-white/60 hover:text-white/80"}`}
+                    className={`font-bold text-sm transition-colors ${isRunner ? "text-white hover:text-[#c4f70e]" : "text-white/60 hover:text-white/80"}`}
                   >
                     {isRunner ? (
                       <ShinyText
@@ -604,7 +603,7 @@ function CallCard({ call }: CallCardProps) {
                         speed={3}
                         color="#ffffff"
                         shineColor="#c4f70e"
-                        className="font-bold"
+                        className="font-bold text-sm"
                       />
                     ) : (
                       call.symbol
@@ -612,85 +611,60 @@ function CallCard({ call }: CallCardProps) {
                   </a>
                   <button
                     onClick={handleCopy}
-                    className="p-1 rounded hover:bg-white/10 transition-colors cursor-pointer"
+                    className="p-0.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
                   >
                     {copied ? (
-                      <Check className="w-3 h-3 text-[#c4f70e]" />
+                      <Check className="w-2.5 h-2.5 text-[#c4f70e]" />
                     ) : (
-                      <Copy className="w-3 h-3 text-white/30 hover:text-white/50" />
+                      <Copy className="w-2.5 h-2.5 text-white/30 hover:text-white/50" />
                     )}
                   </button>
                 </div>
-
                 {call.currentMcap && (
-                  <span className="text-xs font-medium text-white/80">
-                    {formatMcap(call.currentMcap)} mcap
+                  <span className="text-[10px] font-medium text-white/60">
+                    {formatMcap(call.currentMcap)}
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Wallet entries - desktop (aggregated) */}
-            <div className="overflow-hidden">
-              <div
-                className="h-[88px] overflow-y-auto pr-1"
-                style={{
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: 'rgba(255,255,255,0.15) transparent',
-                }}
-              >
-                {call.aggregatedEntries.map((entry, idx) => (
-                  <div key={`${entry.wallet.id}-${idx}`}>
-                    <div className="flex items-center justify-between py-2 px-1">
-                      <div className="flex items-center gap-2">
-                        {/* Crown icon only - no bg, no circle */}
-                        <Crown className={`w-4 h-4 flex-shrink-0 ${isRunner ? "text-[#c4f70e]" : "text-white/40"}`} />
-                        {/* Buy/Sell activity indicators */}
-                        <div className="flex items-center gap-1.5">
-                          <div className="flex items-center gap-0.5">
-                            <TrendingUp className="w-2.5 h-2.5 text-green-500" />
-                            <span className="text-[9px] text-green-400">{entry.buyCount}</span>
-                          </div>
-                          {entry.sellCount > 0 && (
-                            <div className="flex items-center gap-0.5">
-                              <TrendingDown className="w-2.5 h-2.5 text-red-500" />
-                              <span className="text-[9px] text-red-400">{entry.sellCount}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      {/* Right side: Avg entry mcap + position held */}
-                      <div className="flex flex-col items-end">
-                        <span className="text-sm font-mono text-white/70">
-                          {formatMcap(entry.avgEntryMcap)}
-                        </span>
-                        {/* Position held bar */}
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <div className="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${(entry.positionHeldPct ?? 0) >= 80 ? "bg-green-500" : (entry.positionHeldPct ?? 0) >= 50 ? "bg-yellow-500" : "bg-red-500"}`}
-                              style={{ width: `${entry.positionHeldPct ?? 0}%` }}
-                            />
-                          </div>
-                          <span className={`text-[9px] ${(entry.positionHeldPct ?? 0) >= 80 ? "text-green-400" : (entry.positionHeldPct ?? 0) >= 50 ? "text-yellow-400" : "text-red-400"}`}>
-                            {(entry.positionHeldPct ?? 0).toFixed(0)}%
-                          </span>
-                        </div>
-                      </div>
+            {/* Right: Wallet entries - horizontal layout */}
+            <div className="flex-1 overflow-x-auto">
+              <div className="flex items-center gap-2">
+                {call.aggregatedEntries.slice(0, 3).map((entry, idx) => (
+                  <div
+                    key={`${entry.wallet.id}-${idx}`}
+                    className="flex items-center gap-2 py-1 px-2 rounded-md bg-white/[0.03] flex-shrink-0"
+                  >
+                    <Crown className={`w-3 h-3 flex-shrink-0 ${isRunner ? "text-[#c4f70e]" : "text-white/40"}`} />
+                    <div className="flex items-center gap-1">
+                      <TrendingUp className="w-2 h-2 text-green-500" />
+                      <span className="text-[9px] text-green-400">{entry.buyCount}</span>
+                      {entry.sellCount > 0 && (
+                        <>
+                          <TrendingDown className="w-2 h-2 text-red-500" />
+                          <span className="text-[9px] text-red-400">{entry.sellCount}</span>
+                        </>
+                      )}
                     </div>
-                    {/* Fading horizontal separator - only between items, not after last */}
-                    {idx < call.aggregatedEntries.length - 1 && (
-                      <div className="h-px mx-2 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                    )}
+                    <span className="text-[10px] font-mono text-white/60">
+                      {formatMcap(entry.avgEntryMcap)}
+                    </span>
+                    <span className={`text-[11px] font-bold font-mono ${(entry.positionHeldPct ?? 0) >= 80 ? "text-green-400" : (entry.positionHeldPct ?? 0) >= 50 ? "text-yellow-400" : "text-red-400"}`}>
+                      {(entry.positionHeldPct ?? 0).toFixed(0)}%
+                    </span>
                   </div>
                 ))}
+                {call.aggregatedEntries.length > 3 && (
+                  <span className="text-[9px] text-white/40 flex-shrink-0">+{call.aggregatedEntries.length - 3}</span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Right side - 50% - Chart */}
-          <div className={`w-[50%] border-l ${isRunner ? "border-[#c4f70e]/20" : "border-white/5"} overflow-hidden`}>
-            <div className="w-full h-full min-h-[140px]">
+          {/* Chart - full width below */}
+          <div className={`border-t ${isRunner ? "border-[#c4f70e]/20" : "border-white/5"}`}>
+            <div className="w-full h-[60px]">
               <MiniChart
                 mint={call.mint}
                 aggregatedEntries={call.aggregatedEntries}
@@ -890,24 +864,26 @@ export function GodWalletCalls() {
 
   // Grid of cards - runners first, then cold items
   // Using layout animation for smooth reordering (initial=false prevents jump on first render)
-  // Mobile: max 3 items visible (~640px) with scroll, desktop: no limit
+  // Mobile: max 3 items visible (~640px) with scroll, desktop: 3 columns, 2 rows max with scroll
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[640px] lg:max-h-none overflow-y-auto lg:overflow-visible pr-1 lg:pr-0 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-      <AnimatePresence mode="popLayout" initial={false}>
-        {sortedCalls.slice(0, 10).map((call) => (
-          <motion.div
-            key={call.mint}
-            layout
-            layoutId={call.mint}
-            initial={false}
-            transition={{
-              layout: { duration: 0.4, ease: "easeInOut" },
-            }}
-          >
-            <CallCard call={call} />
-          </motion.div>
-        ))}
-      </AnimatePresence>
+    <div className="relative rounded-xl shadow-[4px_4px_20px_rgba(0,0,0,0.4),inset_-1px_-1px_0_rgba(255,255,255,0.05)]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 max-h-[640px] lg:max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        <AnimatePresence mode="popLayout" initial={false}>
+          {sortedCalls.slice(0, 10).map((call) => (
+            <motion.div
+              key={call.mint}
+              layout
+              layoutId={call.mint}
+              initial={false}
+              transition={{
+                layout: { duration: 0.4, ease: "easeInOut" },
+              }}
+            >
+              <CallCard call={call} />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

@@ -27,7 +27,7 @@ export function VibrCoder({ state, className = '', statusText, reason, pnl, heig
   }
 
   return (
-    <div className={`vibr-coder-container ${className}`} style={Object.keys(containerStyle).length > 0 ? containerStyle : undefined}>
+    <div className={`vibr-coder-container mt-[30px] md:mt-0 ${className}`} style={Object.keys(containerStyle).length > 0 ? containerStyle : undefined}>
       <video
         src="/videos/0109.mp4"
         autoPlay

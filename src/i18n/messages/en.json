@@ -34,9 +34,11 @@
     "superRouter": "SUPER ROUTER",
     "todaysProfits": "Today's Profits",
     "winRate": "Win",
+    "balance": "Balance",
+    "total": "total",
     "trades": "Trades",
     "bestTrade": "Best",
-    "winsAbbrev": "W"
+    "winsAbbrev": " wins"
   },
   "smartTrading": {
     "title": "Smart Money Copy Trading",
@@ -261,7 +263,7 @@
     "sold": "Sold",
     "held": "held",
     "tx": "tx",
-    "winsAbbrev": "W",
+    "winsAbbrev": " wins",
     "lossesAbbrev": "L"
   },
   "time": {
