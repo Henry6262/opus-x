@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { Zap, Shield } from "lucide-react";
 import { TokenGateGuard } from "@/components/auth/TokenGateGuard";
 import { CompactAILog } from "./CompactAILog";
-import { GodWalletActivity } from "./GodWalletActivity";
+import { GodWalletCalls } from "./GodWalletCalls";
 import { EnhancedWatchlist } from "./EnhancedWatchlist";
 
 interface SuperRouterCallsSectionProps {
@@ -52,10 +52,8 @@ export function SuperRouterCallsSection({ className }: SuperRouterCallsSectionPr
             <CompactAILog />
           </div>
 
-          {/* God Wallet Activity */}
-          <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-            <GodWalletActivity />
-          </div>
+          {/* God Wallet Calls */}
+          <GodWalletCalls />
 
           {/* Enhanced Watchlist with tracker indicators */}
           <div>

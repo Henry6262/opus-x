@@ -54,6 +54,7 @@ export interface GodWalletBuy {
   imageUrl: string | null;
   amountUsd: number;
   amountSol: number;
+  entryPricePerToken: number; // Token price in USD at entry
   timestamp: string;
   txHash: string;
   copiedBySystem: boolean;

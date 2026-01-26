@@ -5,6 +5,7 @@ export { SuperRouterCallsSection } from "./components/SuperRouterCallsSection";
 export { CompactAILog } from "./components/CompactAILog";
 export { EnhancedWatchlist } from "./components/EnhancedWatchlist";
 export { GodWalletActivity } from "./components/GodWalletActivity";
+export { GodWalletCalls } from "./components/GodWalletCalls";
 export { TrackerWalletIndicator } from "./components/TrackerWalletIndicator";
 export { WalletEntryChart } from "./components/WalletEntryChart";
 

@@ -295,12 +295,13 @@ src/features/super-router-calls/
 ├── components/
 │   ├── SuperRouterCallsSection.tsx  # Main container (wrapped in TokenGateGuard)
 │   ├── CompactAILog.tsx             # AI reasoning stream (WebSocket)
-│   ├── GodWalletActivity.tsx        # God wallet buy feed
+│   ├── GodWalletCalls.tsx           # Token-centric god wallet calls (NEW)
+│   ├── GodWalletActivity.tsx        # Legacy god wallet buy feed (deprecated)
 │   ├── EnhancedWatchlist.tsx        # Watchlist with tracker indicators
 │   ├── TrackerWalletIndicator.tsx   # PFP avatars for tracked wallets
 │   └── WalletEntryChart.tsx         # Price chart with wallet entry markers
 ├── hooks/
-│   ├── useGodWallets.ts             # Fetch god wallets + listen for buys
+│   ├── useGodWallets.ts             # Fetch god wallets + recent buys + WebSocket
 │   ├── useTrackerWallets.ts         # Fetch active tracked wallets
 │   └── useWalletEntries.ts          # Fetch wallet entries for tokens (batch + single)
 ├── types.ts                          # TrackerWallet, GodWalletBuy, etc.
@@ -406,17 +407,31 @@ No API keys required. Balance check uses Solana RPC directly.
 **SuperRouterCallsSection**: Main container
 - Wrapped in `<TokenGateGuard>` for access control
 - Shows header with "EXCLUSIVE" badge
-- Contains CompactAILog, GodWalletActivity, EnhancedWatchlist
+- Contains CompactAILog, GodWalletCalls, EnhancedWatchlist
 
 **CompactAILog**: AI reasoning stream
 - Latest AI decision with conviction %
 - Expandable history (10 items)
 - Real-time via `/ws/trading/reasoning`
 
-**GodWalletActivity**: God wallet buy feed
-- Shows recent god wallet purchases
-- "COPIED" badge if system auto-copied trade
-- Real-time via `god_wallet_buy_detected` event
+**GodWalletCalls**: Token-centric call display (NEW)
+- Groups buys by TOKEN, not by wallet
+- 2-column grid on desktop, 1 column on mobile
+- For each token shows:
+  - Token image (56x56) + symbol + current market cap
+  - Performance % since first entry (green/red)
+  - Mini price chart (80px) with wallet PFP markers showing entry points
+  - List of wallet entries: who entered, at what MC, position % held
+- Data flow:
+  - `price_usd` from DB → `entryPricePerToken`
+  - `totalSupply` from DexScreener
+  - `entryMcap = entryPricePerToken × totalSupply`
+  - `performancePct = (currentMcap - entryMcap) / entryMcap × 100`
+- Real-time via `god_wallet_buy_detected` WebSocket event
+
+**GodWalletActivity**: Legacy component (deprecated)
+- Replaced by GodWalletCalls
+- Shows individual buys rather than token-grouped view
 
 **EnhancedWatchlist**: Watchlist with charts
 - Token cards with mini charts (100px)
@@ -487,6 +502,26 @@ When a god wallet buys:
    - TrackerWalletIndicator now uses `WalletEntryPoint` type directly from hook
    - Types match backend response format
 
+4. ~~**GodWalletActivity**: Not displaying historical buys~~ ✅ FIXED
+   - `useGodWallets` now fetches from `/api/wallets/recent-buys` on mount
+   - Filters for god wallet buys by matching wallet_id
+   - Fetches token metadata (symbol, name, image) from DexScreener API
+   - Caches metadata to avoid repeated API calls
+
+5. ~~**Token symbols showing as mint prefixes**~~ ✅ FIXED
+   - Added `fetchTokenMetadata()` to get symbol/name from DexScreener
+   - Token metadata cache persists across component remounts
+
+6. ~~**GodWalletActivity UI confusing**~~ ✅ FIXED (Replaced)
+   - Created new `GodWalletCalls` component with token-centric view
+   - Groups buys by token, shows mini chart with wallet PFP entry markers
+   - Calculates entry market cap from `price_usd × totalSupply`
+   - Shows performance % from entry to current
+
+7. **Position % always shows 100%**
+   - Backend doesn't track sells yet
+   - When sell tracking is implemented, position % will update dynamically
+
 ---
 
 ## God Wallet Copy Trading System
@@ -497,9 +532,13 @@ When a god wallet buys:
 |-----------|--------|-------|
 | God wallet buy detection | ✅ Working | Helius WebSocket detects buys |
 | Recording buys to DB | ✅ Working | 360+ trades in `wallet_trades` |
+| Frontend display | ✅ Working | GodWalletCalls shows token-centric view with charts |
+| Token metadata | ✅ Working | Fetched from DexScreener, cached |
+| Entry MC calculation | ✅ Working | `price_usd × totalSupply` from DexScreener |
 | God wallet sell detection | ❌ Not implemented | Only buys tracked |
 | Copy trade execution | ❌ Not implemented | Detection works, execution doesn't fire |
 | Exit strategy | ❌ Not defined | No sell logic |
+| Position % tracking | ❌ Not implemented | Always shows 100% |
 
 ### God Wallets Configured (24 total)
 
