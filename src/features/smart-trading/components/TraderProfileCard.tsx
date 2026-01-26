@@ -139,9 +139,14 @@ export function TraderProfileCard({
           <span className={`text-sm md:text-lg font-bold font-mono tabular-nums ${
             streak.type === "win" ? "text-green-400" : "text-red-400"
           }`}>
-            {streak.current}
+            {streak.current}{streak.type === "win" ? "W" : "L"}
           </span>
-          <span className="text-xs text-white/30">/{streak.best}</span>
+          {/* Only show best streak if it's higher than current (and we're on a win streak) */}
+          {streak.best > 0 && (
+            <span className="text-xs text-white/30" title="Best winning streak">
+              ({streak.best}W best)
+            </span>
+          )}
         </div>
       )}
     </div>

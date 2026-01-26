@@ -527,7 +527,7 @@ function mapDevprintStats(
       realWalletBalance: isLiveMode ? solBalance : 0,
       openPositions: stats.open_positions,
       maxOpenPositions: config?.max_positions ?? 10,
-      dailyPnL: stats.total_pnl,
+      dailyPnL: 0, // Will be calculated from today's closed positions in context
       maxDailyLoss: 1.0,
       dailyTrades: stats.open_positions + stats.closed_positions,
       maxDailyTrades: 10,

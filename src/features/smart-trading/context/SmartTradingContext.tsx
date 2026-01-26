@@ -27,6 +27,12 @@ import type {
   DashboardMigrationStats,
   HoldingsSnapshotData,
   HoldingData,
+  WatchlistToken,
+  WatchlistStats,
+  WatchlistAddedEvent,
+  WatchlistUpdatedEvent,
+  WatchlistRemovedEvent,
+  WatchlistGraduatedEvent,
 } from "../types";
 import { SignalSource } from "../types";
 
@@ -34,6 +40,22 @@ import { SignalSource } from "../types";
 // PNL ADJUSTMENT (REMOVED - using raw backend data)
 // ============================================
 // const PNL_ADJUSTMENT_FACTOR = 1.16;
+
+// ============================================
+// Helper: Calculate daily PnL from closed positions
+// ============================================
+function calculateDailyPnL(closedPositions: Position[]): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return closedPositions
+    .filter((pos) => {
+      if (!pos.closedAt) return false;
+      const closedDate = new Date(pos.closedAt);
+      return closedDate >= today;
+    })
+    .reduce((sum, pos) => sum + (pos.realizedPnlSol ?? 0), 0);
+}
 
 // ============================================
 // Activity Feed Types
@@ -61,6 +83,10 @@ interface SmartTradingState {
   positions: Position[];
   history: Position[];
   chartHistory: PortfolioSnapshot[];
+
+  // Watchlist data (centralized for real-time updates)
+  watchlistTokens: WatchlistToken[];
+  watchlistStats: WatchlistStats | null;
 
   // Migration feed data (shared)
   rankedMigrations: RankedMigration[];
@@ -292,6 +318,8 @@ export function SmartTradingProvider({
     positions: [],
     history: [],
     chartHistory: [],
+    watchlistTokens: [],
+    watchlistStats: null,
     rankedMigrations: [],
     migrationStats: null,
     connectionStatus: "disconnected",
@@ -358,8 +386,25 @@ export function SmartTradingProvider({
     }
 
     try {
-      // ONE API call instead of 7!
-      const response = await smartTradingService.getDashboardInit();
+      // Fetch dashboard init and watchlist in parallel
+      const [response, watchlistResponse] = await Promise.all([
+        smartTradingService.getDashboardInit(),
+        smartTradingService.getWatchlist().catch(() => ({ tokens: [], stats: null })),
+      ]);
+
+      // Calculate daily PnL from today's closed positions
+      const dailyPnL = calculateDailyPnL(response.positions.closed);
+
+      // Update stats with calculated daily PnL
+      const statsWithDailyPnL = response.stats
+        ? {
+          ...response.stats,
+          trading: {
+            ...response.stats.trading,
+            dailyPnL,
+          },
+        }
+        : null;
 
       setState((prev) => ({
         ...prev,
@@ -384,11 +429,13 @@ export function SmartTradingProvider({
             maxSlippageBps: 0,
             wallet_address: DEFAULT_TRADING_WALLET,
           },
-        dashboardStats: response.stats,
+        dashboardStats: statsWithDailyPnL,
         wallets: response.wallets,
         signals: response.signals,
         positions: response.positions.open,
         history: response.positions.closed,
+        watchlistTokens: watchlistResponse.tokens,
+        watchlistStats: watchlistResponse.stats,
         rankedMigrations: response.migrations,
         migrationStats: mapDashboardStatsToFeedStats(response.migrationStats),
         isLoading: false,
@@ -845,13 +892,29 @@ export function SmartTradingProvider({
             };
           }
 
+          // Add to history
+          const newHistory = [
+            { ...data.position, status: "CLOSED" as const },
+            ...prev.history,
+          ];
+
+          // Recalculate daily PnL with the new closed position
+          const newDailyPnL = calculateDailyPnL(newHistory);
+
           return {
             ...prev,
             positions: prev.positions.filter((p) => p.tokenMint !== data.position.tokenMint),
-            history: [
-              { ...data.position, status: "CLOSED" as const },
-              ...prev.history,
-            ],
+            history: newHistory,
+            // Update daily PnL in dashboard stats
+            dashboardStats: prev.dashboardStats
+              ? {
+                ...prev.dashboardStats,
+                trading: {
+                  ...prev.dashboardStats.trading,
+                  dailyPnL: newDailyPnL,
+                },
+              }
+              : null,
           };
         });
       })
@@ -995,6 +1058,108 @@ export function SmartTradingProvider({
         setState((prev) => ({
           ...prev,
           migrationStats: stats,
+        }));
+      })
+    );
+
+    // ============================================
+    // Watchlist Events - centralized for real-time updates
+    // ============================================
+
+    // Watchlist token added
+    unsubscribes.push(
+      on<WatchlistAddedEvent>("watchlist_added", (data, event) => {
+        console.log("[SmartTrading] watchlist_added:", data.symbol, data);
+        addActivity(event);
+
+        const newToken: WatchlistToken = {
+          mint: data.mint,
+          symbol: data.symbol,
+          name: data.name,
+          added_at: new Date(data.timestamp).toISOString(),
+          last_check_at: new Date(data.timestamp).toISOString(),
+          check_count: 0,
+          watch_reasons: data.watch_reasons,
+          metrics: {
+            liquidity_usd: data.liquidity_usd,
+            volume_24h_usd: data.volume_24h_usd,
+            market_cap_usd: data.market_cap_usd,
+            holder_count: data.holder_count,
+            price_usd: 0,
+          },
+          last_result: {
+            passed: false,
+            failed_checks: [],
+            improving: false,
+            checked_at: new Date(data.timestamp).toISOString(),
+          },
+        };
+
+        setState((prev) => {
+          // Prevent duplicates
+          if (prev.watchlistTokens.some((t) => t.mint === newToken.mint)) {
+            return prev;
+          }
+          return {
+            ...prev,
+            watchlistTokens: [newToken, ...prev.watchlistTokens],
+          };
+        });
+      })
+    );
+
+    // Watchlist token updated
+    unsubscribes.push(
+      on<WatchlistUpdatedEvent>("watchlist_updated", (data, _event) => {
+        console.log("[SmartTrading] watchlist_updated:", data.symbol, data);
+
+        setState((prev) => ({
+          ...prev,
+          watchlistTokens: prev.watchlistTokens.map((token) =>
+            token.mint === data.mint
+              ? {
+                ...token,
+                check_count: data.check_count,
+                last_check_at: new Date().toISOString(),
+                metrics: {
+                  ...token.metrics,
+                  market_cap_usd: data.market_cap_usd,
+                  volume_24h_usd: data.volume_24h_usd,
+                  holder_count: data.holder_count,
+                },
+                last_result: {
+                  ...token.last_result,
+                  improving: data.improving,
+                  checked_at: new Date().toISOString(),
+                },
+              }
+              : token
+          ),
+        }));
+      })
+    );
+
+    // Watchlist token removed
+    unsubscribes.push(
+      on<WatchlistRemovedEvent>("watchlist_removed", (data, _event) => {
+        console.log("[SmartTrading] watchlist_removed:", data.symbol, data.reason);
+
+        setState((prev) => ({
+          ...prev,
+          watchlistTokens: prev.watchlistTokens.filter((t) => t.mint !== data.mint),
+        }));
+      })
+    );
+
+    // Watchlist token graduated (became a position)
+    unsubscribes.push(
+      on<WatchlistGraduatedEvent>("watchlist_graduated", (data, event) => {
+        console.log("[SmartTrading] watchlist_graduated:", data.symbol);
+        addActivity(event);
+
+        setState((prev) => ({
+          ...prev,
+          watchlistTokens: prev.watchlistTokens.filter((t) => t.mint !== data.mint),
         }));
       })
     );
@@ -1278,4 +1443,10 @@ export function useConnectionStatus() {
 export function useActivityFeed() {
   const { activityFeed, clearActivityFeed } = useSmartTradingContext();
   return { activityFeed, clearActivityFeed };
+}
+
+/** Hook for watchlist data - centralized for real-time updates */
+export function useWatchlist() {
+  const { watchlistTokens, watchlistStats, isLoading, refresh } = useSmartTradingContext();
+  return { watchlistTokens, watchlistStats, isLoading, refresh };
 }

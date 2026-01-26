@@ -8,6 +8,7 @@ export {
   useMigrationFeedContext,
   useConnectionStatus,
   useActivityFeed,
+  useWatchlist,
 } from "./SmartTradingContext";
 
 export type { ActivityItem } from "./SmartTradingContext";
