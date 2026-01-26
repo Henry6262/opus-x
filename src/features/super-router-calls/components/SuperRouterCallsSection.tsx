@@ -1,11 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "motion/react";
-import { Zap, Shield } from "lucide-react";
 import { TokenGateGuard } from "@/components/auth/TokenGateGuard";
-import { CompactAILog } from "./CompactAILog";
 import { GodWalletCalls } from "./GodWalletCalls";
 import { EnhancedWatchlist } from "./EnhancedWatchlist";
+import ShinyText from "@/components/ShinyText";
 
 interface SuperRouterCallsSectionProps {
   className?: string;
@@ -24,32 +24,56 @@ export function SuperRouterCallsSection({ className }: SuperRouterCallsSectionPr
           animate={{ opacity: 1, y: 0 }}
           className="space-y-4"
         >
-          {/* Header */}
+          {/* Epic Header */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30">
-                <Zap className="w-5 h-5 text-yellow-500" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  Super Router Calls
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium">
-                    EXCLUSIVE
-                  </span>
+            <div className="flex items-start gap-4">
+              {/* Scouting GIF Icon - Vertical aspect ratio */}
+              <motion.div
+                className="relative flex-shrink-0"
+                animate={{ scale: [1, 1.03, 1] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <div className="absolute -inset-2 rounded-2xl blur-xl bg-[#c4f70e]/25" />
+                <div className="relative w-14 h-20 rounded-2xl overflow-hidden">
+                  <Image
+                    src="/videos/scouting-v2.gif"
+                    alt="Scouting"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+              </motion.div>
+
+              {/* Title + Description */}
+              <div className="flex flex-col">
+                <h2 className="flex items-center gap-3">
+                  <ShinyText
+                    text="SUPER ROUTER CALLS"
+                    speed={4}
+                    color="#ffffff"
+                    shineColor="#c4f70e"
+                    className="text-2xl font-black tracking-wide"
+                  />
                 </h2>
-                <p className="text-xs text-white/50">God wallet tracking & enhanced signals</p>
+                <p className="text-sm text-white/50 mt-1">God wallet tracking & enhanced signals</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 text-xs text-green-400">
-              <Shield className="w-3.5 h-3.5" />
-              <span>Token Verified</span>
-            </div>
-          </div>
-
-          {/* Compact AI Log */}
-          <div>
-            <CompactAILog />
+            {/* Badge */}
+            <motion.div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#c4f70e]/10 border border-[#c4f70e]/30"
+              animate={{ boxShadow: ["0 0 10px rgba(196,247,14,0.2)", "0 0 20px rgba(196,247,14,0.4)", "0 0 10px rgba(196,247,14,0.2)"] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <ShinyText
+                text="$SR Holders Only"
+                speed={2}
+                color="#c4f70e"
+                shineColor="#ffffff"
+                className="text-xs font-bold"
+              />
+            </motion.div>
           </div>
 
           {/* God Wallet Calls */}

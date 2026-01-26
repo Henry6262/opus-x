@@ -3,18 +3,32 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { Crown, ExternalLink, Copy, Check, TrendingUp, TrendingDown } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Crown, Copy, Check, Sparkles } from "lucide-react";
 import { createChart, LineSeries, type IChartApi, type UTCTimestamp } from "lightweight-charts";
 import { useGodWallets } from "../hooks/useGodWallets";
 import type { GodWalletBuy } from "../types";
+import ShinyText from "@/components/ShinyText";
+import GradientText from "@/components/GradientText";
 
 // Market data cache
 const marketDataCache = new Map<string, { mcap: number; price: number; priceChange24h: number; totalSupply: number }>();
+
+interface WalletAggregatedEntry {
+  wallet: {
+    id: string;
+    label: string | null;
+    pfpUrl: string | null;
+    address: string;
+  };
+  buyCount: number;
+  totalSolInvested: number;
+  totalUsdInvested: number;
+  avgEntryMcap: number | null; // Weighted average by SOL invested
+  avgEntryPricePerToken: number; // Weighted average
+  positionHeld: number; // 0-100% (100 for now since we don't track sells)
+  firstBuyTimestamp: string;
+  lastBuyTimestamp: string;
+}
 
 interface TokenCall {
   mint: string;
@@ -30,9 +44,12 @@ interface TokenCall {
     entryMcap: number | null;
     entryPricePerToken: number; // Token price at entry
     amountUsd: number;
+    amountSol: number;
     positionHeld: number; // 0-100%
     timestamp: string;
   }>;
+  // Aggregated entries per wallet
+  aggregatedEntries: WalletAggregatedEntry[];
   // Current market data
   currentMcap: number | null;
   currentPrice: number | null;
@@ -68,6 +85,9 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
   useEffect(() => {
     if (!chartContainerRef.current || !currentMcap) return;
 
+    // Get container height dynamically
+    const containerHeight = chartContainerRef.current.clientHeight || 120;
+
     // Create chart
     const chart = createChart(chartContainerRef.current, {
       layout: {
@@ -79,7 +99,7 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
         horzLines: { color: "rgba(255, 255, 255, 0.03)" },
       },
       width: chartContainerRef.current.clientWidth,
-      height: 80,
+      height: containerHeight,
       timeScale: {
         visible: false,
         borderVisible: false,
@@ -125,10 +145,10 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
       });
     }
 
-    // Add line series
+    // Add line series - Brand green for runners, muted for cold
     const isPositive = currentMcap >= startMcap;
     const lineSeries = chart.addSeries(LineSeries, {
-      color: isPositive ? "#22c55e" : "#ef4444",
+      color: isPositive ? "#c4f70e" : "rgba(255, 255, 255, 0.3)",
       lineWidth: 2,
       crosshairMarkerVisible: false,
       priceLineVisible: false,
@@ -142,7 +162,10 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
     // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+        chart.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight || 120,
+        });
       }
     };
     window.addEventListener("resize", handleResize);
@@ -155,7 +178,7 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
   }, [mint, entries, currentMcap, firstEntryMcap]);
 
   if (!currentMcap) {
-    return <div className="h-[80px] bg-white/[0.02]" />;
+    return <div className="h-full min-h-[120px] bg-white/[0.02]" />;
   }
 
   // Calculate marker positions (% along the timeline) with wallet info
@@ -175,9 +198,9 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
   });
 
   return (
-    <div className="relative h-[80px]">
+    <div className="relative h-full min-h-[120px]">
       <div ref={chartContainerRef} className="h-full" />
-      {/* Entry markers overlay - Wallet PFPs */}
+      {/* Entry markers overlay - Wallet PFPs with brand green */}
       <div className="absolute inset-0 pointer-events-none">
         {markers.map((marker, idx) => (
           <div
@@ -189,14 +212,14 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
               <Image
                 src={marker.pfpUrl}
                 alt={marker.label || "Wallet"}
-                width={24}
-                height={24}
-                className="rounded-full ring-2 ring-yellow-500 shadow-lg shadow-yellow-500/40"
+                width={22}
+                height={22}
+                className="rounded-full ring-2 ring-[#c4f70e] shadow-lg shadow-[#c4f70e]/30"
                 unoptimized
               />
             ) : (
-              <div className="w-6 h-6 rounded-full bg-yellow-500/20 ring-2 ring-yellow-500 shadow-lg shadow-yellow-500/40 flex items-center justify-center">
-                <Crown className="w-3 h-3 text-yellow-500" />
+              <div className="w-[22px] h-[22px] rounded-full bg-[#c4f70e]/20 ring-2 ring-[#c4f70e] shadow-lg shadow-[#c4f70e]/30 flex items-center justify-center">
+                <Crown className="w-2.5 h-2.5 text-[#c4f70e]" />
               </div>
             )}
           </div>
@@ -213,6 +236,7 @@ interface CallCardProps {
 function CallCard({ call }: CallCardProps) {
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -224,141 +248,188 @@ function CallCard({ call }: CallCardProps) {
   const dexScreenerImg = `https://dd.dexscreener.com/ds-data/tokens/solana/${call.mint}.png`;
   const chartUrl = `https://dexscreener.com/solana/${call.mint}`;
 
-  const isPositive = (call.performancePct ?? 0) >= 0;
+  // Runner = positive performance (uptrending), otherwise disabled/cold
+  const isRunner = call.performancePct !== null && call.performancePct > 0;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="rounded-xl bg-white/[0.03] border border-white/10 overflow-hidden"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      whileHover={{ scale: isRunner ? 1.01 : 1.005 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="relative group h-full"
     >
-      {/* Header - Token + Performance + Current MC */}
-      <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-4">
-          {/* Token image */}
-          <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-white/5 flex-shrink-0">
-            {!imgError ? (
-              <Image
-                src={call.imageUrl || dexScreenerImg}
-                alt={call.symbol}
-                fill
-                className="object-cover"
-                onError={() => setImgError(true)}
-                unoptimized
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-white/40 text-sm font-bold">
-                {call.symbol.slice(0, 2)}
-              </div>
-            )}
-          </div>
-
-          {/* Symbol + actions */}
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-white text-xl">{call.symbol}</span>
-              <button onClick={handleCopy} className="p-1.5 rounded hover:bg-white/10">
-                {copied ? (
-                  <Check className="w-4 h-4 text-green-400" />
-                ) : (
-                  <Copy className="w-4 h-4 text-white/30 hover:text-white/60" />
-                )}
-              </button>
-              <a
-                href={chartUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-1.5 rounded hover:bg-white/10 text-white/30 hover:text-white/60"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            </div>
-            {/* Current MC */}
-            <div className="text-sm text-white/50">
-              {call.currentMcap ? formatMcap(call.currentMcap) : "—"} MC
-            </div>
-          </div>
-        </div>
-
-        {/* Performance + Called at */}
-        <div className="text-right">
-          {call.performancePct !== null && (
-            <div
-              className={`flex items-center justify-end gap-1.5 text-xl font-bold ${
-                isPositive ? "text-green-400" : "text-red-400"
-              }`}
-            >
-              {isPositive ? (
-                <TrendingUp className="w-5 h-5" />
-              ) : (
-                <TrendingDown className="w-5 h-5" />
-              )}
-              {isPositive ? "+" : ""}{call.performancePct.toFixed(0)}%
-            </div>
-          )}
-          <div className="text-sm text-white/40">
-            from {call.firstEntryMcap ? formatMcap(call.firstEntryMcap) : "—"}
-          </div>
-        </div>
+      {/* Border - Animated gradient for runners, muted for disabled */}
+      <div className="absolute -inset-[1px] rounded-xl overflow-hidden">
+        {isRunner ? (
+          <motion.div
+            className="absolute inset-0"
+            style={{
+              background: "linear-gradient(90deg, #c4f70e, #22c55e, #c4f70e)",
+              backgroundSize: "200% 100%",
+            }}
+            animate={{
+              backgroundPosition: isHovered ? ["0% 50%", "100% 50%", "0% 50%"] : "0% 50%",
+            }}
+            transition={{
+              duration: 2,
+              repeat: isHovered ? Infinity : 0,
+              ease: "linear",
+            }}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-white/10" />
+        )}
       </div>
 
-      {/* Mini Chart - Price timeline with entry markers */}
-      <div className="border-t border-b border-white/5 mx-4">
-        <MiniChart
-          mint={call.mint}
-          entries={call.entries}
-          currentMcap={call.currentMcap}
-          firstEntryMcap={call.firstEntryMcap}
+      {/* Glow effect - only for runners */}
+      {isRunner && (
+        <motion.div
+          className="absolute -inset-2 rounded-xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-300 pointer-events-none"
+          style={{ background: "radial-gradient(circle at center, #c4f70e, transparent 70%)" }}
         />
-      </div>
+      )}
 
-      {/* Wallet entries */}
-      <div className="divide-y divide-white/5 px-4 pb-2">
-        {call.entries.map((entry, idx) => (
-          <div key={`${entry.wallet.id}-${idx}`} className="flex items-center justify-between py-3">
-            <div className="flex items-center gap-3">
-              {/* Wallet avatar */}
-              {entry.wallet.pfpUrl ? (
-                <Image
-                  src={entry.wallet.pfpUrl}
-                  alt={entry.wallet.label || "Wallet"}
-                  width={24}
-                  height={24}
-                  className="rounded-full ring-1 ring-yellow-500/50"
-                  unoptimized
-                />
-              ) : (
-                <div className="w-6 h-6 rounded-full bg-yellow-500/20 ring-1 ring-yellow-500/50 flex items-center justify-center">
-                  <Crown className="w-3 h-3 text-yellow-500" />
+      {/* Card content */}
+      <div className="relative rounded-xl bg-black overflow-hidden h-full">
+        {/* Main content - 50/50 split, fixed height for consistency */}
+        <div className="flex flex-col lg:flex-row h-full lg:min-h-[160px]">
+          {/* Left side - 50% */}
+          <div className="lg:w-[50%] p-4 flex flex-col justify-between">
+            {/* Header row: Image + Title */}
+            <div className="flex items-center gap-3 mb-3">
+              {/* Token image */}
+              <div className="relative flex-shrink-0">
+                {isRunner && (
+                  <div className="absolute -inset-1 rounded-xl blur-md opacity-60 bg-[#c4f70e]" />
+                )}
+                <div className={`relative w-11 h-11 rounded-xl overflow-hidden bg-black border ${isRunner ? "border-[#c4f70e]/50" : "border-white/10"}`}>
+                  {!imgError ? (
+                    <Image
+                      src={call.imageUrl || dexScreenerImg}
+                      alt={call.symbol}
+                      fill
+                      className="object-cover"
+                      onError={() => setImgError(true)}
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white/40 text-sm font-bold">
+                      {call.symbol.slice(0, 2)}
+                    </div>
+                  )}
                 </div>
-              )}
-              <span className="text-white/70 text-sm font-medium">
-                {entry.wallet.label || `${entry.wallet.address.slice(0, 4)}...`}
-              </span>
+              </div>
+
+              {/* Title + Performance */}
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-2">
+                  <a
+                    href={chartUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`font-bold text-base transition-colors ${isRunner ? "text-white hover:text-[#c4f70e]" : "text-white/60 hover:text-white/80"}`}
+                  >
+                    {isRunner ? (
+                      <ShinyText
+                        text={call.symbol}
+                        speed={3}
+                        color="#ffffff"
+                        shineColor="#c4f70e"
+                        className="font-bold"
+                      />
+                    ) : (
+                      call.symbol
+                    )}
+                  </a>
+                  <button
+                    onClick={handleCopy}
+                    className="p-1 rounded hover:bg-white/10 transition-colors"
+                  >
+                    {copied ? (
+                      <Check className="w-3 h-3 text-[#c4f70e]" />
+                    ) : (
+                      <Copy className="w-3 h-3 text-white/30 hover:text-white/50" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Performance */}
+                {call.performancePct !== null && (
+                  isRunner ? (
+                    <GradientText
+                      colors={["#c4f70e", "#22c55e", "#c4f70e"]}
+                      animationSpeed={3}
+                      className="text-xs font-bold"
+                    >
+                      +{call.performancePct.toFixed(0)}%
+                    </GradientText>
+                  ) : (
+                    <span className="text-xs font-medium text-white/40">
+                      {call.performancePct >= 0 ? "+" : ""}{call.performancePct.toFixed(0)}%
+                    </span>
+                  )
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center gap-4 text-sm">
-              {/* Entry mcap */}
-              <span className="text-white/40">
-                @{entry.entryMcap ? formatMcap(entry.entryMcap) : formatAmount(entry.amountUsd)}
-              </span>
-
-              {/* Position held */}
-              <span
-                className={`font-medium min-w-[40px] text-right ${
-                  entry.positionHeld >= 75
-                    ? "text-green-400"
-                    : entry.positionHeld >= 25
-                    ? "text-yellow-400"
-                    : "text-red-400"
-                }`}
+            {/* Wallet entries - fixed height for 2 entries, scrollable */}
+            <div className="overflow-hidden">
+              <div
+                className="space-y-1.5 h-[72px] overflow-y-auto pr-1"
+                style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(255,255,255,0.15) transparent',
+                }}
               >
-                {entry.positionHeld}%
-              </span>
+                {call.entries.map((entry, idx) => (
+                  <div
+                    key={`${entry.wallet.id}-${idx}`}
+                    className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {entry.wallet.pfpUrl ? (
+                        <Image
+                          src={entry.wallet.pfpUrl}
+                          alt={entry.wallet.label || "Wallet"}
+                          width={22}
+                          height={22}
+                          className={`rounded-full ring-1 ${isRunner ? "ring-[#c4f70e]/50" : "ring-white/20"}`}
+                          unoptimized
+                        />
+                      ) : (
+                        <div className={`w-[22px] h-[22px] rounded-full flex items-center justify-center ${isRunner ? "bg-[#c4f70e]/20 ring-1 ring-[#c4f70e]/50" : "bg-white/10 ring-1 ring-white/20"}`}>
+                          <Crown className={`w-2.5 h-2.5 ${isRunner ? "text-[#c4f70e]" : "text-white/40"}`} />
+                        </div>
+                      )}
+                      <span className="text-white/70 text-sm font-medium truncate max-w-[80px]">
+                        {entry.wallet.label || `${entry.wallet.address.slice(0, 4)}...`}
+                      </span>
+                    </div>
+                    <span className="text-white/40 text-xs font-mono">
+                      @{entry.entryMcap ? formatMcap(entry.entryMcap) : formatAmount(entry.amountUsd)}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        ))}
+
+          {/* Right side - 50% - Chart */}
+          <div className={`lg:w-[50%] border-t lg:border-t-0 lg:border-l ${isRunner ? "border-[#c4f70e]/20" : "border-white/5"} overflow-hidden`}>
+            <div className="w-full h-[120px] lg:h-full lg:min-h-[140px]">
+              <MiniChart
+                mint={call.mint}
+                entries={call.entries}
+                currentMcap={call.currentMcap}
+                firstEntryMcap={call.firstEntryMcap}
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </motion.div>
   );
@@ -501,69 +572,103 @@ export function GodWalletCalls() {
     });
   }, [calls, marketData]);
 
+  // Sort order state - updates every 7 seconds to reorder runners to top
+  const [sortVersion, setSortVersion] = useState(0);
+
+  // Timer effect for periodic sorting - clean interval to prevent memory leaks
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setSortVersion((v) => v + 1);
+    }, 7000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Sorted calls: runners first (sorted by performance desc), then cold items (sorted by recency)
+  const sortedCalls = useMemo(() => {
+    // Create a shallow copy to avoid mutating the original
+    const items = [...enrichedCalls];
+
+    // Separate runners from cold items
+    const runners: typeof items = [];
+    const cold: typeof items = [];
+
+    for (const item of items) {
+      if (item.performancePct !== null && item.performancePct > 0) {
+        runners.push(item);
+      } else {
+        cold.push(item);
+      }
+    }
+
+    // Sort runners by performance (highest first)
+    runners.sort((a, b) => (b.performancePct ?? 0) - (a.performancePct ?? 0));
+
+    // Sort cold by most recent entry
+    cold.sort((a, b) => {
+      const aTime = a.entries[0] ? new Date(a.entries[0].timestamp).getTime() : 0;
+      const bTime = b.entries[0] ? new Date(b.entries[0].timestamp).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    // Runners first, then cold
+    return [...runners, ...cold];
+  }, [enrichedCalls, sortVersion]);
+
   if (isLoading) {
     return (
-      <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10">
-        <div className="flex items-center justify-center py-12">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-8 h-8 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full"
-          />
-        </div>
+      <div className="flex items-center justify-center py-12">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="w-8 h-8 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full"
+        />
       </div>
     );
   }
 
   if (godWallets.length === 0) {
     return (
-      <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10">
-        <div className="text-center py-12">
-          <Crown className="w-12 h-12 text-yellow-500/30 mx-auto mb-4" />
-          <p className="text-base text-white/50">No god wallets configured</p>
-        </div>
+      <div className="text-center py-12">
+        <Crown className="w-12 h-12 text-yellow-500/30 mx-auto mb-4" />
+        <p className="text-base text-white/50">No god wallets configured</p>
       </div>
     );
   }
 
-  if (enrichedCalls.length === 0) {
+  if (sortedCalls.length === 0) {
     return (
-      <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10">
-        <div className="text-center py-12">
-          <motion.div
-            animate={{ scale: [1, 1.05, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            <Crown className="w-10 h-10 text-yellow-500/40 mx-auto mb-4" />
-          </motion.div>
-          <p className="text-base text-white/50">Watching for god wallet calls...</p>
-          <p className="text-sm text-white/30 mt-2">{godWallets.length} wallets tracked</p>
-        </div>
+      <div className="text-center py-12">
+        <motion.div
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          <Crown className="w-10 h-10 text-[#c4f70e]/40 mx-auto mb-4" />
+        </motion.div>
+        <p className="text-base text-white/50">Watching for god wallet calls...</p>
+        <p className="text-sm text-white/30 mt-2">{godWallets.length} wallets tracked</p>
       </div>
     );
   }
 
+  // Grid of cards - runners first, then cold items
+  // Using layout animation for smooth reordering
   return (
-    <div className="space-y-4 p-4 rounded-2xl bg-white/[0.02] border border-white/10">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Crown className="w-5 h-5 text-yellow-500" />
-          <span className="text-base font-semibold text-white">God Wallet Calls</span>
-        </div>
-        <span className="text-sm text-white/40">
-          {enrichedCalls.length} active · {godWallets.length} wallets
-        </span>
-      </div>
-
-      {/* Calls grid - 1 col mobile, 2 col desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <AnimatePresence mode="popLayout">
-          {enrichedCalls.slice(0, 10).map((call) => (
-            <CallCard key={call.mint} call={call} />
-          ))}
-        </AnimatePresence>
-      </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <AnimatePresence mode="popLayout">
+        {sortedCalls.slice(0, 10).map((call) => (
+          <motion.div
+            key={call.mint}
+            layout
+            layoutId={call.mint}
+            transition={{
+              layout: { duration: 0.4, ease: "easeInOut" },
+            }}
+          >
+            <CallCard call={call} />
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }
