@@ -121,20 +121,23 @@ src/
 - Auto-reconnect with exponential backoff (1s → 2s → 4s → 8s → 16s, max 5 attempts)
 - Fallback polling every 30s when disconnected
 
-### Event Types (20+)
+### Event Types (21+)
 | Category | Events |
 |----------|--------|
 | Connection | `connected`, `disconnected` |
 | Migrations | `migration_detected`, `token_added`, `market_data_updated`, `migration_expired` |
 | AI | `ai_reasoning`, `ai_analysis`, `no_market_data` |
 | Signals | `signal_detected`, `wallet_signal`, `wallet_buy_detected` |
-| Positions | `position_opened`, `price_update`, `take_profit_triggered`, `position_closed`, `stop_loss_triggered`, `holdings_snapshot` |
+| Positions | `position_opened`, `price_update`, `take_profit_triggered`, `position_closed`, `history_updated`, `stop_loss_triggered`, `holdings_snapshot` |
 | Feed | `feed_update`, `stats_update` |
 | Watchlist | `watchlist_added`, `watchlist_updated`, `watchlist_removed`, `watchlist_graduated` |
 
+**`history_updated` event**: Fired immediately after `position_closed` with full closed position data. Used for surgical state updates (removes from positions, adds to history) without full refetch.
+
 ### Update Strategy
-- **Surgical updates** for high-frequency events (price updates, holdings snapshots)
-- **Full refetch** for structural changes (position open/close)
+- **Surgical updates** for high-frequency events (price updates, holdings snapshots, history updates)
+- **Full refetch** for structural changes (position open)
+- `position_closed` + `history_updated` events do surgical update (no refetch needed)
 - Price updates don't spam activity feed
 
 ## Environment Variables

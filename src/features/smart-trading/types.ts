@@ -352,7 +352,8 @@ export interface MigrationFeedEvent {
   | "watchlist_added"
   | "watchlist_updated"
   | "watchlist_removed"
-  | "watchlist_graduated";
+  | "watchlist_graduated"
+  | "history_updated";
   data?: unknown;
   timestamp: number;
   clientId?: string;

@@ -794,10 +794,57 @@ export function SmartTradingProvider({
         // 🚀 Dispatch to terminal for live streaming position closed
         dispatchTerminalEvent("position_closed", payload);
 
-        // Refetch to update positions and history
-        fetchDashboard();
+        // Surgical update: remove from positions, add to history
+        // Note: history_updated event will also fire with full position data
+        setState((prev) => ({
+          ...prev,
+          positions: prev.positions.filter((p) => p.tokenMint !== payload.mint),
+        }));
+      })
+    );
 
+    // NEW: History Updated - Surgical update with full closed position data
+    // This event fires IMMEDIATELY after a position closes (no 2s delay)
+    unsubscribes.push(
+      on<{
+        position: Position;
+        close_reason: string;
+        timestamp: number;
+      }>("history_updated", (data, _event) => {
+        // Safety check
+        if (!data || !data.position) {
+          console.warn("[SmartTrading] Invalid history_updated data:", data);
+          return;
+        }
 
+        console.log(
+          `[SmartTrading] history_updated: ${data.position.tokenSymbol || data.position.tokenMint} closed (${data.close_reason})`
+        );
+
+        // Surgical update: ensure position is removed from open and added to history
+        setState((prev) => {
+          // Check if already in history (avoid duplicates)
+          const alreadyInHistory = prev.history.some(
+            (h) => h.tokenMint === data.position.tokenMint && h.id === data.position.id
+          );
+
+          if (alreadyInHistory) {
+            // Just ensure it's not in positions
+            return {
+              ...prev,
+              positions: prev.positions.filter((p) => p.tokenMint !== data.position.tokenMint),
+            };
+          }
+
+          return {
+            ...prev,
+            positions: prev.positions.filter((p) => p.tokenMint !== data.position.tokenMint),
+            history: [
+              { ...data.position, status: "CLOSED" as const },
+              ...prev.history,
+            ],
+          };
+        });
       })
     );
 
