@@ -265,13 +265,20 @@ export function SmartTradingProvider({
   migrationLimit = 20,
   maxActivityItems = 50,
 }: SmartTradingProviderProps) {
-  // WebSocket connection (shared singleton)
+  // WebSocket connection (shared singleton) - connect to main trading WebSocket
+  // This receives: position_opened, position_closed, watchlist_*, price_update, etc.
   const {
     status: connectionStatus,
     clientId,
     on,
     connect,
   } = useSharedWebSocket({
+    autoConnect: enabled,
+    path: "/ws/trading",
+  });
+
+  // Secondary WebSocket for AI reasoning events (ai_reasoning, no_market_data)
+  const { on: onReasoning } = useSharedWebSocket({
     autoConnect: enabled,
     path: "/ws/trading/reasoning",
   });
@@ -486,9 +493,10 @@ export function SmartTradingProvider({
     );
 
     // AI reasoning completed - surgical update AND dispatch to terminal
+    // NOTE: ai_reasoning events come from /ws/trading/reasoning, not /ws/trading
     // Format: { type: "ai_reasoning", symbol, mint, reasoning, conviction, will_trade, timestamp }
     unsubscribes.push(
-      on<{ symbol: string; mint: string; reasoning: string; conviction: number; will_trade: boolean; timestamp: number }>(
+      onReasoning<{ symbol: string; mint: string; reasoning: string; conviction: number; will_trade: boolean; timestamp: number }>(
         "ai_reasoning",
         (data, event) => {
           addActivity(event);
@@ -525,9 +533,10 @@ export function SmartTradingProvider({
     );
 
     // No market data available - dispatch to terminal
+    // NOTE: no_market_data events come from /ws/trading/reasoning, not /ws/trading
     // Format: { type: "no_market_data", symbol, mint, reason, timestamp }
     unsubscribes.push(
-      on<{ symbol: string; mint: string; reason: string; timestamp: number }>(
+      onReasoning<{ symbol: string; mint: string; reason: string; timestamp: number }>(
         "no_market_data",
         (data, event) => {
           addActivity(event);
@@ -993,7 +1002,7 @@ export function SmartTradingProvider({
     return () => {
       unsubscribes.forEach((unsub) => unsub());
     };
-  }, [enabled, on, addActivity, fetchDashboard, fetchMigrations]);
+  }, [enabled, on, onReasoning, addActivity, fetchDashboard, fetchMigrations]);
   // WebSocket event handlers registered
 
   // Initial fetch - using client-side initialization pattern instead of useEffect
