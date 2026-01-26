@@ -357,7 +357,7 @@ main {
 
   .vibr-coder-container {
     width: 100%;
-    margin-top: 0;
+    margin-top: 2rem;
     max-height: 280px;
     aspect-ratio: 16 / 9;
   }
@@ -664,7 +664,7 @@ main {
     display: flex;
     position: absolute;
     right: calc(10% + var(--space-4));
-    bottom: var(--space-6);
+    bottom: 5rem;
     width: 400px;
     max-height: 280px;
     z-index: 60;
@@ -4998,6 +4998,16 @@ button:focus-visible {
   left: 50%;
   transform: translateX(-50%);
   z-index: 5;
+}
+
+/* ===== SKELETON SHIMMER ANIMATION ===== */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 /* ===== SHINY TEXT ANIMATION ===== */

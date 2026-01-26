@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { Eye, Loader2, Copy, Check, Brain, Users, ExternalLink, X, BarChart3 } from "lucide-react";
+import { Eye, Copy, Check, Brain, Users, ExternalLink, BarChart3 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -21,6 +21,136 @@ import { TrackerWalletIndicator } from "./TrackerWalletIndicator";
 import { WalletEntryChart } from "./WalletEntryChart";
 import { useMultipleWalletEntries, type WalletEntryPoint } from "../hooks/useWalletEntries";
 import type { WatchlistToken, WatchlistAddedEvent, WatchlistUpdatedEvent, WatchlistRemovedEvent } from "@/features/smart-trading/types";
+
+// ============================================
+// Skeleton Components - Sophisticated loading states
+// ============================================
+
+function Shimmer({ className }: { className?: string }) {
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      <div
+        className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite]"
+        style={{
+          background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",
+        }}
+      />
+    </div>
+  );
+}
+
+function WatchlistCardSkeleton() {
+  return (
+    <div className="relative flex-shrink-0 w-[320px] rounded-xl overflow-hidden">
+      <div className="relative p-4 bg-gradient-to-br from-zinc-900/95 to-black/95 border border-white/10 rounded-xl backdrop-blur-sm">
+        {/* Top row: Token info + State badge */}
+        <div className="flex items-start justify-between mb-3">
+          {/* Left: Token avatar + info */}
+          <div className="flex items-center gap-3">
+            <Shimmer className="w-11 h-11 rounded-lg bg-white/[0.06]" />
+            <div className="flex flex-col gap-1.5">
+              <Shimmer className="h-4 w-16 rounded bg-white/[0.06]" />
+              <Shimmer className="h-3 w-24 rounded bg-white/[0.04]" />
+            </div>
+          </div>
+          {/* State badge skeleton */}
+          <Shimmer className="h-5 w-16 rounded-full bg-white/[0.06]" />
+        </div>
+
+        {/* Tracker wallet indicators skeleton */}
+        <div className="mb-3 py-2 px-3 rounded-lg bg-white/[0.03] border border-white/5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Shimmer className="w-3.5 h-3.5 rounded bg-white/[0.08]" />
+              <Shimmer className="h-3 w-20 rounded bg-white/[0.06]" />
+            </div>
+            <div className="flex items-center -space-x-2">
+              {[1, 2, 3].map((i) => (
+                <Shimmer key={i} className="w-5 h-5 rounded-full bg-white/[0.08] border border-zinc-900" />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Metrics row skeleton */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex flex-col gap-1">
+                <Shimmer className="h-3 w-8 rounded bg-white/[0.04]" />
+                <Shimmer className="h-4 w-12 rounded bg-white/[0.06]" />
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <Shimmer className="w-3 h-3 rounded bg-white/[0.04]" />
+            <Shimmer className="h-3 w-4 rounded bg-white/[0.04]" />
+          </div>
+        </div>
+
+        {/* Mini Chart skeleton */}
+        <div className="mb-3 rounded-lg overflow-hidden border border-white/5 h-[140px] relative">
+          <Shimmer className="absolute inset-0 bg-white/[0.02]" />
+          {/* Fake chart line */}
+          <svg className="absolute inset-0 w-full h-full opacity-20" preserveAspectRatio="none" viewBox="0 0 320 140">
+            <path
+              d="M0,100 Q40,70 80,80 T160,60 T240,50 T320,40"
+              fill="none"
+              stroke="rgba(255,255,255,0.1)"
+              strokeWidth="2"
+            />
+          </svg>
+          {/* Fake candlesticks */}
+          <div className="absolute bottom-4 left-0 right-0 flex justify-around items-end px-4">
+            {[35, 50, 40, 55, 45, 60, 50, 65, 55, 70, 60, 75].map((h, i) => (
+              <div key={i} className="w-2 bg-white/[0.05] rounded-sm" style={{ height: `${h}%` }} />
+            ))}
+          </div>
+        </div>
+
+        {/* AI Reasoning skeleton */}
+        <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+          <div className="flex items-center gap-2">
+            <Shimmer className="w-3.5 h-3.5 rounded bg-white/[0.08] flex-shrink-0" />
+            <Shimmer className="h-3 flex-1 rounded bg-white/[0.06]" />
+            <Shimmer className="h-4 w-8 rounded bg-white/[0.06] flex-shrink-0" />
+          </div>
+        </div>
+
+        {/* Failed checks skeleton */}
+        <div className="mt-2 flex flex-wrap gap-1">
+          {[1, 2].map((i) => (
+            <Shimmer key={i} className="h-4 w-14 rounded bg-white/[0.04]" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EnhancedWatchlistSkeleton() {
+  return (
+    <div className="space-y-3">
+      {/* Header skeleton */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Shimmer className="w-4 h-4 rounded bg-white/[0.08]" />
+          <Shimmer className="h-4 w-28 rounded bg-white/[0.06]" />
+        </div>
+        <Shimmer className="h-3 w-14 rounded bg-white/[0.04]" />
+      </div>
+
+      {/* Cards row skeleton */}
+      <div className="overflow-x-auto pb-2 -mx-1 px-1">
+        <div className="flex gap-3">
+          {[1, 2, 3].map((i) => (
+            <WatchlistCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface EnhancedWatchlistCardProps {
   token: WatchlistToken;
@@ -410,11 +540,7 @@ export function EnhancedWatchlist() {
   }, [onReasoningEvent]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 text-brand-primary animate-spin" />
-      </div>
-    );
+    return <EnhancedWatchlistSkeleton />;
   }
 
   if (error) {

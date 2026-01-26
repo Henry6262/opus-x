@@ -62,7 +62,6 @@ const VERSION_COLORS = [
 
 const METRICS: { id: MetricType; label: string; icon: typeof TrendingUp; format: (v: number) => string }[] = [
   { id: 'winRate', label: 'Win Rate', icon: Target, format: (v) => `${v.toFixed(1)}%` },
-  { id: 'totalPnl', label: 'Total P&L', icon: TrendingUp, format: (v) => `${v >= 0 ? '+' : ''}${v.toFixed(3)} SOL` },
   { id: 'avgMultiplier', label: 'Avg Multiplier', icon: Zap, format: (v) => `${v.toFixed(2)}x` },
   { id: 'tradeCount', label: 'Trades', icon: BarChart3, format: (v) => v.toString() },
   { id: 'avgHoldTime', label: 'Hold Time', icon: Clock, format: (v) => `${Math.round(v)}m` },
@@ -657,22 +656,12 @@ export function AnalyticsDashboard() {
             {selectedSummary && (
               <div className="grid grid-cols-2 gap-2 md:flex md:flex-col md:gap-2 md:w-[28%]">
                 <StatCard
-                  label="Total PnL"
-                  value={selectedSummary.totalPnlSol}
-                  prefix={selectedSummary.totalPnlSol >= 0 ? "+" : ""}
-                  suffixIcon={<SolIcon size={16} className="ml-1.5" />}
-                  decimals={2}
-                  icon={TrendingUp}
-                  delay={0}
-                  glowColor={selectedSummary.totalPnlSol >= 0 ? "rgba(34, 197, 94, 0.35)" : "rgba(239, 68, 68, 0.35)"}
-                />
-                <StatCard
                   label="Win Rate"
                   value={selectedSummary.winRate}
                   suffix="%"
                   decimals={1}
                   icon={Target}
-                  delay={0.05}
+                  delay={0}
                   glowColor="rgba(196, 247, 14, 0.35)"
                 />
                 <StatCard
@@ -680,7 +669,7 @@ export function AnalyticsDashboard() {
                   value={selectedSummary.totalTrades}
                   decimals={0}
                   icon={BarChart3}
-                  delay={0.1}
+                  delay={0.05}
                   glowColor="rgba(59, 130, 246, 0.35)"
                 />
                 <StatCard
@@ -689,7 +678,7 @@ export function AnalyticsDashboard() {
                   suffix="m"
                   decimals={0}
                   icon={Clock}
-                  delay={0.15}
+                  delay={0.1}
                   glowColor="rgba(139, 92, 246, 0.35)"
                   tooltipText="We close positions in partials, so avoid rushing to fully exit on the first target."
                 />

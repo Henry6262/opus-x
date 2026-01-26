@@ -32,13 +32,10 @@
   },
   "profile": {
     "superRouter": "SUPER ROUTER",
-    "allTimePnl": "历史总盈亏",
+    "todaysProfits": "今日收益",
     "winRate": "胜率",
-    "streak": "连胜",
     "trades": "交易",
     "bestTrade": "最佳",
-    "today": "今日",
-    "copied": "Super Router 交易地址已复制",
     "winsAbbrev": "胜"
   },
   "smartTrading": {

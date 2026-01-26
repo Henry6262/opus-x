@@ -26,7 +26,7 @@ export function SuperRouterCallsSection({ className }: SuperRouterCallsSectionPr
         >
           {/* Epic Header */}
           <div className="flex items-center justify-between">
-            <div className="flex items-start gap-4">
+            <div className="flex items-center gap-4">
               {/* Scouting GIF Icon - Vertical aspect ratio */}
               <motion.div
                 className="relative flex-shrink-0"
@@ -45,8 +45,8 @@ export function SuperRouterCallsSection({ className }: SuperRouterCallsSectionPr
                 </div>
               </motion.div>
 
-              {/* Title + Description */}
-              <div className="flex flex-col">
+              {/* Title + Description - centered vertically */}
+              <div className="flex flex-col justify-center">
                 <h2 className="flex items-center gap-3">
                   <ShinyText
                     text="SUPER ROUTER CALLS"
@@ -60,12 +60,8 @@ export function SuperRouterCallsSection({ className }: SuperRouterCallsSectionPr
               </div>
             </div>
 
-            {/* Badge */}
-            <motion.div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#c4f70e]/10 border border-[#c4f70e]/30"
-              animate={{ boxShadow: ["0 0 10px rgba(196,247,14,0.2)", "0 0 20px rgba(196,247,14,0.4)", "0 0 10px rgba(196,247,14,0.2)"] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
+            {/* Badge - no box shadow */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#c4f70e]/10 border border-[#c4f70e]/30">
               <ShinyText
                 text="$SR Holders"
                 speed={2}
@@ -73,7 +69,7 @@ export function SuperRouterCallsSection({ className }: SuperRouterCallsSectionPr
                 shineColor="#ffffff"
                 className="text-xs font-bold"
               />
-            </motion.div>
+            </div>
           </div>
 
           {/* God Wallet Calls */}

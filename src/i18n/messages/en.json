@@ -32,13 +32,10 @@
   },
   "profile": {
     "superRouter": "SUPER ROUTER",
-    "allTimePnl": "All-Time P&L",
+    "todaysProfits": "Today's Profits",
     "winRate": "Win",
-    "streak": "Streak",
     "trades": "Trades",
     "bestTrade": "Best",
-    "today": "Today",
-    "copied": "Super Router trading address copied",
     "winsAbbrev": "W"
   },
   "smartTrading": {

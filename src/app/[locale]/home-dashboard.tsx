@@ -15,6 +15,7 @@ import { TerminalProvider, useTerminal, useTerminalNarrator, useAiReasoningStrea
 import { useAiMood } from "@/hooks/useAiMood";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MobileBottomBar } from "@/components/MobileBottomBar";
+import GradualBlur from "@/components/ui/GradualBlur";
 
 // Lazy load heavy components for better initial load performance
 const VibrCoder = lazy(() => import("@/components/VibrCoder").then(m => ({ default: m.VibrCoder })));
@@ -162,18 +163,45 @@ function DashboardContent() {
 
   return (
     <>
-      <main className={`cockpit-layout ai-mood ai-mood-${aiMood}`}>
+      {/* ===== TOP NAVBAR: Trader Profile Card ===== */}
+      <div className="fixed top-0 left-0 right-0 z-[100] flex justify-center pointer-events-none">
+        {/* Gradual blur effect below navbar */}
+        <div className="absolute inset-0 z-[1]">
+          <GradualBlur
+            position="top"
+            height="7rem"
+            strength={2}
+            divCount={5}
+            curve="bezier"
+            exponential
+            opacity={1}
+          />
+        </div>
+        {/* Navbar on top of blur */}
+        <div className="relative z-[2] pointer-events-auto">
+          <TraderProfileCard
+            stats={dashboardStats}
+            config={config}
+            positions={positions}
+            history={history}
+          />
+        </div>
+        {/* Language Switcher - on top of blur */}
+        <div className="absolute top-3 right-2 md:top-4 md:right-4 z-[3] pointer-events-auto">
+          <LanguageSwitcher className="shadow-[0_10px_30px_rgba(0,0,0,0.35)] border-white/15 bg-black/50 backdrop-blur-xl scale-75 md:scale-100 origin-top-right" />
+        </div>
+      </div>
+
+      <main className={`cockpit-layout ai-mood ai-mood-${aiMood} pt-24 md:pt-20`}>
         {/* ===== TOP SECTION: VIBR CODER VIDEO + TERMINAL ===== */}
         <div className="hero-section relative">
-          <div className="absolute top-14 right-2 md:top-4 md:right-4 z-[20] flex items-center gap-2">
-            <LanguageSwitcher className="shadow-[0_10px_30px_rgba(0,0,0,0.35)] border-white/15 bg-black/50 backdrop-blur-xl scale-75 md:scale-100 origin-top-right" />
-          </div>
           <Suspense fallback={<VibrCoderSkeleton />}>
             <VibrCoder
               state={getVibrCoderState(aiMood)}
               statusText={aiMood.toUpperCase()}
               reason={reason}
               pnl={pnl}
+              showWallet={false}
             />
           </Suspense>
           <div className="hero-terminal">
@@ -185,16 +213,6 @@ function DashboardContent() {
 
         {/* ===== BOTTOM SECTION: THE DASHBOARD ===== */}
         <div className="dashboard-panel">
-          {/* Trader Profile Card with Integrated Tabs */}
-          <div className="mb-4 mt-4">
-            <TraderProfileCard
-              stats={dashboardStats}
-              config={config}
-              positions={positions}
-              history={history}
-            />
-          </div>
-
           {/* Feature Content - deferred until scrolled into view for mobile perf */}
           <div ref={dashboardRef}>
             {activeView === "smart-trading" && (

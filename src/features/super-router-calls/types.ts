@@ -66,3 +66,27 @@ export interface SuperRouterCallsStats {
   tokensWithTrackerEntries: number;
   recentGodWalletBuys: number;
 }
+
+// New aggregated wallet entry from GET /api/wallets/token/:mint/aggregated
+export interface AggregatedWalletEntry {
+  wallet: TrackerWallet;
+  avgEntryMcap: number;           // Weighted average entry market cap
+  avgEntryPrice: number;          // Weighted average entry price per token
+  positionHeldPct: number;        // 0-100, how much position still held (bought - sold / bought)
+  totalBoughtUsd: number;         // Total USD bought
+  totalSoldUsd: number;           // Total USD sold
+  buyCount: number;               // Number of buy trades (for dot indicators)
+  sellCount: number;              // Number of sell trades
+  firstEntryTimestamp: string;    // When they first entered
+  lastTradeTimestamp: string;     // Most recent trade
+  trades: WalletTrade[];          // Individual trades for chart markers
+}
+
+export interface WalletTrade {
+  action: "buy" | "sell";
+  priceUsd: number;
+  amountUsd: number;
+  amountSol: number;
+  timestamp: string;
+  txHash: string;
+}

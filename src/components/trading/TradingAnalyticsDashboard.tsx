@@ -346,30 +346,12 @@ export function TradingAnalyticsDashboard() {
 
             {/* Stats - Vertical Stack with Horizontal Rows */}
             <div className="space-y-3">
-              {/* PnL Row */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="flex items-center justify-between gap-4 rounded-lg bg-white/[0.04] p-5 md:p-6"
-              >
-                <span className="text-base font-semibold uppercase tracking-[0.16em] text-white/60 flex-1 md:text-lg">
-                  Total PnL
-                </span>
-                <div className="text-2xl font-bold text-white md:text-3xl">
-                  <span className={analytics.totalPnlSol >= 0 ? "text-emerald-400" : "text-red-400"}>
-                    {analytics.totalPnlSol >= 0 ? "+" : ""}
-                  </span>
-                  <CountUp to={analytics.totalPnlSol} decimals={3} duration={1.5} /><SolIcon size={20} className="ml-2" />
-                </div>
-              </motion.div>
-
               <div className="grid grid-cols-3 gap-2 md:grid-cols-3 md:gap-3">
                 {/* Multiplier */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.25 }}
+                  transition={{ delay: 0.2 }}
                   className="rounded-lg bg-white/[0.03] p-2 md:p-4"
                 >
                   <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/60 md:text-sm">
@@ -385,7 +367,7 @@ export function TradingAnalyticsDashboard() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
+                  transition={{ delay: 0.25 }}
                   className="rounded-lg bg-white/[0.03] p-2 md:p-4"
                 >
                   <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/60 md:text-sm">
@@ -400,7 +382,7 @@ export function TradingAnalyticsDashboard() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.35 }}
+                  transition={{ delay: 0.3 }}
                   className="rounded-lg bg-white/[0.03] p-2 md:p-4"
                 >
                   <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/60 md:text-sm">

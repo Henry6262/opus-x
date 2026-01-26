@@ -1,54 +1,158 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { Crown, Copy, Check, Sparkles } from "lucide-react";
+import { Crown, Copy, Check, TrendingUp, TrendingDown } from "lucide-react";
 import { createChart, LineSeries, type IChartApi, type UTCTimestamp } from "lightweight-charts";
 import { useGodWallets } from "../hooks/useGodWallets";
-import type { GodWalletBuy } from "../types";
+import { useMultipleAggregatedWalletEntries } from "../hooks/useAggregatedWalletEntries";
+import type { AggregatedWalletEntry } from "../types";
 import ShinyText from "@/components/ShinyText";
+
+// ============================================
+// Skeleton Components - Sophisticated loading states
+// ============================================
+
+function Shimmer({ className }: { className?: string }) {
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      <div
+        className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite]"
+        style={{
+          background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",
+        }}
+      />
+    </div>
+  );
+}
+
+function CallCardSkeleton() {
+  return (
+    <div className="relative h-full">
+      <div
+        className="relative rounded-xl overflow-hidden h-full border border-zinc-800/80"
+        style={{ background: "rgba(255,255,255,0.03)" }}
+      >
+        {/* MOBILE LAYOUT */}
+        <div className="lg:hidden">
+          {/* Top row: Token info + Wallet entries */}
+          <div className="flex items-start justify-between p-3 gap-2">
+            {/* Left: Token image + name + mcap */}
+            <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+              <Shimmer className="w-10 h-10 rounded-lg bg-white/[0.06]" />
+              <div className="flex flex-col gap-1.5">
+                <Shimmer className="h-4 w-16 rounded bg-white/[0.06]" />
+                <Shimmer className="h-3 w-12 rounded bg-white/[0.04]" />
+              </div>
+            </div>
+
+            {/* Right: Wallet entry skeletons */}
+            <div className="flex items-center gap-1 overflow-hidden max-w-[60%]">
+              {[1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-1 py-0.5 px-1.5 rounded-md bg-white/[0.04] flex-shrink-0">
+                  <Shimmer className="w-4 h-4 rounded-full bg-white/[0.08]" />
+                  <Shimmer className="h-3 w-10 rounded bg-white/[0.06]" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Chart skeleton */}
+          <div className="border-t border-white/5">
+            <div className="w-full h-[100px] relative">
+              <Shimmer className="absolute inset-0 bg-white/[0.02]" />
+              {/* Fake chart line */}
+              <svg className="absolute inset-0 w-full h-full opacity-20" preserveAspectRatio="none">
+                <path
+                  d="M0,70 Q25,50 50,55 T100,40 T150,45 T200,35 T250,40 T300,30"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.1)"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* DESKTOP LAYOUT */}
+        <div className="hidden lg:flex flex-row h-full min-h-[160px]">
+          {/* Left side - 50% */}
+          <div className="w-[50%] p-4 flex flex-col justify-between">
+            {/* Header row: Image + Title */}
+            <div className="flex items-center gap-3 mb-3">
+              <Shimmer className="w-14 h-14 rounded-xl bg-white/[0.06] flex-shrink-0" />
+              <div className="flex flex-col gap-2">
+                <Shimmer className="h-5 w-20 rounded bg-white/[0.06]" />
+                <Shimmer className="h-3 w-16 rounded bg-white/[0.04]" />
+              </div>
+            </div>
+
+            {/* Wallet entries skeleton */}
+            <div className="space-y-2 h-[88px] overflow-hidden">
+              {[1, 2].map((i) => (
+                <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/[0.03]">
+                  <div className="flex items-center gap-3">
+                    <Shimmer className="w-[26px] h-[26px] rounded-full bg-white/[0.08]" />
+                    <div className="flex flex-col gap-1.5">
+                      <Shimmer className="h-4 w-16 rounded bg-white/[0.06]" />
+                      <Shimmer className="h-2 w-12 rounded bg-white/[0.04]" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5">
+                    <Shimmer className="h-4 w-14 rounded bg-white/[0.06]" />
+                    <Shimmer className="h-1.5 w-12 rounded-full bg-white/[0.08]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right side - 50% - Chart */}
+          <div className="w-[50%] border-l border-white/5 overflow-hidden relative">
+            <Shimmer className="absolute inset-0 bg-white/[0.02]" />
+            {/* Fake chart line */}
+            <svg className="absolute inset-0 w-full h-full opacity-20" preserveAspectRatio="none">
+              <path
+                d="M0,100 Q50,80 100,85 T200,60 T300,70 T400,50"
+                fill="none"
+                stroke="rgba(255,255,255,0.1)"
+                strokeWidth="2"
+              />
+            </svg>
+            {/* Fake entry markers */}
+            <div className="absolute top-1/2 left-[25%] -translate-y-1/2 -translate-x-1/2">
+              <Shimmer className="w-5 h-5 rounded-full bg-white/[0.1]" />
+            </div>
+            <div className="absolute top-1/2 left-[60%] -translate-y-1/2 -translate-x-1/2">
+              <Shimmer className="w-5 h-5 rounded-full bg-white/[0.1]" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GodWalletCallsSkeleton() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {[1, 2, 3, 4].map((i) => (
+        <CallCardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
 
 // Market data cache
 const marketDataCache = new Map<string, { mcap: number; price: number; priceChange24h: number; totalSupply: number }>();
-
-interface WalletAggregatedEntry {
-  wallet: {
-    id: string;
-    label: string | null;
-    pfpUrl: string | null;
-    address: string;
-  };
-  buyCount: number;
-  totalSolInvested: number;
-  totalUsdInvested: number;
-  avgEntryMcap: number | null; // Weighted average by SOL invested
-  avgEntryPricePerToken: number; // Weighted average
-  positionHeld: number; // 0-100% (100 for now since we don't track sells)
-  firstBuyTimestamp: string;
-  lastBuyTimestamp: string;
-}
 
 interface TokenCall {
   mint: string;
   symbol: string;
   imageUrl: string | null;
-  entries: Array<{
-    wallet: {
-      id: string;
-      label: string | null;
-      pfpUrl: string | null;
-      address: string;
-    };
-    entryMcap: number | null;
-    entryPricePerToken: number; // Token price at entry
-    amountUsd: number;
-    amountSol: number;
-    positionHeld: number; // 0-100%
-    timestamp: string;
-  }>;
-  // Aggregated entries per wallet
-  aggregatedEntries: WalletAggregatedEntry[];
+  // Aggregated entries from backend (one per wallet)
+  aggregatedEntries: AggregatedWalletEntry[];
   // Current market data
   currentMcap: number | null;
   currentPrice: number | null;
@@ -56,14 +160,16 @@ interface TokenCall {
   firstEntryMcap: number | null;
 }
 
-function formatMcap(mcap: number): string {
+function formatMcap(mcap: number | null | undefined): string {
+  if (mcap == null || mcap === 0) return "—";
   if (mcap >= 1_000_000_000) return `$${(mcap / 1_000_000_000).toFixed(1)}B`;
   if (mcap >= 1_000_000) return `$${(mcap / 1_000_000).toFixed(1)}M`;
   if (mcap >= 1_000) return `$${(mcap / 1_000).toFixed(0)}K`;
   return `$${mcap.toFixed(0)}`;
 }
 
-function formatAmount(usd: number): string {
+function formatAmount(usd: number | null | undefined): string {
+  if (usd == null || usd === 0) return "—";
   if (usd >= 1_000_000) return `$${(usd / 1_000_000).toFixed(1)}M`;
   if (usd >= 1_000) return `$${(usd / 1_000).toFixed(1)}K`;
   return `$${usd.toFixed(0)}`;
@@ -72,12 +178,12 @@ function formatAmount(usd: number): string {
 // Mini chart component for each call
 interface MiniChartProps {
   mint: string;
-  entries: TokenCall["entries"];
+  aggregatedEntries: AggregatedWalletEntry[];
   currentMcap: number | null;
   firstEntryMcap: number | null;
 }
 
-function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProps) {
+function MiniChart({ mint, aggregatedEntries, currentMcap, firstEntryMcap }: MiniChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const [tooltipData, setTooltipData] = useState<{ mcap: string; x: number; y: number; visible: boolean }>({
@@ -139,8 +245,12 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
 
     // Generate synthetic price data (from entry to now)
     const now = Date.now();
-    const oldestEntry = entries[entries.length - 1];
-    const startTime = oldestEntry ? new Date(oldestEntry.timestamp).getTime() : now - 3600000;
+    // Find oldest entry across all wallets
+    const oldestTimestamp = aggregatedEntries.reduce((oldest, entry) => {
+      const entryTime = new Date(entry.firstEntryTimestamp).getTime();
+      return entryTime < oldest ? entryTime : oldest;
+    }, now);
+    const startTime = oldestTimestamp < now ? oldestTimestamp : now - 3600000;
     const startMcap = firstEntryMcap || currentMcap * 0.8;
 
     // Create price line data - ensure unique ascending timestamps
@@ -223,7 +333,7 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
       chart.remove();
       chartRef.current = null;
     };
-  }, [mint, entries, currentMcap, firstEntryMcap]);
+  }, [mint, aggregatedEntries, currentMcap, firstEntryMcap]);
 
   if (!currentMcap) {
     return <div className="h-full min-h-[120px] bg-white/[0.02]" />;
@@ -231,17 +341,22 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
 
   // Calculate marker positions (% along the timeline) with wallet info
   const now = Date.now();
-  const oldestEntry = entries[entries.length - 1];
-  const startTime = oldestEntry ? new Date(oldestEntry.timestamp).getTime() : now - 3600000;
+  const oldestTimestamp = aggregatedEntries.reduce((oldest, entry) => {
+    const entryTime = new Date(entry.firstEntryTimestamp).getTime();
+    return entryTime < oldest ? entryTime : oldest;
+  }, now);
+  const startTime = oldestTimestamp < now ? oldestTimestamp : now - 3600000;
   const duration = now - startTime;
 
-  const markers = entries.map((entry) => {
-    const entryTime = new Date(entry.timestamp).getTime();
+  const markers = aggregatedEntries.map((entry) => {
+    const entryTime = new Date(entry.firstEntryTimestamp).getTime();
     const pct = duration > 0 ? ((entryTime - startTime) / duration) * 100 : 50;
     return {
       pct: Math.max(5, Math.min(95, pct)), // Clamp between 5-95%
       pfpUrl: entry.wallet.pfpUrl,
       label: entry.wallet.label,
+      buyCount: entry.buyCount,
+      sellCount: entry.sellCount,
     };
   });
 
@@ -263,30 +378,41 @@ function MiniChart({ mint, entries, currentMcap, firstEntryMcap }: MiniChartProp
         </div>
       )}
 
-      {/* Entry markers overlay - Wallet PFPs with brand green */}
+      {/* Entry markers overlay - Only show wallets with PFPs */}
       <div className="absolute inset-0 pointer-events-none">
-        {markers.map((marker, idx) => (
-          <div
-            key={idx}
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
-            style={{ left: `${marker.pct}%` }}
-          >
-            {marker.pfpUrl ? (
-              <Image
-                src={marker.pfpUrl}
-                alt={marker.label || "Wallet"}
-                width={22}
-                height={22}
-                className="rounded-full ring-2 ring-[#c4f70e] shadow-lg shadow-[#c4f70e]/30"
-                unoptimized
-              />
-            ) : (
-              <div className="w-[22px] h-[22px] rounded-full bg-[#c4f70e]/20 ring-2 ring-[#c4f70e] shadow-lg shadow-[#c4f70e]/30 flex items-center justify-center">
-                <Crown className="w-2.5 h-2.5 text-[#c4f70e]" />
+        {markers
+          .filter((marker) => marker.pfpUrl)
+          .map((marker, idx) => (
+            <div
+              key={idx}
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+              style={{ left: `${marker.pct}%` }}
+            >
+              <div className="relative">
+                <Image
+                  src={marker.pfpUrl!}
+                  alt={marker.label || "Wallet"}
+                  width={22}
+                  height={22}
+                  className="rounded-full ring-2 ring-[#c4f70e] shadow-lg shadow-[#c4f70e]/30"
+                  unoptimized
+                />
+                {/* Buy/Sell indicator dots */}
+                {(marker.buyCount > 1 || marker.sellCount > 0) && (
+                  <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 flex gap-0.5">
+                    {/* Green dots for buys (max 3) */}
+                    {Array.from({ length: Math.min(marker.buyCount, 3) }).map((_, i) => (
+                      <div key={`buy-${i}`} className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    ))}
+                    {/* Red dots for sells (max 2) */}
+                    {Array.from({ length: Math.min(marker.sellCount, 2) }).map((_, i) => (
+                      <div key={`sell-${i}`} className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          ))}
       </div>
     </div>
   );
@@ -387,32 +513,41 @@ function CallCard({ call }: CallCardProps) {
 
             {/* Right: Compact wallet entries - horizontal scroll */}
             <div className="flex items-center gap-1 overflow-x-auto flex-shrink min-w-0 max-w-[60%]">
-              {call.entries.slice(0, 3).map((entry, idx) => (
+              {call.aggregatedEntries.slice(0, 3).map((entry, idx) => (
                 <div
                   key={`${entry.wallet.id}-${idx}`}
-                  className="flex items-center gap-1 py-0.5 px-1.5 rounded-md bg-white/[0.04] flex-shrink-0"
+                  className="flex items-center gap-1 py-0.5 px-1.5 flex-shrink-0"
                 >
-                  {entry.wallet.pfpUrl ? (
-                    <Image
-                      src={entry.wallet.pfpUrl}
-                      alt={entry.wallet.label || "Wallet"}
-                      width={16}
-                      height={16}
-                      className={`rounded-full ring-1 ${isRunner ? "ring-[#c4f70e]/50" : "ring-white/20"}`}
-                      unoptimized
-                    />
-                  ) : (
-                    <div className={`w-[16px] h-[16px] rounded-full flex items-center justify-center ${isRunner ? "bg-[#c4f70e]/20 ring-1 ring-[#c4f70e]/50" : "bg-white/10 ring-1 ring-white/20"}`}>
-                      <Crown className={`w-2 h-2 ${isRunner ? "text-[#c4f70e]" : "text-white/40"}`} />
-                    </div>
+                  {/* Crown icon only - no bg */}
+                  <Crown className={`w-3 h-3 flex-shrink-0 ${isRunner ? "text-[#c4f70e]" : "text-white/40"}`} />
+                  {/* Avg Entry Mcap + Position % */}
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-mono text-white/60">
+                      {formatMcap(entry.avgEntryMcap)}
+                    </span>
+                    {(entry.positionHeldPct ?? 100) < 100 && (
+                      <span className="text-[8px] text-red-400/80">
+                        {(entry.positionHeldPct ?? 0).toFixed(0)}% held
+                      </span>
+                    )}
+                  </div>
+                  {/* Buy/Sell dots */}
+                  <div className="flex gap-0.5 ml-0.5">
+                    {Array.from({ length: Math.min(entry.buyCount, 3) }).map((_, i) => (
+                      <div key={`b${i}`} className="w-1 h-1 rounded-full bg-green-500" />
+                    ))}
+                    {Array.from({ length: Math.min(entry.sellCount, 2) }).map((_, i) => (
+                      <div key={`s${i}`} className="w-1 h-1 rounded-full bg-red-500" />
+                    ))}
+                  </div>
+                  {/* Separator between items on mobile */}
+                  {idx < Math.min(call.aggregatedEntries.length, 3) - 1 && (
+                    <div className="w-px h-4 bg-gradient-to-b from-transparent via-white/15 to-transparent ml-1" />
                   )}
-                  <span className="text-[9px] font-mono text-white/60">
-                    {entry.entryMcap ? formatMcap(entry.entryMcap) : formatAmount(entry.amountUsd)}
-                  </span>
                 </div>
               ))}
-              {call.entries.length > 3 && (
-                <span className="text-[9px] text-white/40 flex-shrink-0">+{call.entries.length - 3}</span>
+              {call.aggregatedEntries.length > 3 && (
+                <span className="text-[9px] text-white/40 flex-shrink-0">+{call.aggregatedEntries.length - 3}</span>
               )}
             </div>
           </div>
@@ -422,7 +557,7 @@ function CallCard({ call }: CallCardProps) {
             <div className="w-full h-[100px]">
               <MiniChart
                 mint={call.mint}
-                entries={call.entries}
+                aggregatedEntries={call.aggregatedEntries}
                 currentMcap={call.currentMcap}
                 firstEntryMcap={call.firstEntryMcap}
               />
@@ -495,42 +630,58 @@ function CallCard({ call }: CallCardProps) {
               </div>
             </div>
 
-            {/* Wallet entries - desktop */}
+            {/* Wallet entries - desktop (aggregated) */}
             <div className="overflow-hidden">
               <div
-                className="space-y-2 h-[88px] overflow-y-auto pr-1"
+                className="h-[88px] overflow-y-auto pr-1"
                 style={{
                   scrollbarWidth: 'thin',
                   scrollbarColor: 'rgba(255,255,255,0.15) transparent',
                 }}
               >
-                {call.entries.map((entry, idx) => (
-                  <div
-                    key={`${entry.wallet.id}-${idx}`}
-                    className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/[0.03]"
-                  >
-                    <div className="flex items-center gap-3">
-                      {entry.wallet.pfpUrl ? (
-                        <Image
-                          src={entry.wallet.pfpUrl}
-                          alt={entry.wallet.label || "Wallet"}
-                          width={26}
-                          height={26}
-                          className={`rounded-full ring-1 ${isRunner ? "ring-[#c4f70e]/50" : "ring-white/20"}`}
-                          unoptimized
-                        />
-                      ) : (
-                        <div className={`w-[26px] h-[26px] rounded-full flex items-center justify-center ${isRunner ? "bg-[#c4f70e]/20 ring-1 ring-[#c4f70e]/50" : "bg-white/10 ring-1 ring-white/20"}`}>
-                          <Crown className={`w-3 h-3 ${isRunner ? "text-[#c4f70e]" : "text-white/40"}`} />
+                {call.aggregatedEntries.map((entry, idx) => (
+                  <div key={`${entry.wallet.id}-${idx}`}>
+                    <div className="flex items-center justify-between py-2 px-1">
+                      <div className="flex items-center gap-2">
+                        {/* Crown icon only - no bg, no circle */}
+                        <Crown className={`w-4 h-4 flex-shrink-0 ${isRunner ? "text-[#c4f70e]" : "text-white/40"}`} />
+                        {/* Buy/Sell activity indicators */}
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-0.5">
+                            <TrendingUp className="w-2.5 h-2.5 text-green-500" />
+                            <span className="text-[9px] text-green-400">{entry.buyCount}</span>
+                          </div>
+                          {entry.sellCount > 0 && (
+                            <div className="flex items-center gap-0.5">
+                              <TrendingDown className="w-2.5 h-2.5 text-red-500" />
+                              <span className="text-[9px] text-red-400">{entry.sellCount}</span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      <span className={`text-base font-semibold truncate max-w-[90px] ${isRunner ? "text-white" : "text-white/70"}`}>
-                        {entry.wallet.label || `${entry.wallet.address.slice(0, 4)}...`}
-                      </span>
+                      </div>
+                      {/* Right side: Avg entry mcap + position held */}
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm font-mono text-white/70">
+                          {formatMcap(entry.avgEntryMcap)}
+                        </span>
+                        {/* Position held bar */}
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${(entry.positionHeldPct ?? 0) >= 80 ? "bg-green-500" : (entry.positionHeldPct ?? 0) >= 50 ? "bg-yellow-500" : "bg-red-500"}`}
+                              style={{ width: `${entry.positionHeldPct ?? 0}%` }}
+                            />
+                          </div>
+                          <span className={`text-[9px] ${(entry.positionHeldPct ?? 0) >= 80 ? "text-green-400" : (entry.positionHeldPct ?? 0) >= 50 ? "text-yellow-400" : "text-red-400"}`}>
+                            {(entry.positionHeldPct ?? 0).toFixed(0)}%
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-sm font-mono text-white/70">
-                      {entry.entryMcap ? formatMcap(entry.entryMcap) : formatAmount(entry.amountUsd)}
-                    </span>
+                    {/* Fading horizontal separator - only between items, not after last */}
+                    {idx < call.aggregatedEntries.length - 1 && (
+                      <div className="h-px mx-2 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                    )}
                   </div>
                 ))}
               </div>
@@ -542,7 +693,7 @@ function CallCard({ call }: CallCardProps) {
             <div className="w-full h-full min-h-[140px]">
               <MiniChart
                 mint={call.mint}
-                entries={call.entries}
+                aggregatedEntries={call.aggregatedEntries}
                 currentMcap={call.currentMcap}
                 firstEntryMcap={call.firstEntryMcap}
               />
@@ -558,57 +709,47 @@ export function GodWalletCalls() {
   const { godWallets, recentBuys, isLoading } = useGodWallets();
   const [marketData, setMarketData] = useState<Map<string, { mcap: number; price: number; totalSupply: number }>>(new Map());
 
-  // Group buys by token
+  // Extract unique mints from recent buys
+  const mints = useMemo(() => {
+    const uniqueMints = new Set<string>();
+    for (const buy of recentBuys) {
+      uniqueMints.add(buy.mint);
+    }
+    return Array.from(uniqueMints);
+  }, [recentBuys]);
+
+  // Fetch aggregated wallet entries for all mints from backend
+  const aggregatedEntriesMap = useMultipleAggregatedWalletEntries(mints, { godWalletsOnly: true });
+
+  // Group buys by token and attach aggregated entries
   const calls = useMemo(() => {
     const tokenMap = new Map<string, TokenCall>();
 
     for (const buy of recentBuys) {
-      let call = tokenMap.get(buy.mint);
+      if (!tokenMap.has(buy.mint)) {
+        // Get aggregated entries from the backend for this mint
+        const aggregatedEntries = aggregatedEntriesMap.get(buy.mint) || [];
 
-      if (!call) {
-        call = {
+        tokenMap.set(buy.mint, {
           mint: buy.mint,
           symbol: buy.symbol,
           imageUrl: buy.imageUrl,
-          entries: [],
-          aggregatedEntries: [],
+          aggregatedEntries,
           currentMcap: null,
           currentPrice: null,
           performancePct: null,
           firstEntryMcap: null,
-        };
-        tokenMap.set(buy.mint, call);
+        });
       }
-
-      // Add entry
-      call.entries.push({
-        wallet: {
-          id: buy.wallet.id,
-          label: buy.wallet.label,
-          pfpUrl: buy.wallet.pfpUrl,
-          address: buy.wallet.address,
-        },
-        entryMcap: null, // Will be calculated from entryPricePerToken * totalSupply
-        entryPricePerToken: buy.entryPricePerToken,
-        amountUsd: buy.amountUsd,
-        amountSol: buy.amountSol ?? 0,
-        positionHeld: 100, // Default to 100% since we don't track sells yet
-        timestamp: buy.timestamp,
-      });
     }
 
-    // Sort entries by timestamp (newest first) within each call
-    for (const call of tokenMap.values()) {
-      call.entries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    }
-
-    // Convert to array and sort by most recent entry
+    // Convert to array and sort by most recent entry (from aggregated data)
     return Array.from(tokenMap.values()).sort((a, b) => {
-      const aTime = a.entries[0] ? new Date(a.entries[0].timestamp).getTime() : 0;
-      const bTime = b.entries[0] ? new Date(b.entries[0].timestamp).getTime() : 0;
+      const aTime = a.aggregatedEntries[0] ? new Date(a.aggregatedEntries[0].lastTradeTimestamp).getTime() : 0;
+      const bTime = b.aggregatedEntries[0] ? new Date(b.aggregatedEntries[0].lastTradeTimestamp).getTime() : 0;
       return bTime - aTime;
     });
-  }, [recentBuys]);
+  }, [recentBuys, aggregatedEntriesMap]);
 
   // Fetch market data for all tokens
   useEffect(() => {
@@ -636,7 +777,6 @@ export function GodWalletCalls() {
               if (pair) {
                 const mcap = pair.marketCap || pair.fdv || 0;
                 const price = parseFloat(pair.priceUsd) || 0;
-                // Calculate total supply from FDV / price (FDV = fully diluted valuation)
                 const fdv = pair.fdv || mcap;
                 const totalSupply = price > 0 ? fdv / price : 0;
                 marketDataCache.set(call.mint, { mcap, price, priceChange24h: pair.priceChange?.h24 || 0, totalSupply });
@@ -659,23 +799,11 @@ export function GodWalletCalls() {
   const enrichedCalls = useMemo(() => {
     return calls.map((call) => {
       const data = marketData.get(call.mint);
-      if (!data || data.totalSupply === 0) return call;
+      if (!data) return call;
 
-      // Calculate entry mcap for each entry: entry_price_per_token * total_supply
-      const enrichedEntries = call.entries.map((entry) => {
-        const entryMcap = entry.entryPricePerToken > 0
-          ? entry.entryPricePerToken * data.totalSupply
-          : null;
-
-        return {
-          ...entry,
-          entryMcap,
-        };
-      });
-
-      // Get the oldest entry (first caller) for "called at" mcap
-      const oldestEntry = enrichedEntries[enrichedEntries.length - 1];
-      const firstEntryMcap = oldestEntry?.entryMcap || null;
+      // Get first entry mcap from the aggregated data (oldest wallet's avg entry)
+      const oldestEntry = call.aggregatedEntries[call.aggregatedEntries.length - 1];
+      const firstEntryMcap = oldestEntry?.avgEntryMcap || null;
 
       // Calculate performance: (current_mcap - entry_mcap) / entry_mcap * 100
       const performancePct = firstEntryMcap && firstEntryMcap > 0
@@ -688,7 +816,6 @@ export function GodWalletCalls() {
         currentPrice: data.price,
         firstEntryMcap,
         performancePct,
-        entries: enrichedEntries,
       };
     });
   }, [calls, marketData]);
@@ -696,7 +823,7 @@ export function GodWalletCalls() {
   // Sort order state - updates every 7 seconds to reorder runners to top
   const [sortVersion, setSortVersion] = useState(0);
 
-  // Timer effect for periodic sorting - clean interval to prevent memory leaks
+  // Timer effect for periodic sorting
   useEffect(() => {
     const intervalId = setInterval(() => {
       setSortVersion((v) => v + 1);
@@ -707,10 +834,8 @@ export function GodWalletCalls() {
 
   // Sorted calls: runners first (sorted by performance desc), then cold items (sorted by recency)
   const sortedCalls = useMemo(() => {
-    // Create a shallow copy to avoid mutating the original
     const items = [...enrichedCalls];
 
-    // Separate runners from cold items
     const runners: typeof items = [];
     const cold: typeof items = [];
 
@@ -725,27 +850,18 @@ export function GodWalletCalls() {
     // Sort runners by performance (highest first)
     runners.sort((a, b) => (b.performancePct ?? 0) - (a.performancePct ?? 0));
 
-    // Sort cold by most recent entry
+    // Sort cold by most recent trade
     cold.sort((a, b) => {
-      const aTime = a.entries[0] ? new Date(a.entries[0].timestamp).getTime() : 0;
-      const bTime = b.entries[0] ? new Date(b.entries[0].timestamp).getTime() : 0;
+      const aTime = a.aggregatedEntries[0] ? new Date(a.aggregatedEntries[0].lastTradeTimestamp).getTime() : 0;
+      const bTime = b.aggregatedEntries[0] ? new Date(b.aggregatedEntries[0].lastTradeTimestamp).getTime() : 0;
       return bTime - aTime;
     });
 
-    // Runners first, then cold
     return [...runners, ...cold];
   }, [enrichedCalls, sortVersion]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-8 h-8 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full"
-        />
-      </div>
-    );
+    return <GodWalletCallsSkeleton />;
   }
 
   if (godWallets.length === 0) {
@@ -774,8 +890,9 @@ export function GodWalletCalls() {
 
   // Grid of cards - runners first, then cold items
   // Using layout animation for smooth reordering (initial=false prevents jump on first render)
+  // Mobile: max 3 items visible (~640px) with scroll, desktop: no limit
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[640px] lg:max-h-none overflow-y-auto lg:overflow-visible pr-1 lg:pr-0 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
       <AnimatePresence mode="popLayout" initial={false}>
         {sortedCalls.slice(0, 10).map((call) => (
           <motion.div

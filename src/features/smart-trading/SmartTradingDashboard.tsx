@@ -147,7 +147,7 @@ function AnimatedTabsNav({ activeTab, onTabChange }: AnimatedTabsNavProps) {
   const activeColor = activeTabConfig?.color || "#c4f70e";
 
   return (
-    <div className="flex justify-center mb-6">
+    <div className="flex justify-center mt-8 mb-10 relative z-20">
       <div
         ref={containerRef}
         className="relative w-full md:w-auto bg-black/40 backdrop-blur-xl border border-white/10 rounded-full p-1 flex overflow-visible"
@@ -225,7 +225,7 @@ export function SmartTradingDashboard() {
   };
 
   return (
-    <div className="space-y-4 -mt-12 px-2 sm:px-4 lg:px-8">
+    <div className="space-y-4 px-2 sm:px-4 lg:px-8">
       {/* Custom animated tabs navigation */}
       <AnimatedTabsNav activeTab={activeTab} onTabChange={handleTabChange} />
 

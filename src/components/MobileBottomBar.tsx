@@ -50,9 +50,9 @@ export function MobileBottomBar() {
     }, []);
 
     return (
-        <div className="social-links-bar fixed z-[150] bottom-4 left-[26px] md:bottom-auto md:top-[72px] md:left-[26px]">
-            {/* Icon buttons container with local backdrop - mobile only */}
-            <div className="relative flex items-center gap-3">
+        <div className="social-links-bar fixed z-[200] bottom-4 left-[26px] md:bottom-auto md:top-4 md:left-[26px]">
+            {/* Icon buttons container - horizontal on mobile, vertical on desktop */}
+            <div className="relative flex items-center gap-3 md:flex-col md:gap-4">
                 {/* Backdrop pill behind buttons - mobile only */}
                 <div className="absolute -inset-3 rounded-full bg-black/60 backdrop-blur-sm md:hidden" />
                 {/* Twitter/X Icon Button */}
@@ -82,7 +82,7 @@ export function MobileBottomBar() {
                 {/* CA Copy Icon Button */}
                 <motion.button
                     onClick={handleCopyCA}
-                    className="relative flex items-center justify-center"
+                    className="relative flex items-center justify-center cursor-pointer"
                     whileHover={{ scale: 1.15, opacity: 1 }}
                     whileTap={{ scale: 0.95 }}
                 >

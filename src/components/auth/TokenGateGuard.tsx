@@ -95,16 +95,17 @@ export function TokenGateGuard({
       <div className="flex justify-center">
         <div
           className={cn(
-            "relative flex items-end overflow-hidden rounded-2xl",
+            "relative overflow-hidden rounded-2xl",
             "bg-gradient-to-br from-black via-zinc-950 to-black",
             "border border-[#c4f70e]/20",
-            "min-h-[360px] max-w-4xl w-full",
+            "min-h-[280px] max-w-4xl w-full",
             fallbackClassName
           )}
         >
-          {/* Animated background gradient */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_0%_100%,rgba(196,247,14,0.15),transparent_50%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_100%_0%,rgba(196,247,14,0.08),transparent_40%)]" />
+          {/* Animated background gradients - green accents */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_0%_0%,rgba(196,247,14,0.15),transparent_40%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_100%_100%,rgba(196,247,14,0.08),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(196,247,14,0.03),transparent_60%)]" />
 
           {/* Scan line effect */}
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
@@ -113,36 +114,69 @@ export function TokenGateGuard({
             }}
           />
 
-          {/* Scouting GIF - Vertical aspect ratio, no border */}
-          <div className="relative flex-shrink-0 self-center z-10 ml-6 md:ml-10">
-            <div className="absolute -inset-4 rounded-3xl blur-2xl bg-[#c4f70e]/25" />
-            <div className="relative w-[140px] h-[196px] md:w-[200px] md:h-[280px] lg:w-[240px] lg:h-[336px] rounded-2xl overflow-hidden shadow-2xl shadow-[#c4f70e]/40">
-              <Image
-                src="/videos/scouting-v2.gif"
-                alt="Super Router Scouting"
-                fill
-                className="object-cover"
-                unoptimized
-                priority
-              />
+          {/* Top bar: Image (left) + Wallet options (right) */}
+          <div className="relative z-10 flex items-start justify-between p-4 md:p-5">
+            {/* Left: Scouting GIF */}
+            <div className="relative flex-shrink-0">
+              <div className="absolute -inset-2 rounded-xl blur-xl bg-[#c4f70e]/25" />
+              <div className="relative w-[60px] h-[84px] md:w-[80px] md:h-[112px] rounded-xl overflow-hidden">
+                <Image
+                  src="/videos/scouting-v2.gif"
+                  alt="Super Router Scouting"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                  priority
+                />
+              </div>
+            </div>
+
+            {/* Right: Wallet install links or detected wallets */}
+            <div className="flex flex-col items-end gap-2">
+              {noWalletFound ? (
+                <div className="flex flex-wrap justify-end gap-2">
+                  {WALLETS.map((wallet) => (
+                    <a
+                      key={wallet.name}
+                      href={wallet.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-200"
+                    >
+                      <span className="text-sm">{wallet.icon}</span>
+                      <span className="text-white text-xs">{wallet.name}</span>
+                      <Download className="w-3 h-3 text-white/50" />
+                    </a>
+                  ))}
+                </div>
+              ) : availableWallets.length > 0 ? (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                  <span className="text-xs font-mono text-white/50">
+                    {availableWallets.join(", ")}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-white/30 text-xs">Phantom, Solflare, Backpack</span>
+              )}
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col justify-center p-6 md:p-10 z-10">
-            {/* Exclusive Badge with Gradient Animation */}
-            <div className="mb-5">
+          {/* Main content - centered */}
+          <div className="relative z-10 flex flex-col items-center justify-center px-6 pb-6 md:px-10 md:pb-8 text-center">
+            {/* Exclusive Badge - no shadow */}
+            <div className="mb-3">
               <GradientText
                 colors={['#c4f70e', '#00ff6a', '#c4f70e', '#a8d60d']}
                 animationSpeed={4}
                 showBorder={true}
-                className="text-sm font-bold uppercase tracking-[0.2em]"
+                className="text-sm font-bold uppercase tracking-[0.15em]"
               >
                 Exclusive for $SR Holders
               </GradientText>
             </div>
 
             {/* Title with Shiny Effect */}
-            <h3 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 tracking-tight leading-[1.1]">
+            <h3 className="text-2xl md:text-3xl lg:text-4xl font-black text-white mb-3 tracking-tight leading-[1.1]">
               <ShinyText
                 text={title}
                 speed={3}
@@ -152,67 +186,31 @@ export function TokenGateGuard({
               />
             </h3>
 
-            <p className="text-white/50 text-base md:text-lg mb-6 max-w-md leading-relaxed">
+            <p className="text-white/50 text-sm md:text-base mb-5 max-w-md leading-relaxed">
               {description || "Unlock exclusive trading insights, god wallet tracking & enhanced market signals."}
             </p>
 
-            {/* Requirements pill */}
-            <div className="flex items-center gap-2 mb-8">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#c4f70e]/10 border border-[#c4f70e]/30">
-                <Lock className="w-4 h-4 text-[#c4f70e]" />
-                <span className="text-[#c4f70e] font-bold text-sm">
-                  Hold ${minRequiredUsd}+ worth of $SR
+            {/* Requirements pill + Connect button inline */}
+            <div className="flex items-center gap-4 flex-wrap justify-center">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#c4f70e]/10 border border-[#c4f70e]/30">
+                <Lock className="w-3.5 h-3.5 text-[#c4f70e]" />
+                <span className="text-[#c4f70e] font-bold text-xs">
+                  Hold ${minRequiredUsd}+ of $SR
                 </span>
               </div>
+
+              <StarBorder
+                as="button"
+                color="#c4f70e"
+                speed="4s"
+                onClick={() => connect()}
+                className="w-fit"
+              >
+                <span className="flex items-center gap-2 font-bold text-sm md:text-base">
+                  {noWalletFound ? "Install Wallet" : "Connect Wallet"}
+                </span>
+              </StarBorder>
             </div>
-
-            {noWalletFound && (
-              <div className="mb-6">
-                <p className="text-white/50 text-sm mb-3">
-                  No wallet detected. Install one:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {WALLETS.map((wallet) => (
-                    <a
-                      key={wallet.name}
-                      href={wallet.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-200"
-                    >
-                      <span>{wallet.icon}</span>
-                      <span className="text-white text-sm">{wallet.name}</span>
-                      <Download className="w-3 h-3 text-white/50" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {availableWallets.length > 0 && !noWalletFound && (
-              <p className="text-white/30 text-xs mb-4 font-mono">
-                Detected: {availableWallets.join(", ")}
-              </p>
-            )}
-
-            {/* Connect Button with Star Border */}
-            <StarBorder
-              as="button"
-              color="#c4f70e"
-              speed="4s"
-              onClick={() => connect()}
-              className="w-fit"
-            >
-              <span className="flex items-center gap-3 font-bold text-lg">
-                {noWalletFound ? "Install Wallet" : "Connect Wallet"}
-              </span>
-            </StarBorder>
-
-            {!noWalletFound && availableWallets.length === 0 && (
-              <p className="mt-4 text-white/30 text-sm">
-                Supports Phantom, Solflare, Backpack
-              </p>
-            )}
           </div>
         </div>
       </div>
@@ -224,51 +222,54 @@ export function TokenGateGuard({
     <div className="flex justify-center">
       <div
         className={cn(
-          "relative flex items-end overflow-hidden rounded-2xl",
+          "relative overflow-hidden rounded-2xl",
           "bg-gradient-to-br from-black via-zinc-950 to-black",
           "border border-[#c4f70e]/20",
-          "min-h-[360px] max-w-4xl w-full",
+          "min-h-[280px] max-w-4xl w-full",
           fallbackClassName
         )}
       >
-        {/* Animated background gradient */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_0%_100%,rgba(196,247,14,0.12),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_100%_0%,rgba(255,100,100,0.05),transparent_40%)]" />
+        {/* Animated background gradients - green accents */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_0%_0%,rgba(196,247,14,0.15),transparent_40%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_100%_100%,rgba(196,247,14,0.08),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_50%,rgba(196,247,14,0.03),transparent_60%)]" />
 
-        {/* Scouting GIF - Insufficient balance state */}
-        <div className="relative flex-shrink-0 self-center z-10 ml-6 md:ml-10">
-          <div className="absolute -inset-4 rounded-3xl blur-2xl bg-[#c4f70e]/20" />
-          <div className="relative w-[140px] h-[196px] md:w-[180px] md:h-[252px] rounded-2xl overflow-hidden shadow-xl shadow-[#c4f70e]/30 opacity-85">
-            <Image
-              src="/videos/scouting-v2.gif"
-              alt="Super Router Scouting"
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          </div>
-        </div>
-
-        <div className="flex-1 flex flex-col justify-center p-6 md:p-10 z-10">
-          {/* Wallet info - minimal */}
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs font-mono text-white/60">
-                {walletName} · {publicKey ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}` : ""}
-              </span>
-              <button
-                onClick={() => disconnect()}
-                className="p-1 rounded hover:bg-white/10 transition-colors text-white/40 hover:text-white"
-                title="Disconnect"
-              >
-                <LogOut className="w-3 h-3" />
-              </button>
+        {/* Top bar: Image (left) + Wallet connection (right) */}
+        <div className="relative z-10 flex items-start justify-between p-4 md:p-5">
+          {/* Left: Scouting GIF */}
+          <div className="relative flex-shrink-0">
+            <div className="absolute -inset-2 rounded-xl blur-xl bg-[#c4f70e]/20" />
+            <div className="relative w-[60px] h-[84px] md:w-[80px] md:h-[112px] rounded-xl overflow-hidden">
+              <Image
+                src="/videos/scouting-v2.gif"
+                alt="Super Router Scouting"
+                fill
+                className="object-cover"
+                unoptimized
+              />
             </div>
           </div>
 
-          {/* Not Eligible Badge */}
-          <div className="mb-4">
+          {/* Right: Wallet connection pill */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs font-mono text-white/60">
+              {walletName} · {publicKey ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}` : ""}
+            </span>
+            <button
+              onClick={() => disconnect()}
+              className="p-1 rounded hover:bg-white/10 transition-colors text-white/40 hover:text-white cursor-pointer"
+              title="Disconnect"
+            >
+              <LogOut className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+
+        {/* Main content - centered */}
+        <div className="relative z-10 flex flex-col items-center justify-center px-6 pb-6 md:px-10 md:pb-8 text-center">
+          {/* Access Locked Badge - no shadow */}
+          <div className="mb-3">
             <GradientText
               colors={['#ff6b6b', '#ff8e53', '#ff6b6b']}
               animationSpeed={3}
@@ -280,69 +281,73 @@ export function TokenGateGuard({
           </div>
 
           {/* Title */}
-          <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+          <h3 className="text-xl md:text-2xl font-bold text-white mb-4">
             Almost there, anon
           </h3>
 
-          {/* Balance display */}
-          <div className="mb-6 space-y-2">
-            <div className="flex items-baseline gap-2">
-              <span className="text-white/40 text-sm">Your holdings:</span>
-              <span className="text-white font-bold text-lg">
-                <CountUp to={balance} from={0} duration={1} separator="," className="tabular-nums" /> $SR
-              </span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-white/40 text-sm">Value:</span>
-              <span className={cn(
-                "font-bold text-xl",
-                usdValue >= minRequiredUsd ? "text-emerald-400" : "text-amber-400"
-              )}>
-                {formatUsd(usdValue)}
-              </span>
-              <span className="text-white/30 text-sm">
-                / ${minRequiredUsd} required
-              </span>
+          {/* Balance display - compact horizontal */}
+          <div className="mb-5 flex flex-col items-center gap-2">
+            <div className="flex items-center gap-4">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-white/40 text-xs">Holdings:</span>
+                <span className="text-white font-bold text-base">
+                  <CountUp to={balance} from={0} duration={1} separator="," className="tabular-nums" /> $SR
+                </span>
+              </div>
+              <div className="w-px h-4 bg-white/20" />
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-white/40 text-xs">Value:</span>
+                <span className={cn(
+                  "font-bold text-base",
+                  usdValue >= minRequiredUsd ? "text-emerald-400" : "text-amber-400"
+                )}>
+                  {formatUsd(usdValue)}
+                </span>
+                <span className="text-white/30 text-xs">
+                  / ${minRequiredUsd}
+                </span>
+              </div>
             </div>
 
             {/* Progress bar */}
-            <div className="w-full max-w-xs h-2 bg-white/10 rounded-full overflow-hidden mt-3">
+            <div className="w-full max-w-[280px] h-1.5 bg-white/10 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-[#c4f70e] to-[#a8d60d] rounded-full transition-all duration-1000"
                 style={{ width: `${Math.min((usdValue / minRequiredUsd) * 100, 100)}%` }}
               />
             </div>
-            <p className="text-white/30 text-xs">
+            <p className="text-white/30 text-[11px]">
               {Math.max(0, minRequiredUsd - usdValue).toFixed(2)} USD more needed
             </p>
           </div>
 
-          {/* Buy Button with Star Border */}
-          <StarBorder
-            as="a"
-            href={JUPITER_BUY_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            color="#c4f70e"
-            speed="4s"
-            className="w-fit"
-          >
-            <span className="flex items-center gap-2 font-bold text-lg">
-              Buy $SR on Jupiter
-              <ExternalLink className="w-5 h-5" />
-            </span>
-          </StarBorder>
+          {/* Buy Button + DexScreener link - inline */}
+          <div className="flex items-center gap-4">
+            <StarBorder
+              as="a"
+              href={JUPITER_BUY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              color="#c4f70e"
+              speed="4s"
+              className="w-fit"
+            >
+              <span className="flex items-center gap-2 font-bold text-sm md:text-base">
+                Buy $SR on Jupiter
+                <ExternalLink className="w-4 h-4" />
+              </span>
+            </StarBorder>
 
-          {/* DexScreener link */}
-          <a
-            href={DEXSCREENER_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 text-white/40 text-sm hover:text-white/70 transition-colors flex items-center gap-1 w-fit"
-          >
-            View chart on DexScreener
-            <ExternalLink className="w-3 h-3" />
-          </a>
+            <a
+              href={DEXSCREENER_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/40 text-xs hover:text-white/70 transition-colors flex items-center gap-1"
+            >
+              DexScreener
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
         </div>
       </div>
     </div>
