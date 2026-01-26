@@ -74,10 +74,40 @@ function transformEntry(entry: BackendAggregatedEntry): AggregatedWalletEntry {
     txHash: t.tx_hash,
   }));
 
+  // Use backend avg_entry_mcap if available, otherwise calculate from buy trades
+  let avgEntryMcap = entry.avg_entry_mcap || 0;
+  let avgEntryPrice = entry.avg_entry_price || 0;
+
+  // Fallback: Calculate from trades if backend didn't provide it
+  if (avgEntryMcap === 0 && entry.trades.length > 0) {
+    const buyTrades = entry.trades.filter((t) => t.action === "buy");
+    if (buyTrades.length > 0) {
+      // Calculate weighted average mcap from buy trades (weight by USD amount)
+      let totalUsd = 0;
+      let weightedMcap = 0;
+      let weightedPrice = 0;
+
+      for (const trade of buyTrades) {
+        if (trade.mcap_at_trade && trade.mcap_at_trade > 0) {
+          weightedMcap += trade.mcap_at_trade * trade.amount_usd;
+          totalUsd += trade.amount_usd;
+        }
+        if (trade.price_per_token > 0) {
+          weightedPrice += trade.price_per_token * trade.amount_usd;
+        }
+      }
+
+      if (totalUsd > 0) {
+        avgEntryMcap = weightedMcap / totalUsd;
+        avgEntryPrice = weightedPrice / totalUsd;
+      }
+    }
+  }
+
   return {
     wallet,
-    avgEntryMcap: entry.avg_entry_mcap,
-    avgEntryPrice: entry.avg_entry_price,
+    avgEntryMcap,
+    avgEntryPrice,
     positionHeldPct: entry.position_held_pct,
     totalBoughtUsd: entry.total_bought_usd,
     totalSoldUsd: entry.total_sold_usd,
@@ -147,6 +177,17 @@ export function useAggregatedWalletEntries(
 
       // Extract wallets array from nested data structure
       const wallets = data.data?.wallets || [];
+
+      // Debug: Log raw backend data to check what fields are populated
+      if (wallets.length > 0) {
+        console.log("[useAggregatedWalletEntries] Raw backend data for mint:", mint, {
+          firstWallet: wallets[0],
+          avg_entry_mcap: wallets[0]?.avg_entry_mcap,
+          avg_entry_price: wallets[0]?.avg_entry_price,
+          trades: wallets[0]?.trades?.slice(0, 2),
+        });
+      }
+
       const transformedEntries = wallets.map(transformEntry);
       setEntries(transformedEntries);
     } catch (err) {

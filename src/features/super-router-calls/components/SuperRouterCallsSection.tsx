@@ -4,7 +4,7 @@ import Image from "next/image";
 import { motion } from "motion/react";
 import { TokenGateGuard } from "@/components/auth/TokenGateGuard";
 import { GodWalletCalls } from "./GodWalletCalls";
-import { EnhancedWatchlist } from "./EnhancedWatchlist";
+// import { EnhancedWatchlist } from "./EnhancedWatchlist"; // Hidden for now
 import ShinyText from "@/components/ShinyText";
 
 interface SuperRouterCallsSectionProps {
@@ -75,10 +75,10 @@ export function SuperRouterCallsSection({ className }: SuperRouterCallsSectionPr
           {/* God Wallet Calls */}
           <GodWalletCalls />
 
-          {/* Enhanced Watchlist with tracker indicators */}
-          <div>
+          {/* Enhanced Watchlist - Hidden for now */}
+          {/* <div>
             <EnhancedWatchlist />
-          </div>
+          </div> */}
         </motion.div>
       </TokenGateGuard>
     </section>

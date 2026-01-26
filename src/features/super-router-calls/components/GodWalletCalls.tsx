@@ -9,6 +9,7 @@ import { useGodWallets } from "../hooks/useGodWallets";
 import { useMultipleAggregatedWalletEntries } from "../hooks/useAggregatedWalletEntries";
 import type { AggregatedWalletEntry } from "../types";
 import ShinyText from "@/components/ShinyText";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 // ============================================
 // Skeleton Components - Sophisticated loading states
@@ -137,7 +138,7 @@ function CallCardSkeleton() {
 function GodWalletCallsSkeleton() {
   return (
     <div className="relative rounded-xl shadow-[4px_4px_20px_rgba(0,0,0,0.4),inset_-1px_-1px_0_rgba(255,255,255,0.05)]">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 max-h-[640px] lg:max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="grid grid-cols-2 2xl:grid-cols-3 gap-3 max-h-[640px] 2xl:max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <CallCardSkeleton key={i} />
         ))}
@@ -158,6 +159,7 @@ interface TokenCall {
   // Current market data
   currentMcap: number | null;
   currentPrice: number | null;
+  totalSupply: number | null;
   performancePct: number | null;
   firstEntryMcap: number | null;
 }
@@ -183,13 +185,15 @@ interface MiniChartProps {
   aggregatedEntries: AggregatedWalletEntry[];
   currentMcap: number | null;
   firstEntryMcap: number | null;
+  showMcapBadge?: boolean;
 }
 
-function MiniChart({ mint, aggregatedEntries, currentMcap, firstEntryMcap }: MiniChartProps) {
+function MiniChart({ mint, aggregatedEntries, currentMcap, firstEntryMcap, showMcapBadge = false }: MiniChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const [tooltipData, setTooltipData] = useState<{ mcap: string; x: number; y: number; visible: boolean }>({
+  const [tooltipData, setTooltipData] = useState<{ mcap: string; time: string; x: number; y: number; visible: boolean }>({
     mcap: "",
+    time: "",
     x: 0,
     y: 0,
     visible: false,
@@ -245,19 +249,17 @@ function MiniChart({ mint, aggregatedEntries, currentMcap, firstEntryMcap }: Min
 
     chartRef.current = chart;
 
-    // Generate synthetic price data (from entry to now)
+    // Generate synthetic price data for last 30 minutes only
     const now = Date.now();
-    // Find oldest entry across all wallets
-    const oldestTimestamp = aggregatedEntries.reduce((oldest, entry) => {
-      const entryTime = new Date(entry.firstEntryTimestamp).getTime();
-      return entryTime < oldest ? entryTime : oldest;
-    }, now);
-    const startTime = oldestTimestamp < now ? oldestTimestamp : now - 3600000;
-    const startMcap = firstEntryMcap || currentMcap * 0.8;
+    const THIRTY_MINUTES = 30 * 60 * 1000; // 30 minutes in ms
+    const startTime = now - THIRTY_MINUTES;
+
+    // Use firstEntryMcap for start value, or estimate from current with slight variance
+    const startMcap = firstEntryMcap || currentMcap * 0.85;
 
     // Create price line data - ensure unique ascending timestamps
     const lineData: { time: UTCTimestamp; value: number }[] = [];
-    const duration = Math.max(now - startTime, 3600000); // Minimum 1 hour span
+    const duration = THIRTY_MINUTES;
     const steps = 30;
     let lastTime = 0;
 
@@ -307,8 +309,17 @@ function MiniChart({ mint, aggregatedEntries, currentMcap, firstEntryMcap }: Min
       if (data) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const value = (data as any).value ?? 0;
+        // Format time with date and time
+        const date = new Date((param.time as number) * 1000);
+        const formattedTime = date.toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
         setTooltipData({
           mcap: formatMcap(value),
+          time: formattedTime,
           x: param.point.x,
           y: param.point.y,
           visible: true,
@@ -341,18 +352,18 @@ function MiniChart({ mint, aggregatedEntries, currentMcap, firstEntryMcap }: Min
     return <div className="h-full min-h-[80px] bg-white/[0.02]" />;
   }
 
-  // Calculate marker positions (% along the timeline) with wallet info
+  // Calculate marker positions (% along the 30-min timeline) with wallet info
   const now = Date.now();
-  const oldestTimestamp = aggregatedEntries.reduce((oldest, entry) => {
-    const entryTime = new Date(entry.firstEntryTimestamp).getTime();
-    return entryTime < oldest ? entryTime : oldest;
-  }, now);
-  const startTime = oldestTimestamp < now ? oldestTimestamp : now - 3600000;
-  const duration = now - startTime;
+  const THIRTY_MINUTES = 30 * 60 * 1000;
+  const startTime = now - THIRTY_MINUTES;
 
   const markers = aggregatedEntries.map((entry) => {
     const entryTime = new Date(entry.firstEntryTimestamp).getTime();
-    const pct = duration > 0 ? ((entryTime - startTime) / duration) * 100 : 50;
+    // If entry is older than 30 mins, place at left edge (5%)
+    // If entry is within 30 mins, calculate position proportionally
+    const pct = entryTime < startTime
+      ? 5
+      : ((entryTime - startTime) / THIRTY_MINUTES) * 100;
     return {
       pct: Math.max(5, Math.min(95, pct)), // Clamp between 5-95%
       pfpUrl: entry.wallet.pfpUrl,
@@ -362,21 +373,37 @@ function MiniChart({ mint, aggregatedEntries, currentMcap, firstEntryMcap }: Min
     };
   });
 
+  // Determine if positive for badge styling
+  const isPositive = currentMcap && firstEntryMcap ? currentMcap >= firstEntryMcap : true;
+
   return (
     <div className="relative h-full min-h-[80px]">
       <div ref={chartContainerRef} className="h-full" />
+
+      {/* Market Cap Badge - Top right of chart */}
+      {showMcapBadge && currentMcap && (
+        <div
+          className={`absolute top-2 right-2 z-10 px-2 py-0.5 rounded-md backdrop-blur-sm text-[10px] font-bold font-mono shadow-lg ${
+            isPositive
+              ? "bg-[#c4f70e]/20 text-[#c4f70e] border border-[#c4f70e]/30"
+              : "bg-white/10 text-white/70 border border-white/20"
+          }`}
+        >
+          {formatMcap(currentMcap)}
+        </div>
+      )}
 
       {/* Tooltip */}
       {tooltipData.visible && (
         <div
           className="absolute pointer-events-none z-20 bg-black/90 backdrop-blur-sm border border-[#c4f70e]/40 rounded-lg px-2.5 py-1.5 text-xs shadow-lg"
           style={{
-            left: Math.min(tooltipData.x + 10, (chartContainerRef.current?.clientWidth || 150) - 70),
-            top: Math.max(5, tooltipData.y - 30),
+            left: Math.min(tooltipData.x + 10, (chartContainerRef.current?.clientWidth || 150) - 80),
+            top: Math.max(5, tooltipData.y - 40),
           }}
         >
           <div className="text-[#c4f70e] font-bold">{tooltipData.mcap}</div>
-          <div className="text-white/40 text-[9px]">Market Cap</div>
+          <div className="text-white/50 text-[9px]">{tooltipData.time}</div>
         </div>
       )}
 
@@ -454,11 +481,11 @@ function CallCard({ call }: CallCardProps) {
       >
         {/* MOBILE LAYOUT */}
         <div className="lg:hidden">
-          {/* Top row: Token info (left) + Wallet entries (right) */}
-          <div className="flex items-start justify-between p-3 gap-2">
-            {/* Left: Token image + name + mcap */}
-            <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
-              <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-black border border-zinc-700/50 flex-shrink-0">
+          {/* Top row: Token info (left - vertical) + Wallet entries (right) */}
+          <div className="flex items-start justify-between p-3 gap-1.5">
+            {/* Left: Token image with name below (left-aligned, copy button absolute) */}
+            <div className="relative flex flex-col items-start gap-0.5 min-w-0 flex-shrink-0">
+              <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-black border border-zinc-700/50 flex-shrink-0">
                 {!imgError ? (
                   <Image
                     src={call.imageUrl || dexScreenerImg}
@@ -469,92 +496,142 @@ function CallCard({ call }: CallCardProps) {
                     unoptimized
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white/40 text-xs font-bold">
+                  <div className="w-full h-full flex items-center justify-center text-white/40 text-sm font-bold">
                     {call.symbol.slice(0, 2)}
                   </div>
                 )}
+                {/* Copy button - absolute positioned on image */}
+                <button
+                  onClick={handleCopy}
+                  className="absolute -bottom-1 -right-1 p-1 rounded-full bg-black/80 hover:bg-black transition-colors cursor-pointer border border-zinc-700/50"
+                >
+                  {copied ? (
+                    <Check className="w-2.5 h-2.5 text-[#c4f70e]" />
+                  ) : (
+                    <Copy className="w-2.5 h-2.5 text-white/50 hover:text-white/70" />
+                  )}
+                </button>
               </div>
-              <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-1">
-                  <a
-                    href={chartUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`font-bold text-sm transition-colors ${isRunner ? "text-white hover:text-[#c4f70e]" : "text-white/60 hover:text-white/80"}`}
-                  >
-                    {isRunner ? (
-                      <ShinyText
-                        text={call.symbol}
-                        speed={3}
-                        color="#ffffff"
-                        shineColor="#c4f70e"
-                        className="font-bold text-sm"
-                      />
-                    ) : (
-                      call.symbol
-                    )}
-                  </a>
-                  <button
-                    onClick={handleCopy}
-                    className="p-0.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
-                  >
-                    {copied ? (
-                      <Check className="w-2.5 h-2.5 text-[#c4f70e]" />
-                    ) : (
-                      <Copy className="w-2.5 h-2.5 text-white/30 hover:text-white/50" />
-                    )}
-                  </button>
-                </div>
-                {call.currentMcap && (
-                  <span className="text-[10px] font-medium text-white/60">
-                    {formatMcap(call.currentMcap)}
-                  </span>
+              {/* Token name below image */}
+              <a
+                href={chartUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`font-bold text-xs transition-colors ${isRunner ? "text-white hover:text-[#c4f70e]" : "text-white/60 hover:text-white/80"}`}
+              >
+                {isRunner ? (
+                  <ShinyText
+                    text={call.symbol}
+                    speed={3}
+                    color="#ffffff"
+                    shineColor="#c4f70e"
+                    className="font-bold text-xs"
+                  />
+                ) : (
+                  call.symbol
                 )}
-              </div>
+              </a>
             </div>
 
-            {/* Right: Compact wallet entries - horizontal scroll */}
-            <div className="flex items-center gap-1 overflow-x-auto flex-shrink min-w-0 max-w-[60%]">
-              {call.aggregatedEntries.slice(0, 3).map((entry, idx) => (
-                <div
-                  key={`${entry.wallet.id}-${idx}`}
-                  className="flex items-center gap-1 py-0.5 px-1.5 flex-shrink-0"
-                >
-                  {/* Crown icon only - no bg */}
-                  <Crown className={`w-3 h-3 flex-shrink-0 ${isRunner ? "text-[#c4f70e]" : "text-white/40"}`} />
-                  {/* Avg Entry Mcap + Position % */}
-                  <div className="flex flex-col">
-                    <span className="text-[9px] font-mono text-white/60">
-                      {formatMcap(entry.avgEntryMcap)}
-                    </span>
-                    {(entry.positionHeldPct ?? 100) < 100 && (
-                      <span className="text-[8px] text-red-400/80">
-                        {(entry.positionHeldPct ?? 0).toFixed(0)}% held
-                      </span>
-                    )}
-                  </div>
-                  {/* Buy/Sell dots */}
-                  <div className="flex gap-0.5 ml-0.5">
-                    {Array.from({ length: Math.min(entry.buyCount, 3) }).map((_, i) => (
-                      <div key={`b${i}`} className="w-1 h-1 rounded-full bg-green-500" />
-                    ))}
-                    {Array.from({ length: Math.min(entry.sellCount, 2) }).map((_, i) => (
-                      <div key={`s${i}`} className="w-1 h-1 rounded-full bg-red-500" />
-                    ))}
-                  </div>
-                  {/* Separator between items on mobile */}
-                  {idx < Math.min(call.aggregatedEntries.length, 3) - 1 && (
-                    <div className="w-px h-4 bg-gradient-to-b from-transparent via-white/15 to-transparent ml-1" />
-                  )}
+            {/* Right: Aggregated Summary - Clean compact row with tooltips */}
+            {(() => {
+              const walletCount = call.aggregatedEntries.length;
+
+              // Calculate avg entry mcap with fallback to price-based calculation
+              let avgEntryMcap = 0;
+              if (walletCount > 0) {
+                // First try: use avgEntryMcap from entries
+                avgEntryMcap = call.aggregatedEntries.reduce((sum, e) => sum + (e.avgEntryMcap || 0), 0) / walletCount;
+
+                // Fallback: calculate from avgEntryPrice × totalSupply
+                if (avgEntryMcap === 0 && call.totalSupply && call.totalSupply > 0) {
+                  const avgPrice = call.aggregatedEntries.reduce((sum, e) => sum + (e.avgEntryPrice || 0), 0) / walletCount;
+                  if (avgPrice > 0) {
+                    avgEntryMcap = avgPrice * call.totalSupply;
+                  }
+                }
+              }
+
+              const avgHoldingPct = walletCount > 0
+                ? call.aggregatedEntries.reduce((sum, e) => sum + (e.positionHeldPct ?? 100), 0) / walletCount
+                : 0;
+              const profitPct = avgEntryMcap > 0 && call.currentMcap
+                ? ((call.currentMcap - avgEntryMcap) / avgEntryMcap) * 100
+                : 0;
+
+              return (
+                <div className="flex items-center gap-2 py-1.5 px-2.5 rounded-md bg-white/[0.03] flex-shrink-0">
+                  {/* Wallet count */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1">
+                        <Crown className={`w-4 h-4 ${isRunner ? "text-[#c4f70e]" : "text-white/50"}`} />
+                        <span className={`text-base font-bold font-mono ${isRunner ? "text-white" : "text-white/70"}`}>{walletCount}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="bg-black/95 border border-white/10 text-white max-w-[180px]">
+                      <p className="font-medium text-[11px]">God Wallets</p>
+                      <p className="text-white/60 text-[10px]">Tracked wallets in this token</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <span className="text-white/20 text-[10px]">│</span>
+
+                  {/* Avg entry */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[8px] text-white/40 uppercase tracking-wider">AVG</span>
+                        <span className="text-xs font-mono text-white/60">{formatMcap(avgEntryMcap)}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="bg-black/95 border border-white/10 text-white max-w-[180px]">
+                      <p className="font-medium text-[11px]">Avg Entry</p>
+                      <p className="text-white/60 text-[10px]">Avg mcap at entry</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <span className="text-white/20 text-[10px]">│</span>
+
+                  {/* Holding % */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[8px] text-white/40 uppercase tracking-wider">HOLD</span>
+                        <span className={`text-xs font-bold font-mono ${avgHoldingPct >= 80 ? "text-green-400" : avgHoldingPct >= 50 ? "text-yellow-400" : "text-red-400"}`}>
+                          {avgHoldingPct.toFixed(0)}%
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="bg-black/95 border border-white/10 text-white max-w-[180px]">
+                      <p className="font-medium text-[11px]">Position Held</p>
+                      <p className="text-white/60 text-[10px]">% still holding (not sold)</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <span className="text-white/20 text-[10px]">│</span>
+
+                  {/* Profit % */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[8px] text-white/40 uppercase tracking-wider">P&L</span>
+                        <span className={`text-sm font-bold font-mono ${profitPct >= 0 ? "text-green-400" : "text-red-400"}`}>
+                          {profitPct >= 0 ? "+" : ""}{profitPct.toFixed(0)}%
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="bg-black/95 border border-white/10 text-white max-w-[180px]">
+                      <p className="font-medium text-[11px]">Performance</p>
+                      <p className="text-white/60 text-[10px]">Price change since entry</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
-              ))}
-              {call.aggregatedEntries.length > 3 && (
-                <span className="text-[9px] text-white/40 flex-shrink-0">+{call.aggregatedEntries.length - 3}</span>
-              )}
-            </div>
+              );
+            })()}
           </div>
 
-          {/* Chart - full width on mobile */}
+          {/* Chart - full width on mobile with mcap badge */}
           <div className={`border-t ${isRunner ? "border-[#c4f70e]/20" : "border-white/5"}`}>
             <div className="w-full h-[100px]">
               <MiniChart
@@ -562,6 +639,7 @@ function CallCard({ call }: CallCardProps) {
                 aggregatedEntries={call.aggregatedEntries}
                 currentMcap={call.currentMcap}
                 firstEntryMcap={call.firstEntryMcap}
+                showMcapBadge
               />
             </div>
           </div>
@@ -570,10 +648,10 @@ function CallCard({ call }: CallCardProps) {
         {/* DESKTOP LAYOUT - Full width with chart below */}
         <div className="hidden lg:flex flex-col">
           {/* Top section: Token info + Wallet entries side by side */}
-          <div className="flex items-start gap-4 p-3">
-            {/* Left: Token image + name + mcap */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-black border border-zinc-700/50">
+          <div className="flex items-start justify-between p-4 gap-3">
+            {/* Left: Token image with name below (left-aligned, copy button absolute) */}
+            <div className="relative flex flex-col items-start gap-1 min-w-0 flex-shrink-0">
+              <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-black border border-zinc-700/50 flex-shrink-0">
                 {!imgError ? (
                   <Image
                     src={call.imageUrl || dexScreenerImg}
@@ -584,92 +662,153 @@ function CallCard({ call }: CallCardProps) {
                     unoptimized
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white/40 text-xs font-bold">
+                  <div className="w-full h-full flex items-center justify-center text-white/40 text-sm font-bold">
                     {call.symbol.slice(0, 2)}
                   </div>
                 )}
+                {/* Copy button - absolute positioned on image */}
+                <button
+                  onClick={handleCopy}
+                  className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-black/80 hover:bg-black transition-colors cursor-pointer border border-zinc-700/50"
+                >
+                  {copied ? (
+                    <Check className="w-3 h-3 text-[#c4f70e]" />
+                  ) : (
+                    <Copy className="w-3 h-3 text-white/50 hover:text-white/70" />
+                  )}
+                </button>
               </div>
-              <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-1">
-                  <a
-                    href={chartUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`font-bold text-sm transition-colors ${isRunner ? "text-white hover:text-[#c4f70e]" : "text-white/60 hover:text-white/80"}`}
-                  >
-                    {isRunner ? (
-                      <ShinyText
-                        text={call.symbol}
-                        speed={3}
-                        color="#ffffff"
-                        shineColor="#c4f70e"
-                        className="font-bold text-sm"
-                      />
-                    ) : (
-                      call.symbol
-                    )}
-                  </a>
-                  <button
-                    onClick={handleCopy}
-                    className="p-0.5 rounded hover:bg-white/10 transition-colors cursor-pointer"
-                  >
-                    {copied ? (
-                      <Check className="w-2.5 h-2.5 text-[#c4f70e]" />
-                    ) : (
-                      <Copy className="w-2.5 h-2.5 text-white/30 hover:text-white/50" />
-                    )}
-                  </button>
-                </div>
-                {call.currentMcap && (
-                  <span className="text-[10px] font-medium text-white/60">
-                    {formatMcap(call.currentMcap)}
-                  </span>
+              {/* Token name below image */}
+              <a
+                href={chartUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`font-bold text-sm transition-colors ${isRunner ? "text-white hover:text-[#c4f70e]" : "text-white/60 hover:text-white/80"}`}
+              >
+                {isRunner ? (
+                  <ShinyText
+                    text={call.symbol}
+                    speed={3}
+                    color="#ffffff"
+                    shineColor="#c4f70e"
+                    className="font-bold text-sm"
+                  />
+                ) : (
+                  call.symbol
                 )}
-              </div>
+              </a>
             </div>
 
-            {/* Right: Wallet entries - horizontal layout */}
-            <div className="flex-1 overflow-x-auto">
-              <div className="flex items-center gap-2">
-                {call.aggregatedEntries.slice(0, 3).map((entry, idx) => (
-                  <div
-                    key={`${entry.wallet.id}-${idx}`}
-                    className="flex items-center gap-2 py-1 px-2 rounded-md bg-white/[0.03] flex-shrink-0"
-                  >
-                    <Crown className={`w-3 h-3 flex-shrink-0 ${isRunner ? "text-[#c4f70e]" : "text-white/40"}`} />
-                    <div className="flex items-center gap-1">
-                      <TrendingUp className="w-2 h-2 text-green-500" />
-                      <span className="text-[9px] text-green-400">{entry.buyCount}</span>
-                      {entry.sellCount > 0 && (
-                        <>
-                          <TrendingDown className="w-2 h-2 text-red-500" />
-                          <span className="text-[9px] text-red-400">{entry.sellCount}</span>
-                        </>
-                      )}
-                    </div>
-                    <span className="text-[10px] font-mono text-white/60">
-                      {formatMcap(entry.avgEntryMcap)}
-                    </span>
-                    <span className={`text-[11px] font-bold font-mono ${(entry.positionHeldPct ?? 0) >= 80 ? "text-green-400" : (entry.positionHeldPct ?? 0) >= 50 ? "text-yellow-400" : "text-red-400"}`}>
-                      {(entry.positionHeldPct ?? 0).toFixed(0)}%
-                    </span>
+            {/* Right: Aggregated Summary - Clean single row with tooltips */}
+            <div className="flex items-center gap-3">
+              {(() => {
+                // Calculate aggregated metrics from all entries
+                const walletCount = call.aggregatedEntries.length;
+
+                // Calculate avg entry mcap with fallback to price-based calculation
+                let avgEntryMcap = 0;
+                if (walletCount > 0) {
+                  // First try: use avgEntryMcap from entries
+                  avgEntryMcap = call.aggregatedEntries.reduce((sum, e) => sum + (e.avgEntryMcap || 0), 0) / walletCount;
+
+                  // Fallback: calculate from avgEntryPrice × totalSupply
+                  if (avgEntryMcap === 0 && call.totalSupply && call.totalSupply > 0) {
+                    const avgPrice = call.aggregatedEntries.reduce((sum, e) => sum + (e.avgEntryPrice || 0), 0) / walletCount;
+                    if (avgPrice > 0) {
+                      avgEntryMcap = avgPrice * call.totalSupply;
+                    }
+                  }
+                }
+
+                const avgHoldingPct = walletCount > 0
+                  ? call.aggregatedEntries.reduce((sum, e) => sum + (e.positionHeldPct ?? 100), 0) / walletCount
+                  : 0;
+                const profitPct = avgEntryMcap > 0 && call.currentMcap
+                  ? ((call.currentMcap - avgEntryMcap) / avgEntryMcap) * 100
+                  : 0;
+
+                return (
+                  <div className="flex items-center gap-3 py-2 px-4 rounded-lg bg-white/[0.03]">
+                    {/* Wallet count */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1.5 cursor-help">
+                          <Crown className={`w-5 h-5 ${isRunner ? "text-[#c4f70e]" : "text-white/50"}`} />
+                          <span className={`text-lg font-bold font-mono ${isRunner ? "text-white" : "text-white/70"}`}>{walletCount}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="bg-black/95 border border-white/10 text-white max-w-[200px]">
+                        <p className="font-medium">God Wallets</p>
+                        <p className="text-white/60 text-[10px]">Number of tracked god wallets that entered this token</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <span className="text-white/20 text-sm">│</span>
+
+                    {/* Avg entry mcap */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex flex-col items-center cursor-help">
+                          <span className="text-[9px] text-white/40 uppercase tracking-wider">AVG</span>
+                          <span className="text-sm font-mono text-white/60">{formatMcap(avgEntryMcap)}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="bg-black/95 border border-white/10 text-white max-w-[200px]">
+                        <p className="font-medium">Avg Entry</p>
+                        <p className="text-white/60 text-[10px]">Average market cap when god wallets entered</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <span className="text-white/20 text-sm">│</span>
+
+                    {/* Holding % */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex flex-col items-center cursor-help">
+                          <span className="text-[9px] text-white/40 uppercase tracking-wider">HOLD</span>
+                          <span className={`text-sm font-bold font-mono ${avgHoldingPct >= 80 ? "text-green-400" : avgHoldingPct >= 50 ? "text-yellow-400" : "text-red-400"}`}>
+                            {avgHoldingPct.toFixed(0)}%
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="bg-black/95 border border-white/10 text-white max-w-[200px]">
+                        <p className="font-medium">Position Held</p>
+                        <p className="text-white/60 text-[10px]">Average % of position still held by god wallets (not sold)</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <span className="text-white/20 text-sm">│</span>
+
+                    {/* Profit % */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex flex-col items-center cursor-help">
+                          <span className="text-[9px] text-white/40 uppercase tracking-wider">P&L</span>
+                          <span className={`text-base font-bold font-mono ${profitPct >= 0 ? "text-green-400" : "text-red-400"}`}>
+                            {profitPct >= 0 ? "+" : ""}{profitPct.toFixed(0)}%
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="bg-black/95 border border-white/10 text-white max-w-[200px]">
+                        <p className="font-medium">Performance</p>
+                        <p className="text-white/60 text-[10px]">Price change since average entry (current mcap vs entry mcap)</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
-                ))}
-                {call.aggregatedEntries.length > 3 && (
-                  <span className="text-[9px] text-white/40 flex-shrink-0">+{call.aggregatedEntries.length - 3}</span>
-                )}
-              </div>
+                );
+              })()}
             </div>
           </div>
 
-          {/* Chart - full width below */}
+          {/* Chart - full width below with mcap badge */}
           <div className={`border-t ${isRunner ? "border-[#c4f70e]/20" : "border-white/5"}`}>
-            <div className="w-full h-[60px]">
+            <div className="w-full h-[80px]">
               <MiniChart
                 mint={call.mint}
                 aggregatedEntries={call.aggregatedEntries}
                 currentMcap={call.currentMcap}
                 firstEntryMcap={call.firstEntryMcap}
+                showMcapBadge
               />
             </div>
           </div>
@@ -711,6 +850,7 @@ export function GodWalletCalls() {
           aggregatedEntries,
           currentMcap: null,
           currentPrice: null,
+          totalSupply: null,
           performancePct: null,
           firstEntryMcap: null,
         });
@@ -777,7 +917,12 @@ export function GodWalletCalls() {
 
       // Get first entry mcap from the aggregated data (oldest wallet's avg entry)
       const oldestEntry = call.aggregatedEntries[call.aggregatedEntries.length - 1];
-      const firstEntryMcap = oldestEntry?.avgEntryMcap || null;
+      let firstEntryMcap = oldestEntry?.avgEntryMcap || null;
+
+      // Fallback: calculate entry mcap from avgEntryPrice × totalSupply
+      if (!firstEntryMcap && oldestEntry?.avgEntryPrice && data.totalSupply > 0) {
+        firstEntryMcap = oldestEntry.avgEntryPrice * data.totalSupply;
+      }
 
       // Calculate performance: (current_mcap - entry_mcap) / entry_mcap * 100
       const performancePct = firstEntryMcap && firstEntryMcap > 0
@@ -788,6 +933,7 @@ export function GodWalletCalls() {
         ...call,
         currentMcap: data.mcap,
         currentPrice: data.price,
+        totalSupply: data.totalSupply,
         firstEntryMcap,
         performancePct,
       };
@@ -864,10 +1010,10 @@ export function GodWalletCalls() {
 
   // Grid of cards - runners first, then cold items
   // Using layout animation for smooth reordering (initial=false prevents jump on first render)
-  // Mobile: max 3 items visible (~640px) with scroll, desktop: 3 columns, 2 rows max with scroll
+  // Mobile/tablet/laptop: 2 columns, large desktop (1400px+): 3 columns
   return (
     <div className="relative rounded-xl shadow-[4px_4px_20px_rgba(0,0,0,0.4),inset_-1px_-1px_0_rgba(255,255,255,0.05)]">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 max-h-[640px] lg:max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="grid grid-cols-2 2xl:grid-cols-3 gap-3 max-h-[640px] 2xl:max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         <AnimatePresence mode="popLayout" initial={false}>
           {sortedCalls.slice(0, 10).map((call) => (
             <motion.div

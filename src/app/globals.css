@@ -690,32 +690,39 @@ main {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  /* Default for standard desktop (1201px-1299px) */
-  margin-top: -280px !important;
+  /* Default for standard desktop (769px-1199px) */
+  margin-top: -60px !important;
   padding: 0 12% var(--space-4) 12% !important;
   padding-bottom: 100px !important;
   position: relative;
   /* z-index removed - allows fixed elements (wallet pill) to properly layer above content */
 }
 
-/* Mid-large desktop (1300px-1500px) - less overlap */
+/* Standard desktop (1200px-1299px) - slight overlap */
+@media (min-width: 1200px) {
+  .dashboard-panel {
+    margin-top: -100px !important;
+  }
+}
+
+/* Mid-large desktop (1300px-1500px) - moderate overlap */
 @media (min-width: 1300px) {
   .dashboard-panel {
-    margin-top: -60px !important;
+    margin-top: -150px !important;
   }
 }
 
-/* Wide desktop (1501px+) - even less overlap */
+/* Wide desktop (1501px+) - more overlap */
 @media (min-width: 1501px) {
   .dashboard-panel {
-    margin-top: -80px !important;
+    margin-top: -200px !important;
   }
 }
 
-/* Ultra-wide screens (1921px+) - minimal overlap */
+/* Ultra-wide screens (1921px+) - max overlap */
 @media (min-width: 1921px) {
   .dashboard-panel {
-    margin-top: -40px !important;
+    margin-top: -250px !important;
   }
 }
 

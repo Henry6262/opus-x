@@ -99,10 +99,10 @@ export function WalletEntryChart({ mint, height = 200, showTooltip = true }: Wal
         const now = Date.now();
         const priceUsd = parseFloat(pair.priceUsd);
 
-        // Create some synthetic candles for visualization
+        // Create some synthetic candles for visualization (last 30 minutes)
         const candles: OHLCVData[] = [];
         const intervals = 30; // 30 candles
-        const intervalMs = 5 * 60 * 1000; // 5 min candles
+        const intervalMs = 1 * 60 * 1000; // 1 min candles = 30 minutes total
 
         for (let i = intervals; i >= 0; i--) {
           const time = now - (i * intervalMs);
@@ -284,7 +284,14 @@ export function WalletEntryChart({ mint, height = 200, showTooltip = true }: Wal
       if (data) {
         const price = (data as any).close ?? (data as any).value ?? 0;
         const formattedPrice = formatPrice(price);
-        const formattedTime = new Date((param.time as number) * 1000).toLocaleTimeString();
+        // Show both date and time
+        const date = new Date((param.time as number) * 1000);
+        const formattedTime = date.toLocaleString(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
 
         setTooltipData({
           price: formattedPrice,
