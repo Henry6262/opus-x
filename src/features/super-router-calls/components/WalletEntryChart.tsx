@@ -182,8 +182,13 @@ export function WalletEntryChart({ mint, height = 200, showTooltip = true }: Wal
       },
       localization: {
         priceFormatter: (price: number) => {
-          if (price < 0.00001) return price.toExponential(2);
-          if (price < 0.01) return price.toFixed(6);
+          if (price === 0) return "0";
+          if (price < 0.0000001) return price.toFixed(10);
+          if (price < 0.000001) return price.toFixed(9);
+          if (price < 0.00001) return price.toFixed(8);
+          if (price < 0.0001) return price.toFixed(7);
+          if (price < 0.001) return price.toFixed(6);
+          if (price < 0.01) return price.toFixed(5);
           if (price < 1) return price.toFixed(4);
           return price.toFixed(2);
         },
@@ -407,9 +412,13 @@ function formatAmount(usd: number): string {
 }
 
 function formatPrice(price: number): string {
-  if (price < 0.00001) return price.toExponential(2);
-  if (price < 0.001) return price.toFixed(6);
-  if (price < 0.01) return price.toFixed(5);
-  if (price < 1) return price.toFixed(4);
+  if (price === 0) return "$0";
+  if (price < 0.0000001) return `$${price.toFixed(10)}`;
+  if (price < 0.000001) return `$${price.toFixed(9)}`;
+  if (price < 0.00001) return `$${price.toFixed(8)}`;
+  if (price < 0.0001) return `$${price.toFixed(7)}`;
+  if (price < 0.001) return `$${price.toFixed(6)}`;
+  if (price < 0.01) return `$${price.toFixed(5)}`;
+  if (price < 1) return `$${price.toFixed(4)}`;
   return `$${price.toFixed(2)}`;
 }
