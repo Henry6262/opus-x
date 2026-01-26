@@ -410,6 +410,7 @@ export function GodWalletCalls() {
           symbol: buy.symbol,
           imageUrl: buy.imageUrl,
           entries: [],
+          aggregatedEntries: [],
           currentMcap: null,
           currentPrice: null,
           performancePct: null,
@@ -429,6 +430,7 @@ export function GodWalletCalls() {
         entryMcap: null, // Will be calculated from entryPricePerToken * totalSupply
         entryPricePerToken: buy.entryPricePerToken,
         amountUsd: buy.amountUsd,
+        amountSol: buy.amountSol ?? 0,
         positionHeld: 100, // Default to 100% since we don't track sells yet
         timestamp: buy.timestamp,
       });
