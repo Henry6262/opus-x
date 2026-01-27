@@ -50,7 +50,7 @@ export function MobileBottomBar() {
     }, []);
 
     return (
-        <div className="social-links-bar fixed z-[200] bottom-4 left-[26px] md:bottom-auto md:top-4 md:left-[26px]">
+        <div className="social-links-bar fixed z-[200] bottom-[6px] left-[26px] md:bottom-auto md:top-[26px] md:left-[26px]">
             {/* Icon buttons container - horizontal on mobile, vertical on desktop */}
             <div className="relative flex items-center gap-3 md:flex-col md:gap-0">
                 {/* Backdrop pill behind buttons - mobile: horizontal, desktop: vertical glass pill */}

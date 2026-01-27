@@ -62,7 +62,7 @@ export function TraderProfileCard({
   const totalValue = walletBalance + totalExposure + unrealizedPnL;
 
   const StatBalance = () => (
-    <div className="flex items-center gap-2 min-w-[140px]">
+    <div className="flex items-center gap-2">
       {isLoading ? (
         <Skeleton className="h-5 w-24" />
       ) : (
@@ -82,7 +82,7 @@ export function TraderProfileCard({
   );
 
   const StatTrades = () => (
-    <div className="flex flex-col items-center justify-center px-3 py-1 rounded-lg bg-white/[0.03]">
+    <div className="flex flex-col items-center justify-center">
       <span className="text-[8px] md:text-[10px] text-white/40 uppercase tracking-wider">{tProfile("trades")}</span>
       {isLoading ? (
         <Skeleton className="h-5 w-16 mt-0.5" />
@@ -96,7 +96,7 @@ export function TraderProfileCard({
   );
 
   const StatBest = () => (
-    <div className="flex flex-col items-center justify-center px-3 py-1 rounded-lg bg-white/[0.03]">
+    <div className="flex flex-col items-center justify-center">
       <span className="text-[8px] md:text-[10px] text-white/40 uppercase tracking-wider">{tProfile("bestTrade")}</span>
       {isLoading ? (
         <Skeleton className="h-5 w-14 mt-0.5" />
@@ -160,10 +160,12 @@ export function TraderProfileCard({
             )}
           </div>
 
-          {/* ZONE 2 Desktop: Full stats */}
-          <div className="hidden md:flex md:items-center md:gap-6 pl-6 pr-4 border-l border-white/10">
+          {/* ZONE 2 Desktop: Full stats with faded separators */}
+          <div className="hidden md:flex md:items-center md:gap-4 pl-6 pr-4 border-l border-white/10">
             <StatBalance />
+            <div className="w-px h-6 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
             <StatTrades />
+            <div className="w-px h-6 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
             <StatBest />
           </div>
         </div>
