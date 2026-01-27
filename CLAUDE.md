@@ -113,6 +113,59 @@ src/
 | Gemini | Google API | AI entry analysis |
 | Supabase | Project DB | Analytics & logs (optional) |
 
+## Agent Versioning System
+
+Track different versions of the trading bot with changelogs and performance metrics.
+
+### API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/versions` | GET | List all versions with changelogs |
+| `/api/versions/active` | GET | Get currently active version |
+| `/api/versions` | POST | Create new version |
+| `/api/versions/:id/activate` | PUT | Activate a version |
+| `/api/versions/:id/metrics` | GET | Performance metrics for version |
+| `/api/versions/compare` | GET | Compare multiple versions |
+
+### Response Format
+
+```typescript
+interface AgentVersion {
+  id: string;
+  versionCode: string;        // "v1", "v2", "v3"
+  versionName: string;        // "V3 - Social Intelligence..."
+  description?: string;
+  startDate?: string;         // "2026-01-27" (when version went live)
+  endDate?: string | null;    // null = currently active
+  changelog: ChangelogEntry[];
+  isActive: boolean;
+}
+
+interface ChangelogEntry {
+  category: 'feature' | 'improvement' | 'performance' | 'bugfix' | 'security';
+  title: string;
+  description?: string;
+  impact?: string;
+}
+```
+
+### Current Versions
+
+| Version | Period | Key Features |
+|---------|--------|--------------|
+| v1 | Jan 19-20 | Market metrics trading, AI decisions, migration detection |
+| v2 | Jan 21-26 | Bug fixes, async trades, wallet tracking, AI speed |
+| v3 | Jan 27+ | Social metrics, top holders, god wallet copy, 100 concurrent txns |
+
+### Frontend Files
+
+- `src/types/versioning.ts` - TypeScript types
+- `src/lib/versioning-api.ts` - API client
+- `src/hooks/useVersions.ts` - Version management hook
+- `src/hooks/useVersionComparison.ts` - Compare versions hook
+- `src/components/analytics/` - Dashboard components
+
 ## WebSocket Architecture
 
 ### Connection
