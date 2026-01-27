@@ -651,7 +651,7 @@ function CallCard({ call }: CallCardProps) {
         <div className="hidden lg:flex flex-col">
           {/* Top section: Token info + Wallet entries side by side */}
           <div className="flex items-start justify-between p-4 gap-3">
-            {/* Left: Token image with name below (left-aligned, copy button absolute) */}
+            {/* Left: Token image with name + copy button next to it */}
             <div className="relative flex flex-col items-start gap-1 min-w-0 flex-shrink-0">
               <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-black border border-zinc-700/50 flex-shrink-0">
                 {!imgError ? (
@@ -668,37 +668,39 @@ function CallCard({ call }: CallCardProps) {
                     {call.symbol.slice(0, 2)}
                   </div>
                 )}
-                {/* Copy button - absolute positioned on image */}
+              </div>
+              {/* Token name + copy button inline */}
+              <div className="flex items-center gap-1.5">
+                <a
+                  href={chartUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`font-bold text-sm transition-colors ${isRunner ? "text-white hover:text-[#c4f70e]" : "text-white/60 hover:text-white/80"}`}
+                >
+                  {isRunner ? (
+                    <ShinyText
+                      text={call.symbol}
+                      speed={3}
+                      color="#ffffff"
+                      shineColor="#c4f70e"
+                      className="font-bold text-sm"
+                    />
+                  ) : (
+                    call.symbol
+                  )}
+                </a>
                 <button
                   onClick={handleCopy}
-                  className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-black/80 hover:bg-black transition-colors cursor-pointer border border-zinc-700/50"
+                  className="p-1 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Copy contract address"
                 >
                   {copied ? (
                     <Check className="w-3 h-3 text-[#c4f70e]" />
                   ) : (
-                    <Copy className="w-3 h-3 text-white/50 hover:text-white/70" />
+                    <Copy className="w-3 h-3 text-white/40 hover:text-white/70" />
                   )}
                 </button>
               </div>
-              {/* Token name below image */}
-              <a
-                href={chartUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`font-bold text-sm transition-colors ${isRunner ? "text-white hover:text-[#c4f70e]" : "text-white/60 hover:text-white/80"}`}
-              >
-                {isRunner ? (
-                  <ShinyText
-                    text={call.symbol}
-                    speed={3}
-                    color="#ffffff"
-                    shineColor="#c4f70e"
-                    className="font-bold text-sm"
-                  />
-                ) : (
-                  call.symbol
-                )}
-              </a>
             </div>
 
             {/* Right: Aggregated Summary - Clean single row with tooltips */}

@@ -306,7 +306,9 @@ src/features/super-router-calls/
 ├── hooks/
 │   ├── useGodWallets.ts             # Fetch god wallets + recent buys + WebSocket
 │   ├── useTrackerWallets.ts         # Fetch active tracked wallets
-│   └── useWalletEntries.ts          # Fetch wallet entries for tokens (batch + single)
+│   ├── useWalletEntries.ts          # Fetch wallet entries for tokens (batch + single)
+│   ├── useGodWalletTokenPrices.ts   # Real-time price updates via WebSocket (NEW)
+│   └── useTokenPriceHistory.ts      # Historical price data for charts (NEW)
 ├── types.ts                          # TrackerWallet, GodWalletBuy, etc.
 └── index.ts                          # Exports
 
@@ -524,6 +526,15 @@ When a god wallet buys:
 7. **Position % always shows 100%**
    - Backend doesn't track sells yet
    - When sell tracking is implemented, position % will update dynamically
+
+8. **GodWalletCalls.tsx needs to use real-time price hooks** (Phase 4 - DEFERRED)
+   - NEW: `useGodWalletTokenPrices` hook created - listens to `god_wallet_token_price_update` WebSocket events
+   - NEW: `useTokenPriceHistory` hook created - fetches from `/api/tokens/{mint}/price-history`
+   - TODO: Update GodWalletCalls.tsx to replace one-time DexScreener fetch with `useGodWalletTokenPrices()`
+   - TODO: Update MiniChart to use `useTokenPriceHistory()` for real historical data instead of synthetic
+   - Backend: `god_wallet_price_monitor.rs` created, broadcasts price updates via WebSocket
+   - Backend: `/api/tokens/:mint/price-history` endpoint ready (30s cache)
+   - Implementation guide in plan file: `/Users/henry/.claude/plans/sprightly-orbiting-pebble.md`
 
 ---
 

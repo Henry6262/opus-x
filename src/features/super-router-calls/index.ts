@@ -12,6 +12,10 @@ export { WalletEntryChart } from "./components/WalletEntryChart";
 // Hooks
 export { useTrackerWallets } from "./hooks/useTrackerWallets";
 export { useGodWallets } from "./hooks/useGodWallets";
+export { useGodWalletTokenPrices } from "./hooks/useGodWalletTokenPrices";
+export type { TokenPrice } from "./hooks/useGodWalletTokenPrices";
+export { useTokenPriceHistory, useMultipleTokenPriceHistories } from "./hooks/useTokenPriceHistory";
+export type { PriceHistoryPoint } from "./hooks/useTokenPriceHistory";
 
 // Types
 export type {
