@@ -392,10 +392,12 @@ export function SmartTradingProvider({
         smartTradingService.getWatchlist().catch(() => ({ tokens: [], stats: null })),
       ]);
 
-      // Calculate daily PnL from today's closed positions
-      const dailyPnL = calculateDailyPnL(response.positions.closed);
+      // Use daily PnL from backend API (falls back to client-side calculation if backend returns 0)
+      const backendDailyPnL = response.stats?.trading?.dailyPnL ?? 0;
+      const dailyPnL = backendDailyPnL !== 0
+        ? backendDailyPnL
+        : calculateDailyPnL(response.positions.closed);
 
-      // Update stats with calculated daily PnL
       const statsWithDailyPnL = response.stats
         ? {
           ...response.stats,

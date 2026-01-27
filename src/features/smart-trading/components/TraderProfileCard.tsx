@@ -32,6 +32,7 @@ function Skeleton({ className }: { className?: string }) {
 export function TraderProfileCard({
   stats,
   config,
+  positions,
 }: TraderProfileCardProps) {
   const tProfile = useTranslations("profile");
 
@@ -56,10 +57,9 @@ export function TraderProfileCard({
   // Balance: prefer real wallet balance if available, else paper balance
   const walletBalance = stats?.trading?.realWalletBalance ?? stats?.trading?.walletBalance ?? 0;
 
-  // Total value including positions (walletBalance + totalExposure + unrealizedPnL)
-  const totalExposure = stats?.trading?.totalExposure ?? 0;
-  const unrealizedPnL = stats?.trading?.unrealizedPnL ?? 0;
-  const totalValue = walletBalance + totalExposure + unrealizedPnL;
+  // Total value = wallet balance + SOL locked in open positions
+  const totalInvestedInPositions = positions.reduce((sum, p) => sum + (p.entryAmountSol ?? 0), 0);
+  const totalValue = walletBalance + totalInvestedInPositions;
 
   const StatBalance = () => (
     <div className="flex items-center gap-2">
