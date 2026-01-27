@@ -260,7 +260,7 @@ export function TokenGateGuard({
             </span>
             <button
               onClick={() => disconnect()}
-              className="p-1.5 rounded-md bg-white/10 hover:bg-red-500/20 border border-white/10 hover:border-red-500/30 transition-all text-white/60 hover:text-red-400 cursor-pointer"
+              className="p-1.5 rounded-md hover:bg-red-500/20 transition-all text-white/50 hover:text-red-400 cursor-pointer"
               title="Disconnect"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -271,11 +271,11 @@ export function TokenGateGuard({
         {/* Main content - centered */}
         <div className="relative z-10 flex flex-col items-center justify-center px-6 pb-8 md:px-10 md:pb-10 text-center">
           {/* Access Locked Badge */}
-          <div className="mb-3">
+          <div className="mb-3 px-3 py-1 rounded-full bg-orange-500/20">
             <GradientText
               colors={['#ff6b6b', '#ff8e53', '#ff6b6b']}
               animationSpeed={3}
-              showBorder={true}
+              showBorder={false}
               className="text-sm font-bold uppercase tracking-wider"
             >
               Access Locked
@@ -301,7 +301,7 @@ export function TokenGateGuard({
                 <span className="text-white/40 text-xs">Value:</span>
                 <span className={cn(
                   "font-bold text-base",
-                  usdValue >= minRequiredUsd ? "text-emerald-400" : "text-amber-400"
+                  usdValue >= minRequiredUsd ? "text-emerald-400" : "text-red-400"
                 )}>
                   {formatUsd(usdValue)}
                 </span>

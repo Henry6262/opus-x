@@ -353,7 +353,8 @@ export interface MigrationFeedEvent {
   | "watchlist_updated"
   | "watchlist_removed"
   | "watchlist_graduated"
-  | "history_updated";
+  | "history_updated"
+  | "god_wallet_token_price_update";
   data?: unknown;
   timestamp: number;
   clientId?: string;
