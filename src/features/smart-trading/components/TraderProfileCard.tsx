@@ -112,7 +112,7 @@ export function TraderProfileCard({
     <div className="relative mt-0 md:mt-0 pt-0 md:pt-1 pb-3 md:pb-2 overflow-hidden md:overflow-visible">
 
       {/* Main pill container */}
-      <div className="relative mt-6 md:mt-8 rounded-full bg-black/50 backdrop-blur-xl border-2 border-[#c4f70e]/30 h-12 md:h-16 ml-16 md:ml-20 w-fit max-w-[700px] overflow-visible flex items-center shadow-[0_0_20px_rgba(196,247,14,0.1)] animate-[profile-ambient-breathing_3s_ease-in-out_infinite] z-[20]">
+      <div className="relative mt-3 md:mt-8 rounded-full bg-black/50 backdrop-blur-xl border-2 border-[#c4f70e]/30 h-12 md:h-16 ml-10 md:ml-20 w-fit max-w-[700px] overflow-visible flex items-center shadow-[0_0_20px_rgba(196,247,14,0.1)] animate-[profile-ambient-breathing_3s_ease-in-out_infinite] z-[20]">
           {/* Subtle glow effects */}
           <div className="absolute -top-20 right-1/4 w-48 h-48 bg-[#c4f70e]/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -143,19 +143,19 @@ export function TraderProfileCard({
             )}
           </div>
 
-          {/* ZONE 2 Mobile: Balance / Total */}
-          <div className="flex md:hidden items-center gap-1.5 pl-3 pr-2">
+          {/* ZONE 2 Mobile: Balance / Total - stacked vertically */}
+          <div className="flex md:hidden flex-col items-start pl-3 pr-2">
             {isLoading ? (
-              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-8 w-16" />
             ) : (
               <>
-                <span className="text-xs font-bold font-mono tabular-nums text-white">
-                  {walletBalance.toFixed(2)}
-                </span>
-                <Image src="/logos/solana.png" alt="SOL" width={14} height={14} className="opacity-70" />
-                <span className="text-[9px] text-white/50 font-mono">
-                  (tot: {totalValue.toFixed(2)})
-                </span>
+                <span className="text-[9px] text-white/50 uppercase tracking-wider">Total</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-bold font-mono tabular-nums text-white">
+                    {totalValue.toFixed(2)}
+                  </span>
+                  <Image src="/logos/solana.png" alt="SOL" width={12} height={12} className="opacity-70" />
+                </div>
               </>
             )}
           </div>
@@ -205,7 +205,7 @@ export function TraderProfileCard({
 
       {/* Win Rate Ring - Left side with animated glow */}
       <div
-        className="absolute left-[30px] top-[calc(44%-10px)] md:top-[calc(45%+7px)] -translate-y-1/2 w-16 h-16 md:w-24 md:h-24 z-[30]"
+        className="absolute left-[8px] md:left-[30px] top-[calc(44%-10px)] md:top-[calc(45%+7px)] -translate-y-1/2 w-16 h-16 md:w-24 md:h-24 z-[30]"
       >
         {/* Outer rotating ring - conic gradient (hidden on mobile to reduce glow bleed) */}
         <motion.div

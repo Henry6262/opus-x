@@ -66,7 +66,7 @@ export function MobileBottomBar() {
                     whileHover={{ scale: 1.15, opacity: 1 }}
                     whileTap={{ scale: 0.95 }}
                 >
-                    <XIcon className="w-7 h-7 md:w-4 md:h-4 text-white/70 hover:text-white transition-colors" />
+                    <XIcon className="w-9 h-9 md:w-4 md:h-4 text-white/70 hover:text-white transition-colors" />
                 </motion.a>
 
                 {/* Separator - desktop only */}
@@ -81,7 +81,7 @@ export function MobileBottomBar() {
                     whileHover={{ scale: 1.15, opacity: 1 }}
                     whileTap={{ scale: 0.95 }}
                 >
-                    <DexScreenerIcon className="w-7 h-7 md:w-4 md:h-4 text-white/70 hover:text-white transition-colors" />
+                    <DexScreenerIcon className="w-9 h-9 md:w-4 md:h-4 text-white/70 hover:text-white transition-colors" />
                 </motion.a>
 
                 {/* Separator - desktop only */}
@@ -117,7 +117,7 @@ export function MobileBottomBar() {
                                 exit={{ scale: 0, rotate: 180 }}
                                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
                             >
-                                <Check className="w-7 h-7 md:w-4 md:h-4 text-[#c4f70e]" />
+                                <Check className="w-9 h-9 md:w-4 md:h-4 text-[#c4f70e]" />
                             </motion.div>
                         ) : (
                             <motion.div
@@ -127,7 +127,7 @@ export function MobileBottomBar() {
                                 exit={{ scale: 0 }}
                                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
                             >
-                                <Copy className="w-7 h-7 md:w-4 md:h-4 text-[#c4f70e]" />
+                                <Copy className="w-9 h-9 md:w-4 md:h-4 text-[#c4f70e]" />
                             </motion.div>
                         )}
                     </AnimatePresence>

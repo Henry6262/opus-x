@@ -138,7 +138,7 @@ function CallCardSkeleton() {
 function GodWalletCallsSkeleton() {
   return (
     <div className="relative rounded-xl shadow-[4px_4px_20px_rgba(0,0,0,0.4),inset_-1px_-1px_0_rgba(255,255,255,0.05)]">
-      <div className="grid grid-cols-2 2xl:grid-cols-3 gap-3 max-h-[640px] 2xl:max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3 max-h-[640px] 2xl:max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <CallCardSkeleton key={i} />
         ))}
@@ -167,6 +167,8 @@ interface TokenCall {
 function formatMcap(mcap: number | null | undefined): string {
   if (mcap == null || mcap === 0) return "—";
   if (mcap >= 1_000_000_000) return `$${(mcap / 1_000_000_000).toFixed(1)}B`;
+  // No decimals for >= 4M, 1 decimal for 1M-4M
+  if (mcap >= 4_000_000) return `$${Math.round(mcap / 1_000_000)}M`;
   if (mcap >= 1_000_000) return `$${(mcap / 1_000_000).toFixed(1)}M`;
   if (mcap >= 1_000) return `$${(mcap / 1_000).toFixed(0)}K`;
   return `$${mcap.toFixed(0)}`;
@@ -485,7 +487,7 @@ function CallCard({ call }: CallCardProps) {
           <div className="flex items-start justify-between p-3 gap-1.5">
             {/* Left: Token image with name below (left-aligned, copy button absolute) */}
             <div className="relative flex flex-col items-start gap-0.5 min-w-0 flex-shrink-0">
-              <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-black border border-zinc-700/50 flex-shrink-0">
+              <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-black border border-zinc-700/50 flex-shrink-0">
                 {!imgError ? (
                   <Image
                     src={call.imageUrl || dexScreenerImg}
@@ -1010,10 +1012,10 @@ export function GodWalletCalls() {
 
   // Grid of cards - runners first, then cold items
   // Using layout animation for smooth reordering (initial=false prevents jump on first render)
-  // Mobile/tablet/laptop: 2 columns, large desktop (1400px+): 3 columns
+  // Mobile: 1 column, tablet/laptop: 2 columns, large desktop (1400px+): 3 columns
   return (
     <div className="relative rounded-xl shadow-[4px_4px_20px_rgba(0,0,0,0.4),inset_-1px_-1px_0_rgba(255,255,255,0.05)]">
-      <div className="grid grid-cols-2 2xl:grid-cols-3 gap-3 max-h-[640px] 2xl:max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3 max-h-[640px] 2xl:max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         <AnimatePresence mode="popLayout" initial={false}>
           {sortedCalls.slice(0, 10).map((call) => (
             <motion.div

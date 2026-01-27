@@ -192,7 +192,7 @@ function DashboardContent() {
         </div>
       </div>
 
-      <main className={`cockpit-layout ai-mood ai-mood-${aiMood} pt-24 md:pt-20`}>
+      <main className={`cockpit-layout ai-mood ai-mood-${aiMood} pt-44 md:pt-20`}>
         {/* ===== TOP SECTION: VIBR CODER VIDEO + TERMINAL ===== */}
         <div className="hero-section relative">
           <Suspense fallback={<VibrCoderSkeleton />}>

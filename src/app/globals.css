@@ -244,6 +244,7 @@ main {
   width: 100%;
   background: var(--void-black);
   overflow: hidden;
+  margin-top: 5rem;
   /* No z-index here - wallet pill has its own fixed positioning with high z-index */
 }
 
@@ -293,8 +294,9 @@ main {
   height: 120px;
   background: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0.8) 0%,
-    rgba(0, 0, 0, 0.4) 45%,
+    var(--void-black) 0%,
+    rgba(0, 0, 0, 0.8) 30%,
+    rgba(0, 0, 0, 0.4) 60%,
     transparent 100%
   );
 }
@@ -357,7 +359,7 @@ main {
 
   .vibr-coder-container {
     width: 100%;
-    margin-top: 2rem;
+    margin-top: 6rem;
     max-height: 280px;
     aspect-ratio: 16 / 9;
   }
@@ -2380,11 +2382,11 @@ main {
   }
 
   .vibr-coder-fade-top {
-    height: 60px;
+    height: 80px;
     background: linear-gradient(
       to bottom,
-      rgba(0, 0, 0, 0.5) 0%,
-      rgba(0, 0, 0, 0.2) 50%,
+      var(--void-black) 0%,
+      rgba(0, 0, 0, 0.6) 40%,
       transparent 100%
     );
   }

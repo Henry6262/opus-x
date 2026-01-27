@@ -25,7 +25,7 @@ export function SuperRouterCallsSection({ className }: SuperRouterCallsSectionPr
           className="space-y-4"
         >
           {/* Epic Header - relative container for absolute badge */}
-          <div className="relative w-full">
+          <div className="relative w-full z-10">
             {/* Badge - absolute top right */}
             <div className="absolute top-0 right-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#c4f70e]/10 whitespace-nowrap">
               <ShinyText

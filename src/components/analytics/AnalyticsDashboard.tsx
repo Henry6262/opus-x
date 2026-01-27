@@ -63,8 +63,6 @@ const VERSION_COLORS = [
 const METRICS: { id: MetricType; label: string; icon: typeof TrendingUp; format: (v: number) => string }[] = [
   { id: 'winRate', label: 'Win Rate', icon: Target, format: (v) => `${v.toFixed(1)}%` },
   { id: 'avgMultiplier', label: 'Avg Multiplier', icon: Zap, format: (v) => `${v.toFixed(2)}x` },
-  { id: 'tradeCount', label: 'Trades', icon: BarChart3, format: (v) => v.toString() },
-  { id: 'avgHoldTime', label: 'Hold Time', icon: Clock, format: (v) => `${Math.round(v)}m` },
 ];
 
 // ============================================
@@ -83,8 +81,7 @@ function MetricSelector({ selectedMetric, onChange, compact = false, labelOnTop 
   return (
     <div
       className={cn(
-        "flex flex-col gap-2",
-        compact && !labelOnTop && "flex-row items-center gap-2",
+        "flex flex-col gap-1.5",
         className
       )}
     >
@@ -95,7 +92,7 @@ function MetricSelector({ selectedMetric, onChange, compact = false, labelOnTop 
           labelOnTop && "text-center"
         )}
       >
-        Metric
+        TP Stats
       </label>
       <div className="relative">
         <select
@@ -610,22 +607,30 @@ export function AnalyticsDashboard() {
               transition={{ delay: 0.1 }}
               className="relative flex-1 rounded-2xl bg-white/[0.02] backdrop-blur-sm overflow-hidden md:w-[72%] md:border-l md:border-b md:border-white/10"
             >
-              <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-2">
-                {versions.map((version) => {
-                  const isSelected = version.id === selectedVersionId;
-                  return (
-                    <button
-                      key={version.id}
-                      onClick={() => setSelectedVersionId(version.id)}
-                      className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition cursor-pointer md:px-4 md:py-1.5 md:text-[11px] md:border md:border-transparent md:bg-transparent md:text-white/60 md:hover:bg-white/5 md:hover:text-white/90 ${isSelected
-                        ? "bg-[#c4f70e]/30 text-[#c4f70e] shadow-[0_0_24px_rgba(196,247,14,0.55)] md:border-[#c4f70e]/80 md:text-[#c4f70e]"
-                        : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80"
-                        }`}
-                    >
-                      {(version.versionCode || version.versionName || "V?").toUpperCase()}
-                    </button>
-                  );
-                })}
+              <div className="absolute left-4 top-3 z-10 flex flex-col gap-1.5">
+                <span className="text-[8px] font-semibold uppercase tracking-[0.25em] text-white/40 md:text-[9px]">
+                  Versions
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {versions.map((version) => {
+                    const isSelected = version.id === selectedVersionId;
+                    return (
+                      <button
+                        key={version.id}
+                        onClick={() => setSelectedVersionId(version.id)}
+                        className={cn(
+                          "rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition cursor-pointer",
+                          "md:px-4 md:py-1.5 md:text-[11px]",
+                          isSelected
+                            ? "bg-[#c4f70e]/20 text-[#c4f70e] border border-[#c4f70e]/40 shadow-[0_0_16px_rgba(196,247,14,0.3)]"
+                            : "bg-white/5 text-white/60 border border-transparent hover:bg-white/10 hover:text-white/80"
+                        )}
+                      >
+                        {(version.versionCode || version.versionName || "V?").toUpperCase()}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div className="p-3 md:p-4">
                 {comparisonLoading ? (
