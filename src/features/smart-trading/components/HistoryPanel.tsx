@@ -204,7 +204,7 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
     const itemCount = viewMode === "trades" ? allClosedTrades.length : (txnsTotal || transactions.length);
 
     return (
-        <div className="h-full flex flex-col overflow-hidden max-h-[420px] md:max-h-none rounded-xl border border-white/10 p-3">
+        <div className="h-full flex flex-col overflow-hidden max-h-[280px] md:max-h-none rounded-xl border border-white/10 p-3">
             {/* Header with SectionHeader component */}
             <SectionHeader
                 icon={<TrendingUp className="w-6 h-6 text-[#c4f70e]" />}
@@ -249,7 +249,7 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
                         transition={{ duration: 0.2 }}
                         className="flex-1 overflow-hidden"
                     >
-                        <div className="h-full max-h-[320px] md:max-h-none overflow-y-auto space-y-2 pr-1">
+                        <div className="h-full max-h-[200px] md:max-h-none overflow-y-auto space-y-2 pr-1">
                             {TRADES_VIEW_ENABLED && viewMode === "trades" ? (
                                 <TradesView
                                     trades={visibleTrades}

@@ -45,6 +45,9 @@ class ProductionVersioningAPI {
       createdAt: raw.createdAt ?? raw.created_at ?? '',
       createdBy: raw.createdBy ?? raw.created_by ?? undefined,
       notes: raw.notes ?? undefined,
+      startDate: raw.startDate ?? raw.start_date ?? undefined,
+      endDate: raw.endDate ?? raw.end_date ?? undefined,
+      changelog: raw.changelog ?? undefined,
     };
   }
 

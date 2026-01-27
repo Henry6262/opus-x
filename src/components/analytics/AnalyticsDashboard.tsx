@@ -20,7 +20,11 @@ import {
   Clock,
   BarChart3,
   Sparkles,
+  FileText,
+  X,
 } from 'lucide-react';
+import { AnimatePresence } from 'motion/react';
+import type { ChangelogEntry } from '@/types/versioning';
 import { subDays } from 'date-fns';
 import {
   CartesianGrid,
@@ -195,6 +199,100 @@ function TimeframeSelector({ selectedBucket, onChange, className, mobileDropdown
         </button>
       </div>
     </div>
+  );
+}
+
+// ============================================
+// CHANGELOG PANEL
+// ============================================
+
+interface ChangelogPanelProps {
+  version: AgentVersion;
+  onClose: () => void;
+}
+
+function ChangelogPanel({ version, onClose }: ChangelogPanelProps) {
+  // Filter out unwanted entries
+  const changelog = (version.changelog || []).filter(
+    (entry) => !entry.title.toLowerCase().includes('position sizing')
+  );
+
+  const handleClose = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClose();
+  };
+
+  return (
+    <motion.div
+      initial={{ x: '-100%', opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: '-100%', opacity: 0 }}
+      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+      className="absolute inset-0 z-20 bg-black/95 backdrop-blur-xl rounded-2xl overflow-hidden border border-white/10"
+    >
+      {/* Header */}
+      <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-2.5 border-b border-white/10 bg-black/80 backdrop-blur-sm">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-[#c4f70e]/20 flex items-center justify-center">
+            <FileText className="w-3.5 h-3.5 text-[#c4f70e]" />
+          </div>
+          <div>
+            <h4 className="text-[13px] font-bold text-white">
+              {version.versionCode?.toUpperCase()} Updates
+            </h4>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition cursor-pointer"
+        >
+          <X className="w-3.5 h-3.5 text-white/60" />
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="overflow-y-auto max-h-[calc(100%-48px)] p-3 space-y-1">
+        {changelog.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <FileText className="w-8 h-8 text-white/20 mb-2" />
+            <p className="text-white/40 text-xs">No updates yet</p>
+          </div>
+        ) : (
+          changelog.map((entry, idx) => (
+            <motion.div
+              key={`${entry.title}-${idx}`}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.03 }}
+              className="group flex items-start gap-2 py-2 px-2.5 rounded-lg hover:bg-white/[0.03] transition"
+            >
+              {/* Bullet */}
+              <div className="w-1.5 h-1.5 rounded-full bg-[#c4f70e] mt-1.5 flex-shrink-0" />
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-medium text-white/90 leading-snug">
+                  {entry.title}
+                </p>
+                {entry.description && (
+                  <p className="text-[11px] text-white/50 leading-relaxed mt-0.5">
+                    {entry.description}
+                  </p>
+                )}
+                {entry.impact && (
+                  <p className="text-[10px] text-[#c4f70e]/70 mt-1 flex items-center gap-1">
+                    <Zap className="w-2.5 h-2.5" />
+                    {entry.impact}
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          ))
+        )}
+      </div>
+    </motion.div>
   );
 }
 
@@ -452,6 +550,7 @@ export function AnalyticsDashboard() {
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('winRate');
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [bucket, setBucket] = useState<'1d' | '3h'>('3h');
+  const [showChangelog, setShowChangelog] = useState(false);
   const [dateRange] = useState({
     start: subDays(new Date(), 30).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0],
@@ -603,13 +702,16 @@ export function AnalyticsDashboard() {
                 <span className="text-[8px] font-semibold uppercase tracking-[0.25em] text-white/40 md:text-[9px]">
                   Versions
                 </span>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {versions.map((version) => {
                     const isSelected = version.id === selectedVersionId;
                     return (
                       <button
                         key={version.id}
-                        onClick={() => setSelectedVersionId(version.id)}
+                        onClick={() => {
+                          setSelectedVersionId(version.id);
+                          setShowChangelog(false);
+                        }}
                         className={cn(
                           "rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition cursor-pointer",
                           "md:px-4 md:py-1.5 md:text-[11px]",
@@ -622,6 +724,20 @@ export function AnalyticsDashboard() {
                       </button>
                     );
                   })}
+                  {/* Changelog button */}
+                  <button
+                    onClick={() => setShowChangelog(!showChangelog)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition cursor-pointer",
+                      "md:px-4 md:py-1.5 md:text-[11px]",
+                      showChangelog
+                        ? "bg-white/20 text-white border border-white/30"
+                        : "bg-white/5 text-white/60 border border-transparent hover:bg-white/10 hover:text-white/80"
+                    )}
+                  >
+                    <FileText className="w-3 h-3" />
+                    <span className="hidden md:inline">Changelog</span>
+                  </button>
                 </div>
               </div>
               <div className="p-3 md:p-4">
@@ -647,6 +763,16 @@ export function AnalyticsDashboard() {
                   </div>
                 )}
               </div>
+
+              {/* Changelog Panel - slides from left */}
+              <AnimatePresence>
+                {showChangelog && selectedVersionId && (
+                  <ChangelogPanel
+                    version={versions.find((v) => v.id === selectedVersionId) || versions[0]}
+                    onClose={() => setShowChangelog(false)}
+                  />
+                )}
+              </AnimatePresence>
             </motion.div>
 
             {/* Stats Cards - Animated Glassmorphic Design */}

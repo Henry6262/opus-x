@@ -15,6 +15,16 @@ import type { TradingConfig } from '@/features/smart-trading/types';
  * Represents a specific version of the trading agent configuration.
  * Each version tracks a snapshot of settings and associated performance metrics.
  */
+/**
+ * A single changelog entry for a version release
+ */
+export interface ChangelogEntry {
+  category: 'feature' | 'improvement' | 'performance' | 'bugfix' | 'security';
+  title: string;
+  description?: string;
+  impact?: string;
+}
+
 export interface AgentVersion {
   id: string;
   versionCode: string;          // e.g., "v1.0.0", "v1.1.0"
@@ -25,6 +35,9 @@ export interface AgentVersion {
   createdAt: string;             // ISO 8601 timestamp
   createdBy?: string;            // Email or user ID
   notes?: string;                // Optional notes about the version
+  startDate?: string;            // Date version became active (ISO date)
+  endDate?: string | null;       // Date version was deactivated (null = current)
+  changelog?: ChangelogEntry[];  // Structured changelog entries
 }
 
 // ============================================

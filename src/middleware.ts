@@ -5,7 +5,7 @@ import { locales, defaultLocale } from './i18n/config';
 const intlMiddleware = createMiddleware({
   locales,
   defaultLocale,
-  localePrefix: 'as-needed', // Only show locale prefix for non-default locales
+  localePrefix: 'always', // Always require locale prefix (e.g., /en/cockpit, not /cockpit)
 });
 
 export function middleware(req: NextRequest): NextResponse {
