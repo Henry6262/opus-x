@@ -650,7 +650,7 @@ function CallCard({ call }: CallCardProps) {
         {/* DESKTOP LAYOUT - Full width with chart below */}
         <div className="hidden lg:flex flex-col">
           {/* Top section: Token info + Wallet entries side by side */}
-          <div className="flex items-start justify-between p-4 gap-3">
+          <div className="flex items-center justify-between p-4 gap-6">
             {/* Left: Token image with name + copy button next to it */}
             <div className="relative flex flex-col items-start gap-1 min-w-0 flex-shrink-0">
               <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-black border border-zinc-700/50 flex-shrink-0">
@@ -703,8 +703,13 @@ function CallCard({ call }: CallCardProps) {
               </div>
             </div>
 
+            {/* Fading vertical separator */}
+            <div className="h-14 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent flex-shrink-0" />
+
             {/* Right: Aggregated Summary - Clean single row with tooltips */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/40">God Wallet Tracker</span>
+              <div className="flex items-center gap-3">
               {(() => {
                 // Calculate aggregated metrics from all entries
                 const walletCount = call.aggregatedEntries.length;
@@ -737,8 +742,8 @@ function CallCard({ call }: CallCardProps) {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-center gap-1.5 cursor-help">
-                          <Crown className={`w-5 h-5 ${isRunner ? "text-[#c4f70e]" : "text-white/50"}`} />
-                          <span className={`text-lg font-bold font-mono ${isRunner ? "text-white" : "text-white/70"}`}>{walletCount}</span>
+                          <Crown className={`w-6 h-6 ${isRunner ? "text-[#c4f70e]" : "text-white/50"}`} />
+                          <span className={`text-2xl font-bold font-mono ${isRunner ? "text-white" : "text-white/70"}`}>{walletCount}</span>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="bg-black/95 border border-white/10 text-white max-w-[200px]">
@@ -747,14 +752,15 @@ function CallCard({ call }: CallCardProps) {
                       </TooltipContent>
                     </Tooltip>
 
-                    <span className="text-white/20 text-sm">│</span>
+                    {/* Fading separator */}
+                    <div className="w-px h-8 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
 
                     {/* Avg entry mcap */}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex flex-col items-center cursor-help">
-                          <span className="text-[9px] text-white/40 uppercase tracking-wider">AVG</span>
-                          <span className="text-sm font-mono text-white/60">{formatMcap(avgEntryMcap)}</span>
+                          <span className="text-[10px] text-white/40 uppercase tracking-wider">AVG</span>
+                          <span className="text-base font-mono text-white/60">{formatMcap(avgEntryMcap)}</span>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="bg-black/95 border border-white/10 text-white max-w-[200px]">
@@ -763,14 +769,15 @@ function CallCard({ call }: CallCardProps) {
                       </TooltipContent>
                     </Tooltip>
 
-                    <span className="text-white/20 text-sm">│</span>
+                    {/* Fading separator */}
+                    <div className="w-px h-8 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
 
                     {/* Holding % */}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex flex-col items-center cursor-help">
-                          <span className="text-[9px] text-white/40 uppercase tracking-wider">HOLD</span>
-                          <span className={`text-sm font-bold font-mono ${avgHoldingPct >= 80 ? "text-green-400" : avgHoldingPct >= 50 ? "text-yellow-400" : "text-red-400"}`}>
+                          <span className="text-[10px] text-white/40 uppercase tracking-wider">HOLD</span>
+                          <span className={`text-base font-bold font-mono ${avgHoldingPct >= 80 ? "text-green-400" : avgHoldingPct >= 50 ? "text-yellow-400" : "text-red-400"}`}>
                             {avgHoldingPct.toFixed(0)}%
                           </span>
                         </div>
@@ -781,14 +788,15 @@ function CallCard({ call }: CallCardProps) {
                       </TooltipContent>
                     </Tooltip>
 
-                    <span className="text-white/20 text-sm">│</span>
+                    {/* Fading separator */}
+                    <div className="w-px h-8 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
 
                     {/* Profit % */}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex flex-col items-center cursor-help">
-                          <span className="text-[9px] text-white/40 uppercase tracking-wider">P&L</span>
-                          <span className={`text-base font-bold font-mono ${profitPct >= 0 ? "text-green-400" : "text-red-400"}`}>
+                          <span className="text-[10px] text-white/40 uppercase tracking-wider">P&L</span>
+                          <span className={`text-lg font-bold font-mono ${profitPct >= 0 ? "text-green-400" : "text-red-400"}`}>
                             {profitPct >= 0 ? "+" : ""}{profitPct.toFixed(0)}%
                           </span>
                         </div>
@@ -801,6 +809,7 @@ function CallCard({ call }: CallCardProps) {
                   </div>
                 );
               })()}
+              </div>
             </div>
           </div>
 

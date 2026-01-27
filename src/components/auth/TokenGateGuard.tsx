@@ -158,20 +158,20 @@ export function TokenGateGuard({
             </div>
           </div>
 
+          {/* Exclusive Badge - Absolute top left */}
+          <div className="absolute top-4 left-4 z-20">
+            <GradientText
+              colors={['#c4f70e', '#00ff6a', '#c4f70e', '#a8d60d']}
+              animationSpeed={4}
+              showBorder={true}
+              className="text-[10px] font-bold uppercase tracking-[0.12em]"
+            >
+              $SR Exclusive
+            </GradientText>
+          </div>
+
           {/* Main content - centered */}
           <div className="relative z-10 flex flex-col items-center justify-center px-6 pb-8 md:px-10 md:pb-10 text-center">
-            {/* Exclusive Badge */}
-            <div className="mb-3">
-              <GradientText
-                colors={['#c4f70e', '#00ff6a', '#c4f70e', '#a8d60d']}
-                animationSpeed={4}
-                showBorder={true}
-                className="text-sm font-bold uppercase tracking-[0.15em]"
-              >
-                Exclusive for $SR Holders
-              </GradientText>
-            </div>
-
             {/* Title with Shiny Effect */}
             <h3 className="text-2xl md:text-3xl lg:text-4xl font-black text-white mb-3 tracking-tight leading-[1.1]">
               <ShinyText
@@ -183,31 +183,28 @@ export function TokenGateGuard({
               />
             </h3>
 
-            <p className="text-white/60 text-sm md:text-base mb-5 max-w-md leading-relaxed">
-              {description || "Unlock exclusive trading insights, god wallet tracking & enhanced market signals."}
+            <p className="text-white/60 text-sm md:text-base mb-8 max-w-lg leading-relaxed">
+              {description || (
+                <>
+                  Unlock exclusive access to <span className="text-[#c4f70e] font-bold text-base md:text-lg">God Wallet Tracking</span>, real-time trading insights & enhanced market signals. Hold <span className="text-[#c4f70e] font-bold">${minRequiredUsd}+ of $SR</span> to unlock.
+                </>
+              )}
             </p>
 
-            {/* Requirements pill + Connect button inline */}
-            <div className="flex items-center gap-4 flex-wrap justify-center">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/50 border border-[#c4f70e]/30 backdrop-blur-sm">
-                <Lock className="w-3.5 h-3.5 text-[#c4f70e]" />
-                <span className="text-[#c4f70e] font-bold text-xs">
-                  Hold ${minRequiredUsd}+ of $SR
-                </span>
-              </div>
-
-              <StarBorder
-                as="button"
-                color="#c4f70e"
-                speed="4s"
-                onClick={() => connect()}
-                className="w-fit"
-              >
-                <span className="flex items-center gap-2 font-bold text-sm md:text-base">
-                  {noWalletFound ? "Install Wallet" : "Connect Wallet"}
-                </span>
-              </StarBorder>
-            </div>
+            {/* Connect button - centered, bigger, fully rounded */}
+            <StarBorder
+              as="button"
+              color="#c4f70e"
+              speed="3s"
+              onClick={() => connect()}
+              className="w-fit"
+              borderRadius="9999px"
+              thickness={2}
+            >
+              <span className="flex items-center gap-3 font-bold text-lg md:text-xl px-8 py-2">
+                {noWalletFound ? "Install Wallet" : "Connect Wallet"}
+              </span>
+            </StarBorder>
           </div>
         </div>
       </div>
