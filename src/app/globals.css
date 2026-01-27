@@ -692,40 +692,12 @@ main {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  /* Default for standard desktop (769px-1199px) */
-  margin-top: -60px !important;
+  /* Uniform overlap across all desktop sizes */
+  margin-top: -50px !important;
   padding: 0 12% var(--space-4) 12% !important;
   padding-bottom: 100px !important;
   position: relative;
   /* z-index removed - allows fixed elements (wallet pill) to properly layer above content */
-}
-
-/* Standard desktop (1200px-1299px) - slight overlap */
-@media (min-width: 1200px) {
-  .dashboard-panel {
-    margin-top: -100px !important;
-  }
-}
-
-/* Mid-large desktop (1300px-1500px) - moderate overlap */
-@media (min-width: 1300px) {
-  .dashboard-panel {
-    margin-top: -150px !important;
-  }
-}
-
-/* Wide desktop (1501px+) - more overlap */
-@media (min-width: 1501px) {
-  .dashboard-panel {
-    margin-top: -200px !important;
-  }
-}
-
-/* Ultra-wide screens (1921px+) - max overlap */
-@media (min-width: 1921px) {
-  .dashboard-panel {
-    margin-top: -250px !important;
-  }
 }
 
 /* ===== CAPSULE TAB BUTTONS (Inside the chin) ===== */
