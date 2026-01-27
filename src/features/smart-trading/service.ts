@@ -202,6 +202,8 @@ interface DevprintTradingStats {
   avg_hold_time_minutes: number;
   best_trade_pct: number;
   worst_trade_pct: number;
+  daily_pnl?: number;
+  dailyPnL?: number;
 }
 
 // ============================================
@@ -527,7 +529,7 @@ function mapDevprintStats(
       realWalletBalance: isLiveMode ? solBalance : 0,
       openPositions: stats.open_positions,
       maxOpenPositions: config?.max_positions ?? 10,
-      dailyPnL: 0, // Will be calculated from today's closed positions in context
+      dailyPnL: stats.dailyPnL ?? stats.daily_pnl ?? 0,
       maxDailyLoss: 1.0,
       dailyTrades: stats.open_positions + stats.closed_positions,
       maxDailyTrades: 10,
