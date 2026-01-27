@@ -273,26 +273,26 @@ export function useMultipleTokenPriceHistories(
 
             if (!response.ok) {
               return [mint, {
-                history: [],
+                history: [] as PriceHistoryPoint[],
                 currentPrice: null,
                 priceChangePct: null,
                 isLoading: false,
                 error: `Failed: ${response.status}`,
                 refetch: async () => {},
-              }] as const;
+              } satisfies UseTokenPriceHistoryResult] as const;
             }
 
             const data: PriceHistoryApiResponse = await response.json();
 
             if (!data.success) {
               return [mint, {
-                history: [],
+                history: [] as PriceHistoryPoint[],
                 currentPrice: null,
                 priceChangePct: null,
                 isLoading: false,
                 error: "API error",
                 refetch: async () => {},
-              }] as const;
+              } satisfies UseTokenPriceHistoryResult] as const;
             }
 
             const mappedHistory: PriceHistoryPoint[] = data.data.points.map((point) => ({
@@ -324,13 +324,13 @@ export function useMultipleTokenPriceHistories(
             return [mint, result] as const;
           } catch (err) {
             return [mint, {
-              history: [],
+              history: [] as PriceHistoryPoint[],
               currentPrice: null,
               priceChangePct: null,
               isLoading: false,
               error: err instanceof Error ? err.message : "Fetch error",
               refetch: async () => {},
-            }] as const;
+            } satisfies UseTokenPriceHistoryResult] as const;
           }
         })
       );
