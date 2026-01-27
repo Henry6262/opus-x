@@ -20,7 +20,6 @@ import {
   Clock,
   BarChart3,
   Sparkles,
-  RefreshCw,
 } from 'lucide-react';
 import { subDays } from 'date-fns';
 import {
@@ -81,29 +80,29 @@ function MetricSelector({ selectedMetric, onChange, compact = false, labelOnTop 
   return (
     <div
       className={cn(
-        "flex flex-col gap-1.5",
+        "flex flex-col items-center gap-1.5",
         className
       )}
     >
       <label
         className={cn(
-          "font-semibold uppercase text-white/40",
-          compact ? "text-[9px] tracking-[0.25em]" : "text-xs tracking-widest",
-          labelOnTop && "text-center"
+          "font-semibold uppercase text-white/40 text-center",
+          compact ? "text-[9px] tracking-[0.25em]" : "text-xs tracking-widest"
         )}
       >
         TP Stats
       </label>
-      <div className="relative">
+      <div className={cn("relative", compact && "rounded-full bg-white/5 p-1")}>
         <select
           value={selectedMetric}
           onChange={(event) => onChange(event.target.value as MetricType)}
           className={cn(
-            "appearance-none rounded-lg border border-white/10 bg-black/40 cursor-pointer",
-            compact ? "px-2 py-1 pr-7 text-[11px] font-semibold" : "px-3 py-2 pr-9 text-sm font-semibold",
-            "text-white/80",
-            "shadow-[0_10px_20px_rgba(0,0,0,0.2)] transition",
-            "focus:border-[#c4f70e]/40 focus:outline-none"
+            "appearance-none cursor-pointer",
+            compact
+              ? "px-3 py-1.5 pr-7 text-[10px] font-semibold uppercase tracking-[0.15em] rounded-full bg-transparent text-white/80"
+              : "px-3 py-2 pr-9 text-sm font-semibold rounded-lg border border-white/10 bg-black/40 text-white/80 shadow-[0_10px_20px_rgba(0,0,0,0.2)]",
+            "transition focus:outline-none",
+            compact ? "focus:text-[#c4f70e]" : "focus:border-[#c4f70e]/40"
           )}
         >
           {METRICS.map((metric) => (
@@ -115,7 +114,7 @@ function MetricSelector({ selectedMetric, onChange, compact = false, labelOnTop 
         <div
           className={cn(
             "pointer-events-none absolute top-1/2 -translate-y-1/2",
-            compact ? "right-2 text-[10px] text-[#c4f70e]" : "right-3 text-white/50"
+            compact ? "right-3 text-[10px] text-[#c4f70e]" : "right-3 text-white/50"
           )}
         >
           ▾
@@ -167,29 +166,34 @@ function TimeframeSelector({ selectedBucket, onChange, className, mobileDropdown
   }
 
   return (
-    <div className={cn("flex gap-1 rounded-full bg-white/5 p-1", className)}>
-      <button
-        onClick={() => onChange('3h')}
-        className={cn(
-          "px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] rounded-full transition-all cursor-pointer",
-          selectedBucket === '3h'
-            ? "bg-[#c4f70e]/20 text-[#c4f70e] shadow-[0_0_12px_rgba(196,247,14,0.2)]"
-            : "text-white/50 hover:text-white/70 hover:bg-white/5"
-        )}
-      >
-        3-Hour
-      </button>
-      <button
-        onClick={() => onChange('1d')}
-        className={cn(
-          "px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] rounded-full transition-all cursor-pointer",
-          selectedBucket === '1d'
-            ? "bg-[#c4f70e]/20 text-[#c4f70e] shadow-[0_0_12px_rgba(196,247,14,0.2)]"
-            : "text-white/50 hover:text-white/70 hover:bg-white/5"
-        )}
-      >
-        Daily
-      </button>
+    <div className={cn("flex flex-col items-center gap-1.5", className)}>
+      <label className="text-[9px] font-semibold uppercase tracking-[0.25em] text-white/40 text-center">
+        Timeframe
+      </label>
+      <div className="flex gap-1 rounded-full bg-white/5 p-1">
+        <button
+          onClick={() => onChange('3h')}
+          className={cn(
+            "px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] rounded-full transition-all cursor-pointer",
+            selectedBucket === '3h'
+              ? "bg-[#c4f70e]/20 text-[#c4f70e] shadow-[0_0_12px_rgba(196,247,14,0.2)]"
+              : "text-white/50 hover:text-white/70 hover:bg-white/5"
+          )}
+        >
+          3-Hour
+        </button>
+        <button
+          onClick={() => onChange('1d')}
+          className={cn(
+            "px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] rounded-full transition-all cursor-pointer",
+            selectedBucket === '1d'
+              ? "bg-[#c4f70e]/20 text-[#c4f70e] shadow-[0_0_12px_rgba(196,247,14,0.2)]"
+              : "text-white/50 hover:text-white/70 hover:bg-white/5"
+          )}
+        >
+          Daily
+        </button>
+      </div>
     </div>
   );
 }
@@ -551,18 +555,6 @@ export function AnalyticsDashboard() {
               </h3>
             </div>
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => reloadComparison()}
-                disabled={comparisonLoading}
-                className={cn(
-                  "p-2 rounded-lg border border-white/10 bg-black/40 text-white/60",
-                  "hover:bg-white/5 hover:text-white/90 transition cursor-pointer",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
-                title="Refresh data"
-              >
-                <RefreshCw className={cn("w-4 h-4", comparisonLoading && "animate-spin")} />
-              </button>
               <TimeframeSelector
                 selectedBucket={bucket}
                 onChange={setBucket}
