@@ -80,12 +80,12 @@ export function CompetitionSection({ walletAddress }: CompetitionSectionProps) {
           </div>
 
           {/* Content */}
-          <div className="relative p-5 md:p-6 flex flex-col gap-5">
+          <div className="relative p-5 md:p-8 lg:p-10 flex flex-col gap-5 md:gap-6">
 
             {/* Header */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 md:gap-4">
             {/* Title with DecryptedText effect */}
-            <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
+            <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight">
               <DecryptedText
                 text="Train SuperRouter AI"
                 speed={40}
@@ -99,30 +99,30 @@ export function CompetitionSection({ walletAddress }: CompetitionSectionProps) {
             </h2>
 
             {/* Description */}
-            <p className="text-[12px] md:text-[13px] text-white/40 font-mono leading-relaxed max-w-lg">
+            <p className="text-[12px] md:text-sm lg:text-[15px] text-white/40 font-mono leading-relaxed max-w-xl">
               Submit your best trades with reasoning. Top 10 analysts get exclusive early access to new features.
             </p>
           </div>
 
           {/* Steps - auto-rotating carousel */}
-          <div className="flex items-stretch gap-2.5">
+          <div className="flex items-stretch gap-2.5 md:gap-4">
             {/* Vertical step indicators */}
-            <div className="flex flex-col justify-center gap-1.5 py-1">
+            <div className="flex flex-col justify-center gap-1.5 md:gap-2 py-1">
               {TRAINING_STEPS.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveStep(idx)}
-                  className={`w-1.5 rounded-full transition-all duration-300 ${
+                  className={`w-1.5 md:w-2 rounded-full transition-all duration-300 ${
                     idx === activeStep
-                      ? "bg-[#c4f70e] h-4"
-                      : "bg-white/15 h-1.5 hover:bg-white/25"
+                      ? "bg-[#c4f70e] h-4 md:h-5"
+                      : "bg-white/15 h-1.5 md:h-2 hover:bg-white/25"
                   }`}
                 />
               ))}
             </div>
 
             {/* Step card */}
-            <div className="relative h-14 flex-1 max-w-[300px] overflow-hidden rounded-lg bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.08]">
+            <div className="relative h-14 md:h-16 lg:h-[72px] flex-1 max-w-[300px] md:max-w-[380px] lg:max-w-[420px] overflow-hidden rounded-lg bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.08]">
               {/* Animated gradient border glow */}
               <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#c4f70e]/5 via-transparent to-[#c4f70e]/5 opacity-50" />
 
@@ -139,17 +139,17 @@ export function CompetitionSection({ walletAddress }: CompetitionSectionProps) {
                       className="absolute inset-0 flex items-center px-4 gap-3"
                     >
                       {/* Background icon - large and faded */}
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <Icon className="w-12 h-12 text-white/[0.03]" strokeWidth={1} />
+                      <div className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <Icon className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 text-white/[0.03]" strokeWidth={1} />
                       </div>
 
                       {/* Step number - no bg/border, bigger with # prefix */}
-                      <span className="text-base font-mono text-[#c4f70e] font-bold shrink-0">
+                      <span className="text-base md:text-lg lg:text-xl font-mono text-[#c4f70e] font-bold shrink-0">
                         #{TRAINING_STEPS[activeStep].num}
                       </span>
 
                       {/* Step text */}
-                      <span className="text-[11px] md:text-[12px] font-mono text-white/80 leading-tight relative z-10">
+                      <span className="text-[11px] md:text-[13px] lg:text-[15px] font-mono text-white/80 leading-tight relative z-10">
                         {TRAINING_STEPS[activeStep].text}
                       </span>
                     </motion.div>
@@ -160,7 +160,7 @@ export function CompetitionSection({ walletAddress }: CompetitionSectionProps) {
           </div>
 
           {/* CTA Button - Green Glass Style */}
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex items-center gap-3 md:gap-4 pt-2 md:pt-4">
             <button
               onClick={() => setModalOpen(true)}
               className="cursor-pointer group relative overflow-hidden rounded-lg bg-gradient-to-r from-[#c4f70e]/20 to-[#c4f70e]/10 border border-[#c4f70e]/30 backdrop-blur-sm transition-all duration-300 hover:from-[#c4f70e]/30 hover:to-[#c4f70e]/20 hover:border-[#c4f70e]/50 hover:shadow-[0_0_20px_rgba(196,247,14,0.3)]"
@@ -168,21 +168,21 @@ export function CompetitionSection({ walletAddress }: CompetitionSectionProps) {
               {/* Inner glow */}
               <div className="absolute inset-0 bg-gradient-to-t from-transparent via-[#c4f70e]/5 to-[#c4f70e]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-              <div className="relative flex items-center gap-3 px-4 py-2.5">
-                <Trophy className="w-4 h-4 text-[#c4f70e]" />
-                <span className="text-[13px] font-mono font-bold text-[#c4f70e] tracking-wide">
+              <div className="relative flex items-center gap-3 px-4 py-2.5 md:px-6 md:py-3">
+                <Trophy className="w-4 h-4 md:w-5 md:h-5 text-[#c4f70e]" />
+                <span className="text-[13px] md:text-[15px] lg:text-base font-mono font-bold text-[#c4f70e] tracking-wide">
                   SUBMIT YOUR TRADE
                 </span>
                 <motion.div
                   animate={{ x: [0, 4, 0] }}
                   transition={{ duration: 1.2, repeat: Infinity }}
                 >
-                  <ChevronRight className="w-4 h-4 text-[#c4f70e]/70" />
+                  <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-[#c4f70e]/70" />
                 </motion.div>
               </div>
             </button>
 
-            <span className="text-[10px] font-mono text-white/25 hidden sm:block">
+            <span className="text-[10px] md:text-xs font-mono text-white/25 hidden sm:block">
               Takes ~30 seconds
             </span>
           </div>
