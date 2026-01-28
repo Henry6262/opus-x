@@ -19,7 +19,9 @@ import {
   TrendingDown,
   DollarSign,
   BarChart3,
+  Gift,
 } from "lucide-react";
+import GradientText from "@/components/GradientText";
 import { useSubmission } from "../hooks/useSubmission";
 
 interface SubmissionModalProps {
@@ -95,18 +97,34 @@ export function SubmissionModal({
         <div className="relative px-6 pt-6 pb-5 border-b border-white/10 bg-gradient-to-b from-white/[0.03] to-transparent">
           <button
             onClick={() => handleClose(false)}
-            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/10 transition-colors cursor-pointer z-10"
           >
             <X className="w-4 h-4 text-white/50" />
           </button>
 
-          <div className="flex items-center gap-3 mb-5">
-            <div className="p-2.5 rounded-xl bg-[#c4f70e]/15 border border-[#c4f70e]/30">
-              <Trophy className="w-5 h-5 text-[#c4f70e]" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white font-mono">Submit Trade</h2>
-              <p className="text-xs text-white/50 font-mono">Train the AI with your best calls</p>
+          <div className="flex items-center gap-4 mb-5">
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", duration: 0.6 }}
+              className="p-3 rounded-xl bg-gradient-to-br from-[#c4f70e]/20 to-[#c4f70e]/5 border border-[#c4f70e]/30 shadow-[0_0_30px_rgba(196,247,14,0.2)]"
+            >
+              <Trophy className="w-6 h-6 text-[#c4f70e]" />
+            </motion.div>
+            <div className="flex-1">
+              <GradientText
+                colors={["#c4f70e", "#ffffff", "#c4f70e"]}
+                animationSpeed={4}
+                className="!text-xl !font-bold !font-mono !tracking-tight"
+              >
+                Submit Your Trade
+              </GradientText>
+              <div className="flex items-center gap-2 mt-1">
+                <Gift className="w-3 h-3 text-[#c4f70e]/70" />
+                <p className="text-[11px] text-white/50 font-mono">
+                  Top 10 analysts win their own custom trading bot
+                </p>
+              </div>
             </div>
           </div>
 
