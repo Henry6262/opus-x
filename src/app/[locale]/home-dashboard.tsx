@@ -16,6 +16,7 @@ import { useAiMood } from "@/hooks/useAiMood";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MobileBottomBar } from "@/components/MobileBottomBar";
 import GradualBlur from "@/components/ui/GradualBlur";
+import { CompetitionSection, TrainingStatus } from "@/features/trading-competition";
 
 // Lazy load heavy components for better initial load performance
 const VibrCoder = lazy(() => import("@/components/VibrCoder").then(m => ({ default: m.VibrCoder })));
@@ -193,7 +194,7 @@ function DashboardContent() {
       </div>
 
       <main className={`cockpit-layout ai-mood ai-mood-${aiMood} pt-44 md:pt-20`}>
-        {/* ===== TOP SECTION: VIBR CODER VIDEO + TERMINAL ===== */}
+        {/* ===== TOP SECTION: VIBR CODER VIDEO ===== */}
         <div className="hero-section relative">
           <Suspense fallback={<VibrCoderSkeleton />}>
             <VibrCoder
@@ -204,10 +205,23 @@ function DashboardContent() {
               showWallet={false}
             />
           </Suspense>
+
           <div className="hero-terminal">
             <Suspense fallback={<TerminalSkeleton />}>
               <Terminal />
             </Suspense>
+          </div>
+        </div>
+
+        {/* ===== TRADING COMPETITION SECTION ===== */}
+        <div className="competition-section-wrapper">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-5">
+            <div className="flex-1">
+              <CompetitionSection />
+            </div>
+            <div className="w-full md:w-[280px] shrink-0">
+              <TrainingStatus />
+            </div>
           </div>
         </div>
 

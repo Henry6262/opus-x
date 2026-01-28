@@ -238,6 +238,11 @@ main {
   /* z-index removed - allows fixed elements (wallet pill, terminal) to layer properly */
 }
 
+/* Training Status Panel - hidden on mobile */
+.hero-training-status {
+  display: none;
+}
+
 /* ===== VIBR CODER VIDEO CONTAINER ===== */
 .vibr-coder-container {
   position: relative;
@@ -650,6 +655,13 @@ main {
   .hero-section {
     padding: 0 10%;
   }
+}
+
+/* Large screens: make room for training status panel */
+@media (min-width: 1100px) {
+  .hero-section {
+    padding-right: calc(10% + 250px); /* Make room for training status on the right */
+  }
 
   .vibr-coder-container {
     width: 100%;
@@ -685,6 +697,20 @@ main {
   .hero-terminal .terminal-drawer.collapsed {
     transform: translateX(calc(100% - 64px));
   }
+
+}
+
+/* Large screens: show training status panel positioned to the right */
+@media (min-width: 1100px) {
+  .hero-training-status {
+    display: flex;
+    position: absolute;
+    right: 10%; /* Align with the right margin */
+    top: 50%;
+    transform: translateY(-50%);
+    width: 220px;
+    z-index: 50;
+  }
 }
 
 /* ===== DASHBOARD PANEL ===== */
@@ -699,6 +725,43 @@ main {
   position: relative;
   /* z-index removed - allows fixed elements (wallet pill) to properly layer above content */
 }
+
+/* ===== COMPETITION SECTION WRAPPER ===== */
+.competition-section-wrapper {
+  padding: 0 12%;
+  margin-top: var(--space-8);
+  margin-bottom: var(--space-6);
+  width: 100%;
+  position: relative;
+}
+
+/* Line separator above competition section */
+.competition-section-wrapper::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--space-4));
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 20%,
+    rgba(196, 247, 14, 0.15) 50%,
+    rgba(255, 255, 255, 0.08) 80%,
+    transparent 100%
+  );
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .competition-section-wrapper {
+    padding: 0 5%;
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+}
+
 
 /* ===== CAPSULE TAB BUTTONS (Inside the chin) ===== */
 .capsule-tab-button {
