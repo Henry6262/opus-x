@@ -26,12 +26,25 @@ async function fetchApi<T>(
 // TOKEN DATA
 // ============================================
 
+interface TokenDataResponse {
+  token: TokenData;
+  twitter: unknown;
+}
+
 export async function fetchTokenData(
   mint: string
 ): Promise<ApiResponse<TokenData>> {
-  return fetchApi<TokenData>(
+  const res = await fetchApi<TokenDataResponse>(
     `${BASE_URL}/token-data?mint=${encodeURIComponent(mint)}`
   );
+
+  if (!res.success) return res;
+
+  // Unwrap the nested token data
+  return {
+    success: true,
+    data: res.data.token,
+  };
 }
 
 // ============================================

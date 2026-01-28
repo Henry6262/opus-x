@@ -15,6 +15,10 @@ import {
   Loader2,
   Sparkles,
   X,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  BarChart3,
 } from "lucide-react";
 import { useSubmission } from "../hooks/useSubmission";
 
@@ -29,7 +33,7 @@ export function SubmissionModal({
   onOpenChange,
   walletAddress: initialWallet = "",
 }: SubmissionModalProps) {
-  const { state, analyze, reset } = useSubmission();
+  const { state, analyze, submit, reset } = useSubmission();
 
   // Local form state
   const [currentFormStep, setCurrentFormStep] = useState(0);
@@ -260,6 +264,163 @@ export function SubmissionModal({
               </motion.div>
             )}
 
+            {/* RESULTS - Show fetched token & trade data */}
+            {state.step === "results" && state.tokenData && (
+              <motion.div
+                key="results"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col gap-4"
+              >
+                {/* Token Card */}
+                <div className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-xl">
+                  {state.tokenData.image_url ? (
+                    <img
+                      src={state.tokenData.image_url}
+                      alt={state.tokenData.symbol}
+                      className="w-14 h-14 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-xl bg-[#c4f70e]/20 flex items-center justify-center">
+                      <Coins className="w-7 h-7 text-[#c4f70e]" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-white font-mono truncate">
+                        {state.tokenData.symbol}
+                      </span>
+                      <span className="text-xs text-white/40 font-mono truncate">
+                        {state.tokenData.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-sm text-white/70 font-mono">
+                        ${state.tokenData.price_usd < 0.01
+                          ? state.tokenData.price_usd.toExponential(2)
+                          : state.tokenData.price_usd.toFixed(4)}
+                      </span>
+                      {state.tokenData.price_change_24h !== null && (
+                        <span className={`text-xs font-mono flex items-center gap-0.5 ${
+                          state.tokenData.price_change_24h >= 0 ? "text-emerald-400" : "text-red-400"
+                        }`}>
+                          {state.tokenData.price_change_24h >= 0 ? (
+                            <TrendingUp className="w-3 h-3" />
+                          ) : (
+                            <TrendingDown className="w-3 h-3" />
+                          )}
+                          {Math.abs(state.tokenData.price_change_24h).toFixed(1)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Market Stats Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-white/5 border border-white/10 rounded-lg">
+                    <div className="flex items-center gap-1.5 text-white/40 text-[10px] uppercase tracking-wider font-mono mb-1">
+                      <BarChart3 className="w-3 h-3" />
+                      Market Cap
+                    </div>
+                    <p className="text-sm font-mono text-white font-medium">
+                      ${state.tokenData.market_cap >= 1_000_000
+                        ? `${(state.tokenData.market_cap / 1_000_000).toFixed(2)}M`
+                        : state.tokenData.market_cap >= 1_000
+                        ? `${(state.tokenData.market_cap / 1_000).toFixed(1)}K`
+                        : state.tokenData.market_cap.toFixed(0)}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white/5 border border-white/10 rounded-lg">
+                    <div className="flex items-center gap-1.5 text-white/40 text-[10px] uppercase tracking-wider font-mono mb-1">
+                      <DollarSign className="w-3 h-3" />
+                      Liquidity
+                    </div>
+                    <p className="text-sm font-mono text-white font-medium">
+                      ${state.tokenData.liquidity >= 1_000_000
+                        ? `${(state.tokenData.liquidity / 1_000_000).toFixed(2)}M`
+                        : state.tokenData.liquidity >= 1_000
+                        ? `${(state.tokenData.liquidity / 1_000).toFixed(1)}K`
+                        : state.tokenData.liquidity.toFixed(0)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Trade Data (if found) */}
+                {state.tradeData && (
+                  <div className="p-4 bg-gradient-to-br from-[#c4f70e]/10 to-transparent border border-[#c4f70e]/20 rounded-xl">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-mono text-white/50 uppercase tracking-wider">Your Trade</span>
+                      <span className={`text-sm font-mono font-bold ${
+                        state.tradeData.pnl_pct >= 0 ? "text-emerald-400" : "text-red-400"
+                      }`}>
+                        {state.tradeData.pnl_pct >= 0 ? "+" : ""}{state.tradeData.pnl_pct.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs font-mono">
+                      <div>
+                        <span className="text-white/40">Entry: </span>
+                        <span className="text-white/80">
+                          ${state.tradeData.avg_entry_price < 0.01
+                            ? state.tradeData.avg_entry_price.toExponential(2)
+                            : state.tradeData.avg_entry_price.toFixed(4)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-white/40">Invested: </span>
+                        <span className="text-white/80">${state.tradeData.total_bought_usd.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* No trade data found */}
+                {!state.tradeData && (
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-center">
+                    <p className="text-sm font-mono text-white/50">
+                      No trades found for this wallet/token pair
+                    </p>
+                    <p className="text-xs font-mono text-white/30 mt-1">
+                      You can still submit manually
+                    </p>
+                  </div>
+                )}
+
+                {/* Reasoning preview */}
+                {reasoning && (
+                  <div className="p-3 bg-white/5 border border-white/10 rounded-lg">
+                    <span className="text-[10px] font-mono text-white/40 uppercase tracking-wider block mb-1">
+                      Your Reasoning
+                    </span>
+                    <p className="text-xs font-mono text-white/70 line-clamp-2">{reasoning}</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* SUBMITTING */}
+            {state.step === "submitting" && (
+              <motion.div
+                key="submitting"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center py-10 gap-5"
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                >
+                  <Loader2 className="w-12 h-12 text-[#c4f70e]" />
+                </motion.div>
+                <div className="text-center">
+                  <p className="text-lg font-mono text-white font-medium">Submitting...</p>
+                  <p className="text-sm font-mono text-white/50 mt-1">Saving your trade to the competition</p>
+                </div>
+              </motion.div>
+            )}
+
             {/* SUCCESS */}
             {state.step === "success" && (
               <motion.div
@@ -328,8 +489,8 @@ export function SubmissionModal({
               >
                 {currentFormStep === 2 ? (
                   <>
-                    <Trophy className="w-5 h-5" />
-                    Submit Trade
+                    <Sparkles className="w-5 h-5" />
+                    Analyze Trade
                   </>
                 ) : (
                   <>
@@ -337,6 +498,25 @@ export function SubmissionModal({
                     <ChevronRight className="w-5 h-5" />
                   </>
                 )}
+              </button>
+            </div>
+          )}
+
+          {/* Results step - Confirm submission */}
+          {state.step === "results" && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => reset()}
+                className="px-5 py-3.5 rounded-xl bg-white/10 border border-white/15 text-sm font-mono text-white/70 hover:bg-white/15 hover:text-white transition-colors cursor-pointer"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => submit(walletAddress)}
+                className="flex-1 flex items-center justify-center gap-2 px-5 py-4 rounded-xl text-base font-mono font-bold bg-[#c4f70e] text-black hover:bg-[#d4ff3e] cursor-pointer shadow-[0_4px_20px_rgba(196,247,14,0.3)] transition-all"
+              >
+                <Trophy className="w-5 h-5" />
+                Confirm & Submit
               </button>
             </div>
           )}
