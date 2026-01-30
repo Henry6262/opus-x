@@ -138,7 +138,7 @@ function CallCardSkeleton() {
 function GodWalletCallsSkeleton() {
   return (
     <div className="relative rounded-xl shadow-[4px_4px_20px_rgba(0,0,0,0.4),inset_-1px_-1px_0_rgba(255,255,255,0.05)]">
-      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3 max-h-[640px] 2xl:max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3 max-h-[520px] 2xl:max-h-[260px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <CallCardSkeleton key={i} />
         ))}
@@ -472,7 +472,7 @@ function CallCard({ call }: CallCardProps) {
 
   return (
     <div className="relative h-full">
-      {/* Card content - gradient bg for runners, subtle border for depth */}
+      {/* Card with chart as background */}
       <div
         className="relative rounded-xl overflow-hidden h-full border border-zinc-800/80"
         style={{
@@ -481,8 +481,28 @@ function CallCard({ call }: CallCardProps) {
             : "rgba(255,255,255,0.03)"
         }}
       >
+        {/* Chart as absolute background layer */}
+        <div className="absolute inset-0 z-0">
+          <MiniChart
+            mint={call.mint}
+            aggregatedEntries={call.aggregatedEntries}
+            currentMcap={call.currentMcap}
+            firstEntryMcap={call.firstEntryMcap}
+          />
+        </div>
+
+        {/* Dark overlay for contrast */}
+        <div
+          className="absolute inset-0 z-[1]"
+          style={{
+            background: isRunner
+              ? "linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.70) 100%)"
+              : "linear-gradient(180deg, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.60) 50%, rgba(0,0,0,0.75) 100%)"
+          }}
+        />
+
         {/* MOBILE LAYOUT */}
-        <div className="lg:hidden">
+        <div className="lg:hidden relative z-[2]">
           {/* Top row: Token info (left - vertical) + Wallet entries (right) */}
           <div className="flex items-start justify-between p-3 gap-1.5">
             {/* Left: Token image with name below (left-aligned, copy button absolute) */}
@@ -562,7 +582,7 @@ function CallCard({ call }: CallCardProps) {
                 : 0;
 
               return (
-                <div className="flex items-center gap-2 py-1.5 px-2.5 rounded-md bg-white/[0.03] flex-shrink-0">
+                <div className="flex items-center gap-2 py-1.5 px-2.5 rounded-md bg-black/40 backdrop-blur-sm flex-shrink-0">
                   {/* Wallet count */}
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -633,23 +653,23 @@ function CallCard({ call }: CallCardProps) {
             })()}
           </div>
 
-          {/* Chart - full width on mobile with mcap badge */}
-          <div className={`border-t ${isRunner ? "border-[#c4f70e]/20" : "border-white/5"}`}>
-            <div className="w-full h-[100px]">
-              <MiniChart
-                mint={call.mint}
-                aggregatedEntries={call.aggregatedEntries}
-                currentMcap={call.currentMcap}
-                firstEntryMcap={call.firstEntryMcap}
-                showMcapBadge
-              />
+          {/* Mcap badge - bottom right */}
+          {call.currentMcap && (
+            <div className="absolute bottom-2 right-2 z-[3]">
+              <span className={`px-2 py-0.5 rounded-md backdrop-blur-sm text-[10px] font-bold font-mono shadow-lg ${
+                isRunner
+                  ? "bg-[#c4f70e]/20 text-[#c4f70e] border border-[#c4f70e]/30"
+                  : "bg-white/10 text-white/70 border border-white/20"
+              }`}>
+                {formatMcap(call.currentMcap)}
+              </span>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* DESKTOP LAYOUT - Full width with chart below */}
-        <div className="hidden lg:flex flex-col">
-          {/* Top section: Token info + Wallet entries side by side */}
+        {/* DESKTOP LAYOUT - Chart as background, content overlaid */}
+        <div className="hidden lg:flex flex-col relative z-[2]">
+          {/* Token info + Wallet entries side by side */}
           <div className="flex items-center justify-between p-4 gap-6">
             {/* Left: Token image with name + copy button next to it */}
             <div className="relative flex flex-col items-start gap-1 min-w-0 flex-shrink-0">
@@ -737,7 +757,7 @@ function CallCard({ call }: CallCardProps) {
                   : 0;
 
                 return (
-                  <div className="flex items-center gap-3 py-2 px-4 rounded-lg bg-white/[0.03]">
+                  <div className="flex items-center gap-3 py-2 px-4 rounded-lg bg-black/40 backdrop-blur-sm">
                     {/* Wallet count */}
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -813,18 +833,18 @@ function CallCard({ call }: CallCardProps) {
             </div>
           </div>
 
-          {/* Chart - full width below with mcap badge */}
-          <div className={`border-t ${isRunner ? "border-[#c4f70e]/20" : "border-white/5"}`}>
-            <div className="w-full h-[80px]">
-              <MiniChart
-                mint={call.mint}
-                aggregatedEntries={call.aggregatedEntries}
-                currentMcap={call.currentMcap}
-                firstEntryMcap={call.firstEntryMcap}
-                showMcapBadge
-              />
+          {/* Mcap badge - bottom right */}
+          {call.currentMcap && (
+            <div className="absolute bottom-2 right-3 z-[3]">
+              <span className={`px-2 py-0.5 rounded-md backdrop-blur-sm text-[10px] font-bold font-mono shadow-lg ${
+                isRunner
+                  ? "bg-[#c4f70e]/20 text-[#c4f70e] border border-[#c4f70e]/30"
+                  : "bg-white/10 text-white/70 border border-white/20"
+              }`}>
+                {formatMcap(call.currentMcap)}
+              </span>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -1026,7 +1046,7 @@ export function GodWalletCalls() {
   // Mobile: 1 column, tablet/laptop: 2 columns, large desktop (1400px+): 3 columns
   return (
     <div className="relative rounded-xl shadow-[4px_4px_20px_rgba(0,0,0,0.4),inset_-1px_-1px_0_rgba(255,255,255,0.05)]">
-      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3 max-h-[640px] 2xl:max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3 max-h-[520px] 2xl:max-h-[260px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         <AnimatePresence mode="popLayout" initial={false}>
           {sortedCalls.slice(0, 10).map((call) => (
             <motion.div

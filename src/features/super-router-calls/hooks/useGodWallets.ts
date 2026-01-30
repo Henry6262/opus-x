@@ -16,7 +16,15 @@ async function fetchTokenMetadata(mint: string): Promise<{ symbol: string; name:
   }
 
   try {
-    const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
+    // Timeout after 5s to prevent hanging on rate-limited requests
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
     if (!response.ok) return null;
 
     const data = await response.json();
@@ -32,7 +40,11 @@ async function fetchTokenMetadata(mint: string): Promise<{ symbol: string; name:
       return metadata;
     }
   } catch (err) {
-    console.error("[fetchTokenMetadata] Error for", mint, err);
+    if (err instanceof DOMException && err.name === "AbortError") {
+      console.warn("[fetchTokenMetadata] Timeout for", mint);
+    } else {
+      console.error("[fetchTokenMetadata] Error for", mint, err);
+    }
   }
 
   return null;
@@ -190,16 +202,21 @@ export function useGodWallets(): UseGodWalletsResult {
 
             console.log("[useGodWallets] Loaded", godWalletBuys.length, "god wallet buys from DB");
 
-            // Fetch token metadata for unique mints in parallel
+            // Set buys immediately so UI isn't blocked on DexScreener metadata
+            setRecentBuys(godWalletBuys);
+
+            // Fetch token metadata in background (batches of 5 to avoid rate limits)
             const uniqueMints = [...new Set(godWalletBuys.map(b => b.mint))];
-            console.log("[useGodWallets] Fetching metadata for", uniqueMints.length, "unique tokens");
+            console.log("[useGodWallets] Fetching metadata for", uniqueMints.length, "unique tokens (background)");
 
-            await Promise.all(
-              uniqueMints.map(mint => fetchTokenMetadata(mint))
-            );
+            const BATCH_SIZE = 5;
+            for (let i = 0; i < uniqueMints.length; i += BATCH_SIZE) {
+              const batch = uniqueMints.slice(i, i + BATCH_SIZE);
+              await Promise.all(batch.map(mint => fetchTokenMetadata(mint)));
+            }
 
-            // Enrich buys with cached metadata
-            const enrichedBuys = godWalletBuys.map(buy => {
+            // Enrich buys with cached metadata after background fetch
+            setRecentBuys(prev => prev.map(buy => {
               const metadata = tokenMetadataCache.get(buy.mint);
               if (metadata) {
                 return {
@@ -210,9 +227,7 @@ export function useGodWallets(): UseGodWalletsResult {
                 };
               }
               return buy;
-            });
-
-            setRecentBuys(enrichedBuys);
+            }));
           }
         }
       } catch (buyErr) {

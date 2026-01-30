@@ -900,20 +900,28 @@ export function SmartTradingProvider({
             ...prev.history,
           ];
 
-          // Recalculate daily PnL with the new closed position
-          const newDailyPnL = calculateDailyPnL(newHistory);
+          // Incrementally add this position's PnL to existing dailyPnL
+          // (don't recalculate from scratch — history may be incomplete)
+          const closedToday = (() => {
+            if (!data.position.closedAt) return false;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return new Date(data.position.closedAt) >= today;
+          })();
+          const pnlDelta = closedToday ? (data.position.realizedPnlSol ?? 0) : 0;
+          const currentDailyPnL = prev.dashboardStats?.trading?.dailyPnL ?? 0;
 
           return {
             ...prev,
             positions: prev.positions.filter((p) => p.tokenMint !== data.position.tokenMint),
             history: newHistory,
-            // Update daily PnL in dashboard stats
+            // Incrementally update daily PnL (preserve backend value + add new close)
             dashboardStats: prev.dashboardStats
               ? {
                 ...prev.dashboardStats,
                 trading: {
                   ...prev.dashboardStats.trading,
-                  dailyPnL: newDailyPnL,
+                  dailyPnL: currentDailyPnL + pnlDelta,
                 },
               }
               : null,
