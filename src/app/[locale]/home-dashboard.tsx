@@ -187,9 +187,31 @@ function DashboardContent() {
             history={history}
           />
         </div>
-        {/* Language Switcher - on top of blur */}
-        <div className="absolute top-3 right-2 md:top-4 md:right-4 z-[3] pointer-events-auto">
-          <LanguageSwitcher className="shadow-[0_10px_30px_rgba(0,0,0,0.35)] border-white/15 bg-black/50 backdrop-blur-xl scale-75 md:scale-100 origin-top-right" />
+        {/* Top-right nav: External links + Language Switcher */}
+        <div className="absolute top-3 right-2 md:top-4 md:right-4 z-[3] pointer-events-auto flex flex-col items-end gap-2 scale-75 md:scale-100 origin-top-right">
+          {/* External link icons */}
+          <div className="flex flex-col items-center gap-2 rounded-full bg-black/50 backdrop-blur-xl border border-white/15 p-1 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+            <a
+              href="https://colosseum.com/agent-hackathon/projects/superrouter?from=leaderboard"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-9 h-9 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+              aria-label="Colosseum Hackathon"
+            >
+              <img src="/logos/colleseum.jpg" alt="Colosseum" className="w-5 h-5 rounded-full object-cover" />
+            </a>
+            <a
+              href="https://www.moltbook.com/u/SuperRouter"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-9 h-9 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
+              aria-label="Moltbook"
+            >
+              <img src="/logos/moltbook.webp" alt="Moltbook" className="w-5 h-5 rounded-full object-cover" />
+            </a>
+          </div>
+          {/* Language Switcher */}
+          <LanguageSwitcher className="shadow-[0_10px_30px_rgba(0,0,0,0.35)] border-white/15 bg-black/50 backdrop-blur-xl" />
         </div>
       </div>
 

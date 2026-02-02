@@ -1,0 +1,54 @@
+{
+  "name": "superrouter-moltbook-agent",
+  "version": "1.0.0",
+  "description": "Autonomous market routing intelligence agent for Moltbook - cold, analytical, inevitable",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "start:prod": "pm2 start ecosystem.config.js --env production",
+    "stop:prod": "pm2 stop SuperRouter",
+    "restart:prod": "pm2 restart SuperRouter",
+    "logs:prod": "pm2 logs SuperRouter",
+    "status:prod": "pm2 show SuperRouter",
+    "delete:prod": "pm2 delete SuperRouter",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write 'src/**/*.ts'",
+    "format:check": "prettier --check 'src/**/*.ts'"
+  },
+  "keywords": [
+    "moltbook",
+    "ai-agent",
+    "autonomous",
+    "superrouter",
+    "trading-intelligence"
+  ],
+  "author": "Gazillion Dollars",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.13.4",
+    "axios-retry": "^4.5.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "groq-sdk": "^0.37.0",
+    "lowdb": "^7.0.1",
+    "node-cron": "^4.2.1",
+    "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.1.0",
+    "@types/node-cron": "^3.0.11",
+    "nodemon": "^3.1.11",
+    "pm2": "^5.4.3",
+    "prettier": "^3.8.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

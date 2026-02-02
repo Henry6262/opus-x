@@ -104,8 +104,8 @@ export function CompetitionSection({ walletAddress }: CompetitionSectionProps) {
             </p>
           </div>
 
-          {/* Steps - auto-rotating carousel */}
-          <div className="flex items-stretch gap-2.5 md:gap-4">
+          {/* Steps carousel + CTA */}
+          <div className="flex items-center gap-2.5 md:gap-4">
             {/* Vertical step indicators */}
             <div className="flex flex-col justify-center gap-1.5 md:gap-2 py-1">
               {TRAINING_STEPS.map((_, idx) => (
@@ -157,34 +157,33 @@ export function CompetitionSection({ walletAddress }: CompetitionSectionProps) {
                 })()}
               </AnimatePresence>
             </div>
-          </div>
 
-          {/* CTA Button - Green Glass Style */}
-          <div className="flex items-center gap-3 md:gap-4 pt-2 md:pt-4">
-            <button
-              onClick={() => setModalOpen(true)}
-              className="cursor-pointer group relative overflow-hidden rounded-lg bg-gradient-to-r from-[#c4f70e]/20 to-[#c4f70e]/10 border border-[#c4f70e]/30 backdrop-blur-sm transition-all duration-300 hover:from-[#c4f70e]/30 hover:to-[#c4f70e]/20 hover:border-[#c4f70e]/50 hover:shadow-[0_0_20px_rgba(196,247,14,0.3)]"
-            >
-              {/* Inner glow */}
-              <div className="absolute inset-0 bg-gradient-to-t from-transparent via-[#c4f70e]/5 to-[#c4f70e]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            {/* CTA Button - right side of carousel */}
+            <div className="flex flex-col items-start gap-1 shrink-0">
+              <button
+                onClick={() => setModalOpen(true)}
+                className="cursor-pointer group relative overflow-hidden rounded-lg bg-gradient-to-r from-[#c4f70e]/20 to-[#c4f70e]/10 border border-[#c4f70e]/30 backdrop-blur-sm transition-all duration-300 hover:from-[#c4f70e]/30 hover:to-[#c4f70e]/20 hover:border-[#c4f70e]/50 hover:shadow-[0_0_20px_rgba(196,247,14,0.3)]"
+              >
+                {/* Inner glow */}
+                <div className="absolute inset-0 bg-gradient-to-t from-transparent via-[#c4f70e]/5 to-[#c4f70e]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-              <div className="relative flex items-center gap-3 px-4 py-2.5 md:px-6 md:py-3">
-                <Trophy className="w-4 h-4 md:w-5 md:h-5 text-[#c4f70e]" />
-                <span className="text-[13px] md:text-[15px] lg:text-base font-mono font-bold text-[#c4f70e] tracking-wide">
-                  SUBMIT YOUR TRADE
-                </span>
-                <motion.div
-                  animate={{ x: [0, 4, 0] }}
-                  transition={{ duration: 1.2, repeat: Infinity }}
-                >
-                  <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-[#c4f70e]/70" />
-                </motion.div>
-              </div>
-            </button>
-
-            <span className="text-[10px] md:text-xs font-mono text-white/25 hidden sm:block">
-              Takes ~30 seconds
-            </span>
+                <div className="relative flex items-center gap-2 px-3 py-2 md:px-5 md:py-2.5">
+                  <Trophy className="w-4 h-4 md:w-5 md:h-5 text-[#c4f70e]" />
+                  <span className="text-[11px] md:text-[13px] lg:text-sm font-mono font-bold text-[#c4f70e] tracking-wide">
+                    SUBMIT YOUR TRADE
+                  </span>
+                  <motion.div
+                    animate={{ x: [0, 4, 0] }}
+                    transition={{ duration: 1.2, repeat: Infinity }}
+                  >
+                    <ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#c4f70e]/70" />
+                  </motion.div>
+                </div>
+              </button>
+              <span className="text-[9px] md:text-[10px] font-mono text-white/25 pl-1">
+                Takes ~30 seconds
+              </span>
+            </div>
           </div>
         </div>
         </motion.div>
