@@ -119,7 +119,7 @@ interface SmartTradingContextValue extends SmartTradingState {
 }
 
 const SmartTradingContext = createContext<SmartTradingContextValue | null>(null);
-const DEFAULT_TRADING_WALLET = "DwFkx11rhxBCxosphwVSgkG1HcQTCmxPyTgMeSHXUjrB";
+const DEFAULT_TRADING_WALLET = "9U5PtsCxkma37wwMRmPLeLVqwGHvHMs7fyLaL47ovmTn";
 
 // ============================================
 // Helper: Generate activity message
