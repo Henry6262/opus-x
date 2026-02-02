@@ -397,6 +397,7 @@ export function EnhancedWatchlist() {
   const [aiReasoningsMap, setAiReasoningsMap] = useState<Map<string, { reasoning: string; conviction: number; will_trade: boolean; timestamp: number }>>(new Map());
   const [selectedToken, setSelectedToken] = useState<WatchlistToken | null>(null);
   const [isChartModalOpen, setIsChartModalOpen] = useState(false);
+  const [modalImgError, setModalImgError] = useState(false);
 
   const isFetchingRef = useRef(false);
 
@@ -406,6 +407,7 @@ export function EnhancedWatchlist() {
 
   const handleOpenChart = useCallback((token: WatchlistToken) => {
     setSelectedToken(token);
+    setModalImgError(false);
     setIsChartModalOpen(true);
   }, []);
 
@@ -616,14 +618,21 @@ export function EnhancedWatchlist() {
             <div className="space-y-4">
               {/* Token info header */}
               <div className="flex items-center gap-3 pb-3 border-b border-white/10">
-                <Image
-                  src={`https://dd.dexscreener.com/ds-data/tokens/solana/${selectedToken.mint}.png`}
-                  alt={selectedToken.symbol}
-                  width={40}
-                  height={40}
-                  className="rounded-lg"
-                  unoptimized
-                />
+                {!modalImgError ? (
+                  <Image
+                    src={`https://dd.dexscreener.com/ds-data/tokens/solana/${selectedToken.mint}.png`}
+                    alt={selectedToken.symbol}
+                    width={40}
+                    height={40}
+                    className="rounded-lg"
+                    onError={() => setModalImgError(true)}
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center text-white font-bold text-sm">
+                    {selectedToken.symbol.slice(0, 2)}
+                  </div>
+                )}
                 <div>
                   <div className="font-bold text-white">{selectedToken.symbol}</div>
                   <div className="text-xs text-white/50">{selectedToken.name}</div>

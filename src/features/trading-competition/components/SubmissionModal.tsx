@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Trophy,
@@ -92,7 +93,9 @@ export function SubmissionModal({
       <DialogContent
         className="bg-[#0a0a0a] border-[#c4f70e]/30 backdrop-blur-2xl sm:max-w-md p-0 overflow-hidden shadow-[0_0_60px_rgba(196,247,14,0.1)]"
         showCloseButton={false}
+        aria-describedby={undefined}
       >
+        <DialogTitle className="sr-only">Submit Your Trade</DialogTitle>
         {/* Header */}
         <div className="relative px-6 pt-6 pb-5 border-b border-white/10 bg-gradient-to-b from-white/[0.03] to-transparent">
           <button
@@ -314,12 +317,14 @@ export function SubmissionModal({
                       </span>
                     </div>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-sm text-white/70 font-mono">
-                        ${state.tokenData.price_usd < 0.01
-                          ? state.tokenData.price_usd.toExponential(2)
-                          : state.tokenData.price_usd.toFixed(4)}
-                      </span>
-                      {state.tokenData.price_change_24h !== null && (
+                      {state.tokenData.price_usd != null && (
+                        <span className="text-sm text-white/70 font-mono">
+                          ${state.tokenData.price_usd < 0.01
+                            ? state.tokenData.price_usd.toExponential(2)
+                            : state.tokenData.price_usd.toFixed(4)}
+                        </span>
+                      )}
+                      {state.tokenData.price_change_24h != null && (
                         <span className={`text-xs font-mono flex items-center gap-0.5 ${
                           state.tokenData.price_change_24h >= 0 ? "text-emerald-400" : "text-red-400"
                         }`}>
@@ -343,11 +348,13 @@ export function SubmissionModal({
                       Market Cap
                     </div>
                     <p className="text-sm font-mono text-white font-medium">
-                      ${state.tokenData.market_cap >= 1_000_000
-                        ? `${(state.tokenData.market_cap / 1_000_000).toFixed(2)}M`
-                        : state.tokenData.market_cap >= 1_000
-                        ? `${(state.tokenData.market_cap / 1_000).toFixed(1)}K`
-                        : state.tokenData.market_cap.toFixed(0)}
+                      {state.tokenData.market_cap != null
+                        ? `$${state.tokenData.market_cap >= 1_000_000
+                            ? `${(state.tokenData.market_cap / 1_000_000).toFixed(2)}M`
+                            : state.tokenData.market_cap >= 1_000
+                            ? `${(state.tokenData.market_cap / 1_000).toFixed(1)}K`
+                            : state.tokenData.market_cap.toFixed(0)}`
+                        : "N/A"}
                     </p>
                   </div>
                   <div className="p-3 bg-white/5 border border-white/10 rounded-lg">
@@ -356,11 +363,13 @@ export function SubmissionModal({
                       Liquidity
                     </div>
                     <p className="text-sm font-mono text-white font-medium">
-                      ${state.tokenData.liquidity >= 1_000_000
-                        ? `${(state.tokenData.liquidity / 1_000_000).toFixed(2)}M`
-                        : state.tokenData.liquidity >= 1_000
-                        ? `${(state.tokenData.liquidity / 1_000).toFixed(1)}K`
-                        : state.tokenData.liquidity.toFixed(0)}
+                      {state.tokenData.liquidity != null
+                        ? `$${state.tokenData.liquidity >= 1_000_000
+                            ? `${(state.tokenData.liquidity / 1_000_000).toFixed(2)}M`
+                            : state.tokenData.liquidity >= 1_000
+                            ? `${(state.tokenData.liquidity / 1_000).toFixed(1)}K`
+                            : state.tokenData.liquidity.toFixed(0)}`
+                        : "N/A"}
                     </p>
                   </div>
                 </div>
@@ -371,23 +380,25 @@ export function SubmissionModal({
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-mono text-white/50 uppercase tracking-wider">Your Trade</span>
                       <span className={`text-sm font-mono font-bold ${
-                        state.tradeData.pnl_pct >= 0 ? "text-emerald-400" : "text-red-400"
+                        (state.tradeData.pnl_pct ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"
                       }`}>
-                        {state.tradeData.pnl_pct >= 0 ? "+" : ""}{state.tradeData.pnl_pct.toFixed(1)}%
+                        {(state.tradeData.pnl_pct ?? 0) >= 0 ? "+" : ""}{(state.tradeData.pnl_pct ?? 0).toFixed(1)}%
                       </span>
                     </div>
                     <div className="flex justify-between text-xs font-mono">
                       <div>
                         <span className="text-white/40">Entry: </span>
                         <span className="text-white/80">
-                          ${state.tradeData.avg_entry_price < 0.01
-                            ? state.tradeData.avg_entry_price.toExponential(2)
-                            : state.tradeData.avg_entry_price.toFixed(4)}
+                          {state.tradeData.avg_entry_price != null
+                            ? `$${state.tradeData.avg_entry_price < 0.01
+                                ? state.tradeData.avg_entry_price.toExponential(2)
+                                : state.tradeData.avg_entry_price.toFixed(4)}`
+                            : "N/A"}
                         </span>
                       </div>
                       <div>
                         <span className="text-white/40">Invested: </span>
-                        <span className="text-white/80">${state.tradeData.total_bought_usd.toFixed(2)}</span>
+                        <span className="text-white/80">${(state.tradeData.total_bought_usd ?? 0).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
