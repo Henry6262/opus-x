@@ -44,6 +44,7 @@ interface EnrichedTransaction {
     mint: string;
     ticker: string;
     token_name: string;
+    is_paper?: boolean;
     sol_amount?: number;
     tokens_received?: number;
     tokens_sold?: number;
@@ -520,13 +521,16 @@ function TransactionRow({ tx }: TransactionRowProps) {
     const isBuy = tx.tx_type === "buy";
     const solAmount = isBuy ? tx.sol_amount : tx.sol_received;
     const tokenAmount = isBuy ? tx.tokens_received : tx.tokens_sold;
+    const isPaper = tx.is_paper || tx.signature?.startsWith("paper-");
 
     const pnlPercent = tx.current_price && tx.price > 0
         ? ((tx.current_price / tx.price - 1) * 100)
         : null;
 
     const openSolscan = () => {
-        window.open(`https://solscan.io/tx/${tx.signature}`, '_blank');
+        if (!isPaper) {
+            window.open(`https://solscan.io/tx/${tx.signature}`, '_blank');
+        }
     };
 
     return (
@@ -535,7 +539,7 @@ function TransactionRow({ tx }: TransactionRowProps) {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 10 }}
-            className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors cursor-pointer"
+            className={`p-2.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors ${isPaper ? "cursor-default" : "cursor-pointer"}`}
             onClick={openSolscan}
             data-cursor-target
         >
@@ -580,9 +584,15 @@ function TransactionRow({ tx }: TransactionRowProps) {
                             {pnlPercent >= 0 ? "+" : ""}{pnlPercent.toFixed(0)}%
                         </span>
                     )}
-                    <span className="flex items-center gap-1 text-[10px] text-white/40">
-                        {tHistory("tx")} <ExternalLink className="w-2.5 h-2.5" />
-                    </span>
+                    {isPaper ? (
+                        <span className="text-[10px] font-mono text-white/30 px-1 py-0.5 rounded bg-white/5">
+                            paper
+                        </span>
+                    ) : (
+                        <span className="flex items-center gap-1 text-[10px] text-white/40">
+                            {tHistory("tx")} <ExternalLink className="w-2.5 h-2.5" />
+                        </span>
+                    )}
                 </div>
             </div>
         </motion.div>
