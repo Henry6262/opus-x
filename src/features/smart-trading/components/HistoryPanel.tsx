@@ -158,6 +158,16 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
         }
     }, [viewMode, transactions.length, fetchTransactions]);
 
+    // Refetch transactions when a position closes (history_updated fires → history grows)
+    // This keeps the transactions view in sync with real-time position closures
+    const prevHistoryLenRef = useRef(history.length);
+    useEffect(() => {
+        if (history.length > prevHistoryLenRef.current && viewMode === "transactions") {
+            fetchTransactions(0, true);
+        }
+        prevHistoryLenRef.current = history.length;
+    }, [history.length, viewMode, fetchTransactions]);
+
     // Trades data - sorted and memoized
     const allClosedTrades = useMemo(() => {
         return [...history]
