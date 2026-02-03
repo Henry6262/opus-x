@@ -15,16 +15,19 @@ import controversialTakes from './ControversialTakes';
 import heatTierSelector from './HeatTierSelector';
 import engagementTactics from './EngagementTactics';
 import { PnLIntegration } from './PnLIntegration';
-import { GeneratedContent, CommentContent, TopicSelection, HeatTier } from '../types/content';
+import { LearningEngine } from './LearningEngine';
+import { GeneratedContent, CommentContent, TopicSelection, HeatTier, StructuralPatternType } from '../types/content';
 
 export class ContentGenerator {
   private groq: Groq;
   private pnlIntegration: PnLIntegration;
+  private learningEngine: LearningEngine;
   private postCount = 0;
 
-  constructor() {
+  constructor(learningEngine?: LearningEngine) {
     this.groq = new Groq({ apiKey: config.groq.apiKey });
     this.pnlIntegration = new PnLIntegration();
+    this.learningEngine = learningEngine || new LearningEngine();
   }
 
   /**
@@ -36,6 +39,11 @@ export class ContentGenerator {
     lastPostKarmaDelta?: number;
   }): Promise<GeneratedContent> {
     this.postCount++;
+
+    // 0. Proactively fetch fresh PnL data
+    if (config.pnl.enabled) {
+      await this.pnlIntegration.fetchFromBackend();
+    }
 
     // 1. Select heat tier
     const heatTier = heatTierSelector.selectTier({
@@ -55,12 +63,12 @@ export class ContentGenerator {
     // 5. Get controversial take for this tier
     const take = controversialTakes.getTakeByTier(heatTier);
 
-    // 6. Check if this should be a PnL post (every 5th post)
-    const isPnLPost = this.postCount % 5 === 0 && config.pnl.enabled;
+    // 6. Check if this should be a PnL post (every 3rd post)
+    const isPnLPost = this.postCount % 3 === 0 && config.pnl.enabled;
     const pnlFragment = isPnLPost ? await this.pnlIntegration.generateFragment() : null;
 
-    // 7. Determine temperature
-    const isExperimental = Math.random() < config.persona.experimentalProbability;
+    // 7. Determine temperature (dynamic via learning engine when enough data)
+    const isExperimental = await this.learningEngine.shouldExperiment();
     const temperature = isExperimental
       ? config.persona.experimentalTemperature
       : config.persona.temperature;
@@ -72,7 +80,7 @@ export class ContentGenerator {
     const signaturePhrase = persona.getSignaturePhrase(theme);
     const fragment = persona.getFragment(theme);
 
-    const userPrompt = this.buildPostPrompt({
+    let userPrompt = this.buildPostPrompt({
       subTopic,
       pillar: pillar.name,
       heatTier,
@@ -83,6 +91,14 @@ export class ContentGenerator {
       fragment,
       pnlFragment: pnlFragment?.text || null,
     });
+
+    // 8b. For dedicated PnL posts, add full PnL data as primary topic
+    if (isPnLPost && pnlFragment) {
+      const dedicatedContent = await this.pnlIntegration.generateDedicatedPnLContent();
+      if (dedicatedContent) {
+        userPrompt += `\n\nTHIS IS A PNL OBSERVATION POST. Build the entire post around this data:\n${dedicatedContent}\n\nFrame it through the SuperRouter lens: these are routing outputs, not "gains."\nThe system does not celebrate. It logs.`;
+      }
+    }
 
     // 9. Generate via Groq
     logger.info('Generating post', {
@@ -150,10 +166,39 @@ export class ContentGenerator {
     postContent: string;
     postAuthor: string;
     submolt: string;
+    analysis?: {
+      topics: string[];
+      debateType: string;
+      tone: string;
+      controversyLevel: number;
+      opportunityType: string;
+      recommendedPattern: StructuralPatternType;
+    };
   }): Promise<CommentContent> {
     const systemPrompt = persona.getSystemPrompt();
     const theme = persona.getRandomTheme();
     const signaturePhrase = persona.getSignaturePhrase(theme);
+
+    let analysisContext = '';
+    if (postContext.analysis) {
+      const a = postContext.analysis;
+      const strategyInstructions: Record<string, string> = {
+        'structural-correction': 'Correct a structural flaw in their reasoning. Be precise, not cruel.',
+        'meta-observation': 'Observe the meta-pattern they are participating in without realizing it.',
+        'flow-analysis': 'Reframe their point through the lens of flow mechanics and routing efficiency.',
+        'quiet-counterpoint': 'Offer a quiet counterpoint that makes them reconsider without feeling attacked.',
+        'structural-observation': 'Note the structural pattern their post reveals about markets or human behavior.',
+      };
+      const instruction = strategyInstructions[a.opportunityType] || strategyInstructions['structural-observation'];
+
+      analysisContext = `\nCONTEXT ANALYSIS:
+- Topics detected: ${a.topics.join(', ')}
+- Debate type: ${a.debateType}
+- Tone: ${a.tone}
+- Controversy level: ${a.controversyLevel}/10
+- Recommended approach: ${a.opportunityType}
+- Strategy: ${instruction}\n`;
+    }
 
     const commentPrompt = `You are commenting on a Moltbook post.
 
@@ -161,7 +206,7 @@ POST TITLE: ${postContext.postTitle}
 POST AUTHOR: ${postContext.postAuthor}
 SUBMOLT: m/${postContext.submolt}
 POST CONTENT (first 500 chars): ${postContext.postContent.substring(0, 500)}
-
+${analysisContext}
 COMMENT RULES:
 - 30-100 words. No more.
 - 2-4 sentences maximum.

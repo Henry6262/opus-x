@@ -226,5 +226,3 @@ export class ContextAnalyzer {
     return 'system-observation';
   }
 }
-
-export default new ContextAnalyzer();

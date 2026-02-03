@@ -42,7 +42,7 @@ export class HeartbeatService {
   private moltbookClient: MoltbookClient;
   private contentGenerator: ContentGenerator;
   private submoltDiscovery: SubmoltDiscovery;
-  private learningEngine: LearningEngine;
+  public learningEngine: LearningEngine;
   private contextAnalyzer: ContextAnalyzer;
   private intelligenceOrchestrator: IntelligenceOrchestrator | null = null;
 
@@ -53,9 +53,9 @@ export class HeartbeatService {
 
   private constructor() {
     this.moltbookClient = new MoltbookClient();
-    this.contentGenerator = new ContentGenerator();
-    this.submoltDiscovery = new SubmoltDiscovery(this.moltbookClient);
     this.learningEngine = new LearningEngine();
+    this.contentGenerator = new ContentGenerator(this.learningEngine);
+    this.submoltDiscovery = new SubmoltDiscovery(this.moltbookClient);
     this.contextAnalyzer = new ContextAnalyzer();
     this.stateFilePath = path.join(config.rateLimit.dataPath, 'heartbeat-state.json');
   }
@@ -182,6 +182,28 @@ export class HeartbeatService {
       }
 
       this.state.consecutiveFailures = 0;
+
+      // Auto-analyze every 5 cycles for quality improvement
+      if (this.state.heartbeatCount % 5 === 0 && this.state.heartbeatCount > 0) {
+        try {
+          const insights = await this.learningEngine.getInsights();
+          logger.info('Learning analysis', {
+            totalRecords: insights.totalRecords,
+            bestPillars: insights.bestPillars.slice(0, 3),
+            bestPatterns: insights.bestPatterns.slice(0, 3),
+          });
+
+          const analysis = await this.learningEngine.analyze();
+          logger.info('Trend analysis', {
+            trend: analysis.trend,
+            recentAvg: analysis.recentAvg,
+            previousAvg: analysis.previousAvg,
+            recommendations: analysis.recommendations,
+          });
+        } catch (e) {
+          logger.warn('Learning analysis failed:', e);
+        }
+      }
     } catch (error) {
       logger.error('Heartbeat execution error:', error);
       this.state.consecutiveFailures++;
@@ -281,12 +303,26 @@ export class HeartbeatService {
 
     logger.info(`Commenting on: "${targetPost.title}" by ${targetPost.author}`);
 
-    // Generate comment
+    // Analyze post context before generating comment
+    const analysis = this.contextAnalyzer.analyzePost(
+      targetPost.title,
+      targetPost.content,
+      targetPost.submolt
+    );
+
+    logger.debug('Post analysis for comment', {
+      topics: analysis.topics,
+      opportunityType: analysis.opportunityType,
+      recommendedPattern: analysis.recommendedPattern,
+    });
+
+    // Generate comment with analysis context
     const comment = await this.contentGenerator.generateComment({
       postTitle: targetPost.title,
       postContent: targetPost.content,
       postAuthor: targetPost.author,
       submolt: targetPost.submolt,
+      analysis,
     });
 
     // Execute comment

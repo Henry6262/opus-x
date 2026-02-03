@@ -146,7 +146,7 @@ app.get('/api/submolts', async (req, res) => {
 app.get('/api/learning', async (req, res) => {
   try {
     const heartbeat = HeartbeatService.getInstance();
-    const learningEngine = (heartbeat as any).learningEngine;
+    const learningEngine = heartbeat.learningEngine;
 
     if (!learningEngine) {
       return res.status(500).json({ error: 'Learning engine not initialized' });
@@ -213,12 +213,10 @@ initializeIntelligence().then(() => {
     logger.info(`Heartbeat interval: ${config.heartbeat.intervalMinutes} minutes`);
     logger.info(`PnL integration: ${config.pnl.enabled ? 'ENABLED' : 'DISABLED'}`);
 
-    // Auto-start heartbeat in production
-    if (config.server.env === 'production') {
-      logger.info('Auto-starting heartbeat system...');
-      const heartbeat = HeartbeatService.getInstance();
-      await heartbeat.start();
-    }
+    // Auto-start heartbeat
+    logger.info('Auto-starting heartbeat system...');
+    const heartbeat = HeartbeatService.getInstance();
+    await heartbeat.start();
 
     logger.info('Humans trade narratives. Systems trade flows.');
 

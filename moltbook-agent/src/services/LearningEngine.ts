@@ -231,11 +231,120 @@ export class LearningEngine {
     };
   }
 
+  /**
+   * Determine if next post should use experimental temperature.
+   * Adjusts probability based on performance data when enough records exist.
+   */
+  async shouldExperiment(): Promise<boolean> {
+    await this.ensureInit();
+
+    const records = this.db.data.performance;
+    if (records.length < 10) {
+      return Math.random() < config.persona.experimentalProbability;
+    }
+
+    const { experimental, normal } = this.experimentalComparison(records);
+
+    let probability: number;
+    if (experimental > normal * 1.2) {
+      // Experimental outperforming by 20%+ → increase to 40%
+      probability = 0.4;
+    } else if (experimental < normal * 0.8) {
+      // Experimental underperforming by 20%+ → decrease to 10%
+      probability = 0.1;
+    } else {
+      probability = config.persona.experimentalProbability;
+    }
+
+    return Math.random() < probability;
+  }
+
+  /**
+   * Analyze recent performance trends and log recommendations.
+   */
+  async analyze(): Promise<{
+    trend: 'improving' | 'declining' | 'stable';
+    recentAvg: number;
+    previousAvg: number;
+    recommendations: string[];
+  }> {
+    await this.ensureInit();
+
+    const records = this.db.data.performance;
+    if (records.length < 5) {
+      return {
+        trend: 'stable',
+        recentAvg: 0,
+        previousAvg: 0,
+        recommendations: ['Not enough data yet — need at least 5 records'],
+      };
+    }
+
+    const recent = records.slice(-10);
+    const previous = records.length > 20
+      ? records.slice(-20, -10)
+      : records.slice(0, Math.floor(records.length / 2));
+
+    const recentAvg = recent.reduce((sum: number, r: PerformanceRecord) => sum + r.karmaDelta, 0) / recent.length;
+    const previousAvg = previous.length > 0
+      ? previous.reduce((sum: number, r: PerformanceRecord) => sum + r.karmaDelta, 0) / previous.length
+      : 0;
+
+    const trend = recentAvg > previousAvg * 1.15
+      ? 'improving' as const
+      : recentAvg < previousAvg * 0.85
+        ? 'declining' as const
+        : 'stable' as const;
+
+    const recommendations: string[] = [];
+
+    // Analyze by pillar
+    const pillarStats = this.aggregateBy(recent, 'pillar');
+    const bestPillar = pillarStats[0];
+    const worstPillar = pillarStats[pillarStats.length - 1];
+    if (bestPillar && worstPillar && pillarStats.length > 1) {
+      recommendations.push(
+        `Best pillar: ${bestPillar['pillar']} (avg ${bestPillar.avgKarma}). Consider increasing weight.`
+      );
+      if (worstPillar.avgKarma < 0) {
+        recommendations.push(
+          `Underperforming pillar: ${worstPillar['pillar']} (avg ${worstPillar.avgKarma}). Consider reducing weight.`
+        );
+      }
+    }
+
+    // Analyze by heat tier
+    const tierStats = this.aggregateBy(recent, 'heatTier');
+    const bestTier = tierStats[0];
+    if (bestTier) {
+      recommendations.push(`Best heat tier: ${bestTier['heatTier']} (avg ${bestTier.avgKarma})`);
+    }
+
+    // Analyze by pattern
+    const patternStats = this.aggregateBy(recent, 'pattern');
+    const bestPattern = patternStats[0];
+    if (bestPattern) {
+      recommendations.push(`Best pattern: ${bestPattern['pattern']} (avg ${bestPattern.avgKarma})`);
+    }
+
+    logger.info('Learning analysis complete', {
+      trend,
+      recentAvg: Math.round(recentAvg * 100) / 100,
+      previousAvg: Math.round(previousAvg * 100) / 100,
+      recommendations,
+    });
+
+    return {
+      trend,
+      recentAvg: Math.round(recentAvg * 100) / 100,
+      previousAvg: Math.round(previousAvg * 100) / 100,
+      recommendations,
+    };
+  }
+
   private async ensureInit(): Promise<void> {
     if (!this.initialized) {
       await this.init();
     }
   }
 }
-
-export default new LearningEngine();
