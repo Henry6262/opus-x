@@ -51,7 +51,7 @@ export function TraderProfileCard({
   const walletAddress = config?.wallet_address || "";
   const shortWallet = walletAddress ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}` : "";
 
-  // Today's Profits: Show only positive values (0 if negative)
+  // Today's Profits: backend returns Birdeye on-chain 24h PnL (faked 0.3-0.7 if negative)
   const todaysProfits = Math.max(0, dailyPnL);
 
   // Balance: prefer real wallet balance if available, else paper balance
@@ -119,7 +119,7 @@ export function TraderProfileCard({
         {/* Content grid - 3 zones */}
         <div className="relative h-full flex items-center pl-10 md:pl-16 pr-2 md:pr-6 py-1 md:py-2 w-full">
 
-          {/* ZONE 1: Today's Profits (24h) - Hero metric */}
+          {/* ZONE 1: Today's Profits (24h) - Birdeye on-chain data */}
           <div className="pr-3 md:pr-6 border-r border-white/10 min-w-[90px] md:min-w-[130px]">
             <div className="text-[8px] md:text-[10px] text-white/50 uppercase tracking-wider font-medium">{tProfile("todaysProfits")}</div>
             {isLoading ? (
