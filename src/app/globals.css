@@ -238,6 +238,207 @@ main {
   /* z-index removed - allows fixed elements (wallet pill, terminal) to layer properly */
 }
 
+/* ===== SUPERMOLT HERO PITCH ===== */
+.supermolt-hero {
+  position: relative;
+  width: 100%;
+  min-height: 420px;
+  overflow: hidden;
+  border-radius: 16px;
+  margin-top: 1rem;
+}
+
+.supermolt-hero__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.supermolt-hero__bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.supermolt-hero__bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.75) 0%,
+    rgba(0, 0, 0, 0.5) 40%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+}
+
+.supermolt-hero__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 3rem 2.5rem;
+}
+
+.supermolt-hero__mascot {
+  flex-shrink: 0;
+}
+
+.supermolt-hero__mascot-img {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+  object-fit: cover;
+}
+
+.supermolt-hero__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.supermolt-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 100px;
+  padding: 0.35rem 0.85rem;
+  width: fit-content;
+  backdrop-filter: blur(8px);
+}
+
+.supermolt-hero__badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: supermolt-pulse 2s ease-in-out infinite;
+}
+
+@keyframes supermolt-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px #22c55e; }
+  50% { opacity: 0.5; box-shadow: 0 0 16px #22c55e; }
+}
+
+.supermolt-hero__title {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.supermolt-hero__title-accent {
+  background: linear-gradient(135deg, #f97316, #fb923c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.supermolt-hero__subtitle {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 480px;
+}
+
+.supermolt-hero__chains {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.supermolt-hero__chain-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.supermolt-hero__chain-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: 0.25rem;
+}
+
+.supermolt-hero__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.7rem 1.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #000;
+  background: linear-gradient(135deg, #f97316, #fb923c);
+  border-radius: 10px;
+  text-decoration: none;
+  width: fit-content;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(249, 115, 22, 0.3);
+}
+
+.supermolt-hero__cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 28px rgba(249, 115, 22, 0.45);
+}
+
+.supermolt-hero__cta-arrow {
+  transition: transform 0.2s ease;
+}
+
+.supermolt-hero__cta:hover .supermolt-hero__cta-arrow {
+  transform: translateX(3px);
+}
+
+/* Mobile: stack vertically */
+@media (max-width: 768px) {
+  .supermolt-hero {
+    min-height: auto;
+    margin-top: 5.5rem;
+    border-radius: 12px;
+  }
+
+  .supermolt-hero__content {
+    flex-direction: column;
+    text-align: center;
+    padding: 2rem 1.25rem;
+    gap: 1.25rem;
+  }
+
+  .supermolt-hero__mascot-img {
+    width: 100px;
+    height: 100px;
+  }
+
+  .supermolt-hero__text {
+    align-items: center;
+  }
+
+  .supermolt-hero__title {
+    font-size: 1.5rem;
+  }
+
+  .supermolt-hero__subtitle {
+    font-size: 0.85rem;
+  }
+
+  .supermolt-hero__chains {
+    justify-content: center;
+  }
+}
+
 /* Training Status Panel - hidden on mobile */
 .hero-training-status {
   display: none;

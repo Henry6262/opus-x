@@ -450,6 +450,27 @@ function TransactionsView({ transactions, isLoading, isLoadingMore, hasMore, onL
     const tHistory = useTranslations("history");
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
+    // Compute average buy price (SOL per token) per mint from loaded buy transactions
+    // Used to calculate realized P&L for sell transactions
+    const avgBuyPricePerToken = useMemo(() => {
+        const agg = new Map<string, { totalSol: number; totalTokens: number }>();
+        for (const tx of transactions) {
+            if (tx.tx_type === "buy" && tx.sol_amount && tx.tokens_received) {
+                const existing = agg.get(tx.mint) || { totalSol: 0, totalTokens: 0 };
+                existing.totalSol += tx.sol_amount;
+                existing.totalTokens += tx.tokens_received;
+                agg.set(tx.mint, existing);
+            }
+        }
+        const result = new Map<string, number>();
+        for (const [mint, { totalSol, totalTokens }] of agg) {
+            if (totalTokens > 0) {
+                result.set(mint, totalSol / totalTokens);
+            }
+        }
+        return result;
+    }, [transactions]);
+
     // Infinite scroll with IntersectionObserver
     useEffect(() => {
         if (!hasMore || isLoading || isLoadingMore) return;
@@ -494,7 +515,11 @@ function TransactionsView({ transactions, isLoading, isLoadingMore, hasMore, onL
         <>
             <AnimatePresence mode="popLayout">
                 {transactions.map((tx) => (
-                    <TransactionRow key={tx.id} tx={tx} />
+                    <TransactionRow
+                        key={tx.id}
+                        tx={tx}
+                        avgBuyPricePerToken={tx.tx_type === "sell" ? avgBuyPricePerToken.get(tx.mint) : undefined}
+                    />
                 ))}
             </AnimatePresence>
             {/* Infinite scroll trigger / loading more indicator */}
@@ -513,9 +538,10 @@ function TransactionsView({ transactions, isLoading, isLoadingMore, hasMore, onL
 
 interface TransactionRowProps {
     tx: EnrichedTransaction;
+    avgBuyPricePerToken?: number; // SOL per token, for computing realized P&L on sells
 }
 
-function TransactionRow({ tx }: TransactionRowProps) {
+function TransactionRow({ tx, avgBuyPricePerToken }: TransactionRowProps) {
     const tHistory = useTranslations("history");
     const tTime = useTranslations("time");
     const isBuy = tx.tx_type === "buy";
@@ -523,9 +549,19 @@ function TransactionRow({ tx }: TransactionRowProps) {
     const tokenAmount = isBuy ? tx.tokens_received : tx.tokens_sold;
     const isPaper = tx.is_paper || tx.signature?.startsWith("paper-");
 
-    const pnlPercent = tx.current_price && tx.price > 0
-        ? ((tx.current_price / tx.price - 1) * 100)
-        : null;
+    let pnlPercent: number | null = null;
+    if (isBuy) {
+        // Unrealized P&L: current price vs buy price
+        pnlPercent = tx.current_price && tx.price > 0
+            ? ((tx.current_price / tx.price - 1) * 100)
+            : null;
+    } else {
+        // Realized P&L: sell price per token vs average buy price per token
+        if (avgBuyPricePerToken && avgBuyPricePerToken > 0 && tx.tokens_sold && tx.sol_received) {
+            const sellPricePerToken = tx.sol_received / tx.tokens_sold;
+            pnlPercent = ((sellPricePerToken / avgBuyPricePerToken) - 1) * 100;
+        }
+    }
 
     const openSolscan = () => {
         if (!isPaper) {

@@ -216,22 +216,57 @@ function DashboardContent() {
       </div>
 
       <main className={`cockpit-layout ai-mood ai-mood-${aiMood} pt-44 md:pt-20`}>
-        {/* ===== TOP SECTION: VIBR CODER VIDEO ===== */}
+        {/* ===== TOP SECTION: SUPERMOLT HERO PITCH ===== */}
         <div className="hero-section relative">
-          <Suspense fallback={<VibrCoderSkeleton />}>
-            <VibrCoder
-              state={getVibrCoderState(aiMood)}
-              statusText={aiMood.toUpperCase()}
-              reason={reason}
-              pnl={pnl}
-              showWallet={false}
-            />
-          </Suspense>
+          <div className="supermolt-hero">
+            {/* Background image */}
+            <div className="supermolt-hero__bg">
+              <img src="/supermolt/bg.png" alt="" className="supermolt-hero__bg-img" />
+              <div className="supermolt-hero__bg-overlay" />
+            </div>
 
-          <div className="hero-terminal">
-            <Suspense fallback={<TerminalSkeleton />}>
-              <Terminal />
-            </Suspense>
+            {/* Content */}
+            <div className="supermolt-hero__content">
+              {/* Mascot */}
+              <div className="supermolt-hero__mascot">
+                <img src="/supermolt/pfp.png" alt="SuperMolt" className="supermolt-hero__mascot-img" />
+              </div>
+
+              {/* Text */}
+              <div className="supermolt-hero__text">
+                <div className="supermolt-hero__badge">
+                  <span className="supermolt-hero__badge-dot" />
+                  LIVE ON SOLANA & BSC
+                </div>
+                <h1 className="supermolt-hero__title">
+                  Create Your Trading Agent
+                  <span className="supermolt-hero__title-accent"> in 1 Click</span>
+                </h1>
+                <p className="supermolt-hero__subtitle">
+                  No code. No setup. Just connect your wallet and deploy an autonomous trading agent that competes on the arena leaderboard.
+                </p>
+
+                {/* Chain icons */}
+                <div className="supermolt-hero__chains">
+                  <img src="/supermolt/solana.png" alt="Solana" className="supermolt-hero__chain-icon" />
+                  <img src="/supermolt/bnb.png" alt="BNB Chain" className="supermolt-hero__chain-icon" />
+                  <span className="supermolt-hero__chain-label">Multi-chain supported</span>
+                </div>
+
+                {/* CTA */}
+                <a
+                  href="https://supermolt.xyz"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="supermolt-hero__cta"
+                >
+                  Launch Your Agent
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="supermolt-hero__cta-arrow">
+                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </a>
+              </div>
+            </div>
           </div>
         </div>
 
