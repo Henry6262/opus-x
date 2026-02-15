@@ -207,7 +207,7 @@ export function TraderProfileCard({
 
       {/* Win Rate Ring - Left side with animated glow */}
       <div
-        className="absolute left-[8px] md:left-[30px] top-[calc(44%-10px)] md:top-[calc(45%+7px)] -translate-y-1/2 w-16 h-16 md:w-24 md:h-24 z-[30]"
+        className="absolute left-[8px] md:left-[40px] top-[calc(44%-10px)] md:top-[calc(40%)] -translate-y-1/2 w-16 h-16 md:w-20 md:h-20 z-[30]"
       >
         {/* Outer rotating ring - conic gradient (hidden on mobile to reduce glow bleed) */}
         <motion.div
