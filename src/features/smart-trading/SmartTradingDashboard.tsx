@@ -16,8 +16,8 @@ import ShinyText from "@/components/ShinyText";
 // Set in .env.local to enable locally
 // ============================================
 const ANALYTICS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true";
-// SR Calls is always enabled (token-gated, so access is controlled by token balance)
-const SUPER_ROUTER_CALLS_ENABLED = true;
+// SR Calls disabled — keeping components, just hiding from UI for now
+const SUPER_ROUTER_CALLS_ENABLED = false;
 const STORAGE_KEY = "superrouter-dashboard-tab";
 
 // ============================================

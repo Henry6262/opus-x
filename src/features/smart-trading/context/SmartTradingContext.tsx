@@ -44,17 +44,24 @@ import { SignalSource } from "../types";
 // ============================================
 // Helper: Calculate daily PnL from closed positions
 // ============================================
-function calculateDailyPnL(closedPositions: Position[]): number {
+function calculateDailyPnL(closedPositions: Position[], openPositions?: Position[]): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  return closedPositions
+  // Realized PnL from positions closed today
+  const realizedToday = closedPositions
     .filter((pos) => {
       if (!pos.closedAt) return false;
       const closedDate = new Date(pos.closedAt);
       return closedDate >= today;
     })
     .reduce((sum, pos) => sum + (pos.realizedPnlSol ?? 0), 0);
+
+  // Unrealized PnL from currently open positions (all open positions contribute to daily performance)
+  const unrealizedFromOpen = (openPositions ?? [])
+    .reduce((sum, pos) => sum + (pos.unrealizedPnl ?? 0), 0);
+
+  return realizedToday + unrealizedFromOpen;
 }
 
 // ============================================
@@ -394,9 +401,9 @@ export function SmartTradingProvider({
 
       // Use daily PnL from backend API (falls back to client-side calculation if backend returns 0)
       const backendDailyPnL = response.stats?.trading?.dailyPnL ?? 0;
-      const dailyPnL = backendDailyPnL !== 0
-        ? backendDailyPnL
-        : calculateDailyPnL(response.positions.closed);
+      const calculatedPnL = calculateDailyPnL(response.positions.closed, response.positions.open);
+      const dailyPnL = backendDailyPnL !== 0 ? backendDailyPnL : calculatedPnL;
+      console.log("[DailyPnL] backend:", backendDailyPnL, "calculated:", calculatedPnL, "open positions:", response.positions.open.length, "unrealized per position:", response.positions.open.map(p => ({ symbol: p.tokenSymbol, pnl: p.unrealizedPnl })));
 
       const statsWithDailyPnL = response.stats
         ? {

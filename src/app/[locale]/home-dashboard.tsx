@@ -13,10 +13,11 @@ import {
 import { TraderProfileCard } from "@/features/smart-trading/components/TraderProfileCard";
 import { TerminalProvider, useTerminal, useTerminalNarrator, useAiReasoningStream } from "@/features/terminal";
 import { useAiMood } from "@/hooks/useAiMood";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+// import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { MobileBottomBar } from "@/components/MobileBottomBar";
 import GradualBlur from "@/components/ui/GradualBlur";
 import { CompetitionSection, TrainingStatus } from "@/features/trading-competition";
+import GradientText from "@/components/GradientText";
 
 // Lazy load heavy components for better initial load performance
 const VibrCoder = lazy(() => import("@/components/VibrCoder").then(m => ({ default: m.VibrCoder })));
@@ -187,7 +188,7 @@ function DashboardContent() {
             history={history}
           />
         </div>
-        {/* Top-right nav: External links + Language Switcher */}
+        {/* Top-right nav: External links */}
         <div className="absolute top-3 right-2 md:top-4 md:right-4 z-[3] pointer-events-auto flex flex-col items-end gap-2 scale-75 md:scale-100 origin-top-right">
           {/* External link icons */}
           <div className="flex flex-col items-center gap-2 rounded-full bg-black/50 backdrop-blur-xl border border-white/15 p-1 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
@@ -210,8 +211,6 @@ function DashboardContent() {
               <img src="/logos/moltbook.webp" alt="Moltbook" className="w-5 h-5 rounded-full object-cover" />
             </a>
           </div>
-          {/* Language Switcher */}
-          <LanguageSwitcher className="shadow-[0_10px_30px_rgba(0,0,0,0.35)] border-white/15 bg-black/50 backdrop-blur-xl" />
         </div>
       </div>
 
@@ -227,31 +226,32 @@ function DashboardContent() {
 
             {/* Content */}
             <div className="supermolt-hero__content">
-              {/* Mascot */}
-              <div className="supermolt-hero__mascot">
+              {/* Mascots - Figure-8: SuperRouter top, SuperMolt bottom, X-crossing between */}
+              <div className="supermolt-hero__mascots">
+                <img src="/character/super-router.png" alt="SuperRouter" className="supermolt-hero__mascot-img" />
+                <svg className="supermolt-hero__mascot-cross" width="44" height="44" viewBox="0 0 44 44" fill="none">
+                  <line x1="10" y1="0" x2="34" y2="44" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"/>
+                  <line x1="34" y1="0" x2="10" y2="44" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"/>
+                </svg>
                 <img src="/supermolt/pfp.png" alt="SuperMolt" className="supermolt-hero__mascot-img" />
+                <div className="supermolt-hero__orbit-dot" />
               </div>
 
               {/* Text */}
               <div className="supermolt-hero__text">
-                <div className="supermolt-hero__badge">
-                  <span className="supermolt-hero__badge-dot" />
-                  LIVE ON SOLANA & BSC
-                </div>
                 <h1 className="supermolt-hero__title">
                   Create Your Trading Agent
-                  <span className="supermolt-hero__title-accent"> in 1 Click</span>
+                  <GradientText
+                    colors={["#c4f70e", "#f97316", "#c4f70e", "#a8e000"]}
+                    animationSpeed={4}
+                    className="inline-flex"
+                  >
+                    {" "}with 1 Click
+                  </GradientText>
                 </h1>
                 <p className="supermolt-hero__subtitle">
-                  No code. No setup. Just connect your wallet and deploy an autonomous trading agent that competes on the arena leaderboard.
+                  Deploy your own autonomous trading agent, with one click.
                 </p>
-
-                {/* Chain icons */}
-                <div className="supermolt-hero__chains">
-                  <img src="/supermolt/solana.png" alt="Solana" className="supermolt-hero__chain-icon" />
-                  <img src="/supermolt/bnb.png" alt="BNB Chain" className="supermolt-hero__chain-icon" />
-                  <span className="supermolt-hero__chain-label">Multi-chain supported</span>
-                </div>
 
                 {/* CTA */}
                 <a
@@ -270,19 +270,10 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* ===== TRADING COMPETITION SECTION ===== */}
-        <div className="competition-section-wrapper">
-          <div className="flex flex-col md:flex-row gap-4 md:gap-5">
-            <div className="flex-1">
-              <CompetitionSection />
-            </div>
-            <div className="w-full md:w-[280px] shrink-0">
-              <TrainingStatus />
-            </div>
-          </div>
-        </div>
+        {/* Gradient fade between hero and dashboard */}
+        <div className="hero-dashboard-fade" />
 
-        {/* ===== BOTTOM SECTION: THE DASHBOARD ===== */}
+        {/* ===== MAIN SECTION: THE DASHBOARD ===== */}
         <div className="dashboard-panel">
           {/* Feature Content - deferred until scrolled into view for mobile perf */}
           <div ref={dashboardRef}>
@@ -300,6 +291,18 @@ function DashboardContent() {
                 <DashboardSkeleton />
               )
             )}
+          </div>
+        </div>
+
+        {/* ===== TRADING COMPETITION SECTION (bottom) ===== */}
+        <div className="competition-section-wrapper">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-5">
+            <div className="flex-1">
+              <CompetitionSection />
+            </div>
+            <div className="w-full md:w-[280px] shrink-0">
+              <TrainingStatus />
+            </div>
           </div>
         </div>
 

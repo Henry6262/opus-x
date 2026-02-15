@@ -242,10 +242,11 @@ main {
 .supermolt-hero {
   position: relative;
   width: 100%;
-  min-height: 420px;
+  flex: 1;
+  min-height: 440px;
   overflow: hidden;
-  border-radius: 16px;
-  margin-top: 1rem;
+  border-radius: 0;
+  margin-top: 0;
 }
 
 .supermolt-hero__bg {
@@ -258,17 +259,17 @@ main {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;
+  object-position: center center;
 }
 
 .supermolt-hero__bg-overlay {
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    135deg,
-    rgba(0, 0, 0, 0.75) 0%,
-    rgba(0, 0, 0, 0.5) 40%,
-    rgba(0, 0, 0, 0.3) 100%
+    to right,
+    rgba(0, 0, 0, 0.88) 0%,
+    rgba(0, 0, 0, 0.72) 50%,
+    rgba(0, 0, 0, 0.45) 100%
   );
 }
 
@@ -276,28 +277,67 @@ main {
   position: relative;
   z-index: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 2rem;
-  padding: 3rem 2.5rem;
+  padding: 2.5rem 2.5rem;
+  padding-bottom: 3rem;
+  margin: 0 15%;
+  min-height: 100%;
+  height: 100%;
+  box-sizing: border-box;
 }
 
-.supermolt-hero__mascot {
+.supermolt-hero__mascots {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  position: relative;
+}
+
+.supermolt-hero__mascot-cross {
+  display: block;
   flex-shrink: 0;
 }
 
 .supermolt-hero__mascot-img {
-  width: 160px;
-  height: 160px;
+  width: 110px;
+  height: 110px;
   border-radius: 50%;
   border: 3px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
   object-fit: cover;
+  position: relative;
+  z-index: 1;
+}
+
+/* Flowing light that traces a figure-8 path around both PFPs */
+.supermolt-hero__orbit-dot {
+  position: absolute;
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent 0%, rgba(249, 115, 22, 0.6) 40%, rgba(249, 115, 22, 0.9) 70%, rgba(249, 115, 22, 0.3) 100%);
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.4), 0 0 24px rgba(249, 115, 22, 0.15);
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  offset-path: path('M 0,-132 C 65,-132 62,-100 62,-77 C 62,-54 45,-15 0,0 C -45,15 -62,54 -62,77 C -62,100 -65,132 0,132 C 65,132 62,100 62,77 C 62,54 45,15 0,0 C -45,-15 -62,-54 -62,-77 C -62,-100 -65,-132 0,-132 Z');
+  offset-rotate: auto;
+  offset-anchor: center center;
+  animation: orbit-flow 7s linear infinite;
+}
+
+@keyframes orbit-flow {
+  from { offset-distance: 0%; }
+  to { offset-distance: 100%; }
 }
 
 .supermolt-hero__text {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .supermolt-hero__badge {
@@ -331,25 +371,25 @@ main {
 }
 
 .supermolt-hero__title {
-  font-size: 2rem;
+  font-size: 2.8rem;
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.2;
   color: #ffffff;
   letter-spacing: -0.02em;
 }
 
 .supermolt-hero__title-accent {
-  background: linear-gradient(135deg, #f97316, #fb923c);
+  background: linear-gradient(135deg, #c4f70e, #a8e000);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .supermolt-hero__subtitle {
-  font-size: 0.95rem;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.7);
-  max-width: 480px;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 500px;
 }
 
 .supermolt-hero__chains {
@@ -377,21 +417,21 @@ main {
   align-items: center;
   gap: 0.5rem;
   margin-top: 0.5rem;
-  padding: 0.7rem 1.5rem;
-  font-size: 0.85rem;
+  padding: 0.85rem 1.75rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #000;
-  background: linear-gradient(135deg, #f97316, #fb923c);
+  background: linear-gradient(135deg, #f97316, #c4f70e);
   border-radius: 10px;
   text-decoration: none;
   width: fit-content;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 20px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 4px 20px rgba(196, 247, 14, 0.25);
 }
 
 .supermolt-hero__cta:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 28px rgba(249, 115, 22, 0.45);
+  box-shadow: 0 6px 28px rgba(196, 247, 14, 0.4);
 }
 
 .supermolt-hero__cta-arrow {
@@ -402,6 +442,22 @@ main {
   transform: translateX(3px);
 }
 
+/* Gradient fade between hero and dashboard */
+.hero-dashboard-fade {
+  width: 100%;
+  height: 60px;
+  margin-top: -30px;
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(10, 10, 10, 0.6) 40%,
+    rgba(10, 10, 10, 1) 100%
+  );
+  pointer-events: none;
+}
+
 /* Mobile: stack vertically */
 @media (max-width: 768px) {
   .supermolt-hero {
@@ -410,16 +466,38 @@ main {
     border-radius: 12px;
   }
 
+  .supermolt-hero__bg-overlay {
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.5) 0%,
+      rgba(0, 0, 0, 0.75) 100%
+    );
+  }
+
   .supermolt-hero__content {
     flex-direction: column;
     text-align: center;
-    padding: 2rem 1.25rem;
-    gap: 1.25rem;
+    padding: 1.5rem 1.25rem;
+    margin-top: 0;
+    gap: 1rem;
+  }
+
+  .supermolt-hero__mascots {
+    flex-direction: row;
+  }
+
+  .supermolt-hero__mascot-cross {
+    width: 28px;
+    height: 28px;
   }
 
   .supermolt-hero__mascot-img {
-    width: 100px;
-    height: 100px;
+    width: 60px;
+    height: 60px;
+  }
+
+  .supermolt-hero__orbit-dot {
+    display: none;
   }
 
   .supermolt-hero__text {
@@ -427,11 +505,11 @@ main {
   }
 
   .supermolt-hero__title {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
   }
 
   .supermolt-hero__subtitle {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 
   .supermolt-hero__chains {
@@ -854,14 +932,14 @@ main {
 /* Desktop: terminal below in dashboard or hidden */
 @media (min-width: 769px) {
   .hero-section {
-    padding: 0 10%;
+    padding: 0;
   }
 }
 
 /* Medium screens (900-1099px): constrain terminal width to prevent exponential growth */
 @media (min-width: 900px) and (max-width: 1099px) {
   .hero-section {
-    padding: 0 6%;  /* Reduce padding to give more room */
+    padding: 0;
   }
 
   .hero-terminal {
@@ -889,10 +967,10 @@ main {
   }
 }
 
-/* Large screens: make room for training status panel */
+/* Large screens */
 @media (min-width: 1100px) {
   .hero-section {
-    padding-right: calc(10% + 250px); /* Make room for training status on the right */
+    padding: 0;
   }
 
   .vibr-coder-container {
