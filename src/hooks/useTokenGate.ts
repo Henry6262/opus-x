@@ -84,13 +84,6 @@ export function useTokenGate(): TokenGateState {
     return () => clearInterval(interval);
   }, [session]);
 
-  // Auto-verify when wallet connects but no valid session
-  useEffect(() => {
-    if (connected && publicKey && !isSessionValid(session, publicKey) && !isVerifying) {
-      verify();
-    }
-  }, [connected, publicKey]);
-
   // Verify balance and create/update session
   const verify = useCallback(async (): Promise<boolean> => {
     if (!connected || !publicKey) {
@@ -125,6 +118,13 @@ export function useTokenGate(): TokenGateState {
       setIsVerifying(false);
     }
   }, [connected, publicKey, refetchBalance]);
+
+  // Auto-verify when wallet connects but no valid session
+  useEffect(() => {
+    if (connected && publicKey && !isSessionValid(session, publicKey) && !isVerifying) {
+      verify();
+    }
+  }, [connected, publicKey, session, verify]);
 
   // Clear session and require re-verification
   const clearSessionHandler = useCallback(() => {
