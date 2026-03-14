@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "dev:turbo": "next dev --turbopack",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint"
   },
@@ -39,6 +39,7 @@
     "ws": "^8.19.0"
   },
   "devDependencies": {
+    "@next/swc-darwin-arm64": "^16.1.1",
     "@opentelemetry/sdk-logs": "^0.209.0",
     "@opentelemetry/sdk-trace-base": "^2.3.0",
     "@tailwindcss/postcss": "^4",
