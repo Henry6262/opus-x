@@ -7,6 +7,8 @@ import { Crown, Copy, Check, TrendingUp, TrendingDown } from "lucide-react";
 import { createChart, LineSeries, type IChartApi, type UTCTimestamp } from "lightweight-charts";
 import { useGodWallets } from "../hooks/useGodWallets";
 import { useMultipleAggregatedWalletEntries } from "../hooks/useAggregatedWalletEntries";
+import { useGodWalletTokenPrices } from "../hooks/useGodWalletTokenPrices";
+import { useTokenPriceHistory } from "../hooks/useTokenPriceHistory";
 import type { AggregatedWalletEntry } from "../types";
 import ShinyText from "@/components/ShinyText";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -147,9 +149,6 @@ function GodWalletCallsSkeleton() {
   );
 }
 
-// Market data cache
-const marketDataCache = new Map<string, { mcap: number; price: number; priceChange24h: number; totalSupply: number }>();
-
 interface TokenCall {
   mint: string;
   symbol: string;
@@ -201,6 +200,9 @@ function MiniChart({ mint, aggregatedEntries, currentMcap, firstEntryMcap, showM
     visible: false,
   });
 
+  // Fetch real historical price data for the last 30 minutes
+  const { history: priceHistory } = useTokenPriceHistory(mint, 30);
+
   useEffect(() => {
     if (!chartContainerRef.current || !currentMcap) return;
 
@@ -251,41 +253,50 @@ function MiniChart({ mint, aggregatedEntries, currentMcap, firstEntryMcap, showM
 
     chartRef.current = chart;
 
-    // Generate synthetic price data for last 30 minutes only
-    const now = Date.now();
-    const THIRTY_MINUTES = 30 * 60 * 1000; // 30 minutes in ms
-    const startTime = now - THIRTY_MINUTES;
+    // Build chart data: use real price history if available, otherwise fall back to synthetic
+    let lineData: { time: UTCTimestamp; value: number }[] = [];
 
-    // Use firstEntryMcap for start value, or estimate from current with slight variance
-    const startMcap = firstEntryMcap || currentMcap * 0.85;
+    if (priceHistory.length >= 2) {
+      // Real historical data — use marketCap if available, else priceUsd
+      const seen = new Set<number>();
+      for (const point of priceHistory) {
+        const timeSeconds = Math.floor(point.timestamp / 1000);
+        if (seen.has(timeSeconds)) continue;
+        seen.add(timeSeconds);
+        lineData.push({
+          time: timeSeconds as UTCTimestamp,
+          value: point.marketCap ?? point.priceUsd,
+        });
+      }
+    } else {
+      // Fallback: synthetic data when history is not yet available
+      const now = Date.now();
+      const THIRTY_MINUTES = 30 * 60 * 1000;
+      const startTime = now - THIRTY_MINUTES;
+      const startMcap = firstEntryMcap || currentMcap * 0.85;
+      const steps = 30;
+      let lastTime = 0;
 
-    // Create price line data - ensure unique ascending timestamps
-    const lineData: { time: UTCTimestamp; value: number }[] = [];
-    const duration = THIRTY_MINUTES;
-    const steps = 30;
-    let lastTime = 0;
-
-    for (let i = 0; i <= steps; i++) {
-      const t = startTime + (duration * i) / steps;
-      const timeSeconds = Math.floor(t / 1000);
-
-      // Ensure strictly ascending - skip if same or less than previous
-      if (timeSeconds <= lastTime) continue;
-      lastTime = timeSeconds;
-
-      // Interpolate mcap with some noise
-      const progress = i / steps;
-      const mcap = startMcap + (currentMcap - startMcap) * progress;
-      const noise = 1 + (Math.random() - 0.5) * 0.1;
-
-      lineData.push({
-        time: timeSeconds as UTCTimestamp,
-        value: mcap * noise,
-      });
+      for (let i = 0; i <= steps; i++) {
+        const t = startTime + (THIRTY_MINUTES * i) / steps;
+        const timeSeconds = Math.floor(t / 1000);
+        if (timeSeconds <= lastTime) continue;
+        lastTime = timeSeconds;
+        const progress = i / steps;
+        const mcap = startMcap + (currentMcap - startMcap) * progress;
+        const noise = 1 + (Math.random() - 0.5) * 0.1;
+        lineData.push({
+          time: timeSeconds as UTCTimestamp,
+          value: mcap * noise,
+        });
+      }
     }
 
+    // Determine direction for color
+    const startValue = lineData[0]?.value ?? currentMcap;
+    const isPositive = currentMcap >= startValue;
+
     // Add line series - Brand green for runners, muted for cold
-    const isPositive = currentMcap >= startMcap;
     const lineSeries = chart.addSeries(LineSeries, {
       color: isPositive ? "#c4f70e" : "rgba(255, 255, 255, 0.3)",
       lineWidth: 2,
@@ -348,7 +359,7 @@ function MiniChart({ mint, aggregatedEntries, currentMcap, firstEntryMcap, showM
       chart.remove();
       chartRef.current = null;
     };
-  }, [mint, aggregatedEntries, currentMcap, firstEntryMcap]);
+  }, [mint, aggregatedEntries, currentMcap, firstEntryMcap, priceHistory]);
 
   if (!currentMcap) {
     return <div className="h-full min-h-[80px] bg-white/[0.02]" />;
@@ -853,7 +864,9 @@ function CallCard({ call }: CallCardProps) {
 
 export function GodWalletCalls() {
   const { godWallets, recentBuys, isLoading } = useGodWallets();
-  const [marketData, setMarketData] = useState<Map<string, { mcap: number; price: number; totalSupply: number }>>(new Map());
+
+  // Real-time price updates via WebSocket (replaces one-time DexScreener fetch)
+  const { getPrice } = useGodWalletTokenPrices();
 
   // Extract unique mints from recent buys
   const mints = useMemo(() => {
@@ -898,80 +911,41 @@ export function GodWalletCalls() {
     });
   }, [recentBuys, aggregatedEntriesMap]);
 
-  // Fetch market data for all tokens
-  useEffect(() => {
-    if (calls.length === 0) return;
-
-    const fetchMarketData = async () => {
-      const newMarketData = new Map<string, { mcap: number; price: number; totalSupply: number }>();
-
-      await Promise.all(
-        calls.map(async (call) => {
-          // Check cache
-          if (marketDataCache.has(call.mint)) {
-            const cached = marketDataCache.get(call.mint)!;
-            newMarketData.set(call.mint, { mcap: cached.mcap, price: cached.price, totalSupply: cached.totalSupply });
-            return;
-          }
-
-          try {
-            const response = await fetch(
-              `https://api.dexscreener.com/latest/dex/tokens/${call.mint}`
-            );
-            if (response.ok) {
-              const data = await response.json();
-              const pair = data.pairs?.[0];
-              if (pair) {
-                const mcap = pair.marketCap || pair.fdv || 0;
-                const price = parseFloat(pair.priceUsd) || 0;
-                const fdv = pair.fdv || mcap;
-                const totalSupply = price > 0 ? fdv / price : 0;
-                marketDataCache.set(call.mint, { mcap, price, priceChange24h: pair.priceChange?.h24 || 0, totalSupply });
-                newMarketData.set(call.mint, { mcap, price, totalSupply });
-              }
-            }
-          } catch (err) {
-            console.error("[GodWalletCalls] Failed to fetch market data for", call.mint);
-          }
-        })
-      );
-
-      setMarketData(newMarketData);
-    };
-
-    fetchMarketData();
-  }, [calls]);
-
-  // Enrich calls with market data
+  // Enrich calls with real-time WebSocket price data
   const enrichedCalls = useMemo(() => {
     return calls.map((call) => {
-      const data = marketData.get(call.mint);
-      if (!data) return call;
+      const priceData = getPrice(call.mint);
+      if (!priceData) return call;
+
+      const mcap = priceData.marketCap;
+      const price = priceData.priceUsd;
+      // Derive totalSupply from marketCap / price (equivalent to fdv / price from DexScreener)
+      const totalSupply = price > 0 ? mcap / price : 0;
 
       // Get first entry mcap from the aggregated data (oldest wallet's avg entry)
       const oldestEntry = call.aggregatedEntries[call.aggregatedEntries.length - 1];
       let firstEntryMcap = oldestEntry?.avgEntryMcap || null;
 
       // Fallback: calculate entry mcap from avgEntryPrice × totalSupply
-      if (!firstEntryMcap && oldestEntry?.avgEntryPrice && data.totalSupply > 0) {
-        firstEntryMcap = oldestEntry.avgEntryPrice * data.totalSupply;
+      if (!firstEntryMcap && oldestEntry?.avgEntryPrice && totalSupply > 0) {
+        firstEntryMcap = oldestEntry.avgEntryPrice * totalSupply;
       }
 
       // Calculate performance: (current_mcap - entry_mcap) / entry_mcap * 100
       const performancePct = firstEntryMcap && firstEntryMcap > 0
-        ? ((data.mcap - firstEntryMcap) / firstEntryMcap) * 100
+        ? ((mcap - firstEntryMcap) / firstEntryMcap) * 100
         : null;
 
       return {
         ...call,
-        currentMcap: data.mcap,
-        currentPrice: data.price,
-        totalSupply: data.totalSupply,
+        currentMcap: mcap,
+        currentPrice: price,
+        totalSupply,
         firstEntryMcap,
         performancePct,
       };
     });
-  }, [calls, marketData]);
+  }, [calls, getPrice]);
 
   // Sort order state - updates every 7 seconds to reorder runners to top
   const [sortVersion, setSortVersion] = useState(0);
