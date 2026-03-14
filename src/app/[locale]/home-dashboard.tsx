@@ -215,63 +215,6 @@ function DashboardContent() {
       </div>
 
       <main className={`cockpit-layout ai-mood ai-mood-${aiMood} pt-44 md:pt-20`}>
-        {/* ===== TOP SECTION: SUPERMOLT HERO PITCH ===== */}
-        <div className="hero-section relative">
-          <div className="supermolt-hero">
-            {/* Background image */}
-            <div className="supermolt-hero__bg">
-              <img src="/supermolt/bg.png" alt="" className="supermolt-hero__bg-img" />
-              <div className="supermolt-hero__bg-overlay" />
-            </div>
-
-            {/* Content */}
-            <div className="supermolt-hero__content">
-              {/* Mascots - Figure-8: SuperRouter top, SuperMolt bottom, X-crossing between */}
-              <div className="supermolt-hero__mascots">
-                <img src="/character/super-router.png" alt="SuperRouter" className="supermolt-hero__mascot-img" />
-                <svg className="supermolt-hero__mascot-cross" width="44" height="44" viewBox="0 0 44 44" fill="none">
-                  <line x1="10" y1="0" x2="34" y2="44" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"/>
-                  <line x1="34" y1="0" x2="10" y2="44" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"/>
-                </svg>
-                <img src="/supermolt/pfp.png" alt="SuperMolt" className="supermolt-hero__mascot-img" />
-                <div className="supermolt-hero__orbit-dot" />
-              </div>
-
-              {/* Text */}
-              <div className="supermolt-hero__text">
-                <h1 className="supermolt-hero__title">
-                  Create Your Trading Agent
-                  <GradientText
-                    colors={["#c4f70e", "#f97316", "#c4f70e", "#a8e000"]}
-                    animationSpeed={4}
-                    className="inline-flex"
-                  >
-                    {" "}with 1 Click
-                  </GradientText>
-                </h1>
-                <p className="supermolt-hero__subtitle">
-                  Deploy your own autonomous trading agent, with one click.
-                </p>
-
-                {/* CTA */}
-                <a
-                  href="https://supermolt.xyz"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="supermolt-hero__cta"
-                >
-                  Launch Your Agent
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="supermolt-hero__cta-arrow">
-                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Gradient fade between hero and dashboard */}
-        <div className="hero-dashboard-fade" />
 
         {/* ===== MAIN SECTION: THE DASHBOARD ===== */}
         <div className="dashboard-panel">
