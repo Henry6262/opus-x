@@ -27,6 +27,9 @@ export interface ChangelogEntry {
 
 export interface AgentVersion {
   id: string;
+  agentId?: string;
+  agentKey?: string;
+  agentName?: string;
   versionCode: string;          // e.g., "v1.0.0", "v1.1.0"
   versionName: string;           // e.g., "Conservative Strategy"
   description?: string;          // Optional description of what changed
@@ -145,6 +148,8 @@ export interface VersionComparisonData {
  * Request payload for creating a new agent version.
  */
 export interface CreateVersionRequest {
+  agentId?: string;
+  agentKey?: string;
   versionCode: string;
   versionName: string;
   description?: string;
@@ -162,6 +167,7 @@ export interface CreateVersionRequest {
  * UI state for the analytics dashboard.
  */
 export interface VersioningDashboardState {
+  selectedAgentId: string;
   selectedMetric: MetricType;
   selectedVersionIds: string[];
   dateRange: {

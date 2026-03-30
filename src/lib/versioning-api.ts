@@ -34,9 +34,34 @@ interface ApiResponse<T> {
 // ============================================
 
 class ProductionVersioningAPI {
+  private withAgentScope(
+    endpoint: string,
+    agentId?: string,
+    agentKey?: string
+  ): string {
+    if (!agentId && !agentKey) {
+      return endpoint;
+    }
+
+    const [pathname, query = ''] = endpoint.split('?');
+    const params = new URLSearchParams(query);
+    if (agentId) {
+      params.set('agent_id', agentId);
+    }
+    if (agentKey) {
+      params.set('agent_key', agentKey);
+    }
+
+    const suffix = params.toString();
+    return suffix ? `${pathname}?${suffix}` : pathname;
+  }
+
   private mapAgentVersion(raw: any): AgentVersion {
     return {
       id: raw.id,
+      agentId: raw.agentId ?? raw.agent_id ?? undefined,
+      agentKey: raw.agentKey ?? raw.agent_key ?? undefined,
+      agentName: raw.agentName ?? raw.agent_name ?? undefined,
       versionCode: raw.versionCode ?? raw.version_code ?? '',
       versionName: raw.versionName ?? raw.version_name ?? '',
       description: raw.description ?? undefined,
@@ -101,28 +126,42 @@ class ProductionVersioningAPI {
     return apiResponse.data;
   }
 
-  async listVersions(): Promise<AgentVersion[]> {
-    const data = await this.fetch<any[]>('/api/versions');
+  async listVersions(agentId?: string, agentKey?: string): Promise<AgentVersion[]> {
+    const data = await this.fetch<any[]>(
+      this.withAgentScope('/api/versions', agentId, agentKey)
+    );
     return data.map((version) => this.mapAgentVersion(version));
   }
 
-  async getActiveVersion(): Promise<AgentVersion | null> {
-    const data = await this.fetch<any | null>('/api/versions/active');
+  async getActiveVersion(agentId?: string, agentKey?: string): Promise<AgentVersion | null> {
+    const data = await this.fetch<any | null>(
+      this.withAgentScope('/api/versions/active', agentId, agentKey)
+    );
     return data ? this.mapAgentVersion(data) : null;
   }
 
   async createVersion(req: CreateVersionRequest): Promise<AgentVersion> {
-    const data = await this.fetch<any>('/api/versions', {
-      method: 'POST',
-      body: JSON.stringify(req),
-    });
+    const data = await this.fetch<any>(
+      this.withAgentScope('/api/versions', req.agentId, req.agentKey),
+      {
+        method: 'POST',
+        body: JSON.stringify(req),
+      }
+    );
     return this.mapAgentVersion(data);
   }
 
-  async activateVersion(versionId: string): Promise<AgentVersion> {
-    const data = await this.fetch<any>(`/api/versions/${versionId}/activate`, {
-      method: 'PUT',
-    });
+  async activateVersion(
+    versionId: string,
+    agentId?: string,
+    agentKey?: string
+  ): Promise<AgentVersion> {
+    const data = await this.fetch<any>(
+      this.withAgentScope(`/api/versions/${versionId}/activate`, agentId, agentKey),
+      {
+        method: 'PUT',
+      }
+    );
     return this.mapAgentVersion(data);
   }
 
@@ -159,9 +198,11 @@ class ProductionVersioningAPI {
     startDate?: string,
     endDate?: string,
     bucket?: '1d' | '3h',
+    agentId?: string,
+    agentKey?: string,
   ): Promise<VersionComparisonData> {
     // Backend doesn't have compare endpoint yet - do client-side comparison
-    const versions = await this.listVersions();
+    const versions = await this.listVersions(agentId, agentKey);
     const filteredVersions = versions.filter(v => versionIds.includes(v.id));
 
     const metricsByVersion: Record<string, VersionMetrics[]> = {};

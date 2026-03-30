@@ -6,10 +6,12 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import type { AgentDefinition } from '@/lib/agents';
 import type { VersionComparisonData, MetricType } from '@/types/versioning';
 import { versioningApi } from '@/lib/versioning-api';
 
 interface UseVersionComparisonOptions {
+  agent?: AgentDefinition;
   versionIds: string[];
   selectedMetric: MetricType;
   dateRange?: {
@@ -54,6 +56,7 @@ interface UseVersionComparisonReturn {
  * ```
  */
 export function useVersionComparison({
+  agent,
   versionIds,
   selectedMetric,
   dateRange,
@@ -66,10 +69,16 @@ export function useVersionComparison({
   const lastRequestKeyRef = useRef<string | null>(null);
 
   const versionIdsKey = versionIds.join('|');
-  const stableVersionIds = useMemo(() => versionIds, [versionIdsKey]);
+  const dateStart = dateRange?.start;
+  const dateEnd = dateRange?.end;
+  const stableVersionIds = useMemo(
+    () => (versionIdsKey ? versionIdsKey.split('|') : []),
+    [versionIdsKey]
+  );
   const requestKey = useMemo(
-    () => `${versionIdsKey}|${selectedMetric}|${dateRange?.start ?? ''}|${dateRange?.end ?? ''}|${bucket}`,
-    [versionIdsKey, selectedMetric, dateRange?.start, dateRange?.end, bucket]
+    () =>
+      `${agent?.id ?? ''}|${agent?.key ?? ''}|${versionIdsKey}|${selectedMetric}|${dateStart ?? ''}|${dateEnd ?? ''}|${bucket}`,
+    [agent?.id, agent?.key, versionIdsKey, selectedMetric, dateStart, dateEnd, bucket]
   );
 
   const loadComparison = useCallback(async (force = false) => {
@@ -77,7 +86,7 @@ export function useVersionComparison({
     console.log('[useVersionComparison] loadComparison called', {
       force,
       bucket,
-      dateRange,
+      dateRange: { start: dateStart, end: dateEnd },
       lastRequestKey: lastRequestKeyRef.current,
       currentRequestKey: requestKey,
       versionIds: stableVersionIds,
@@ -103,17 +112,19 @@ export function useVersionComparison({
       console.log('[useVersionComparison] Fetching with params:', {
         versionIds: stableVersionIds,
         metric: selectedMetric,
-        startDate: dateRange?.start,
-        endDate: dateRange?.end,
+        startDate: dateStart,
+        endDate: dateEnd,
         bucket,
       });
 
       const result = await versioningApi.compareVersions(
         stableVersionIds,
         selectedMetric,
-        dateRange?.start,
-        dateRange?.end,
-        bucket
+        dateStart,
+        dateEnd,
+        bucket,
+        agent?.id,
+        agent?.key
       );
 
       // Debug: Log how many metrics were returned for each version
@@ -132,7 +143,7 @@ export function useVersionComparison({
     } finally {
       setLoading(false);
     }
-  }, [requestKey, stableVersionIds, selectedMetric, dateRange?.start, dateRange?.end, bucket]);
+  }, [requestKey, stableVersionIds, selectedMetric, dateStart, dateEnd, bucket, agent?.id, agent?.key]);
 
   useEffect(() => {
     if (autoLoad) {

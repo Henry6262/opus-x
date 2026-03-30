@@ -12,6 +12,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import { brand } from "@/lib/brand";
 import { Panel } from "@/components/design-system";
 import { ShinyText } from "@/components/animations";
 import { useWalletSignals, usePositions } from "../context";
@@ -254,7 +255,7 @@ function WalletRow({
             }}
           >
             <img
-              src={wallet.twitterAvatar || "/character/super-router.png"}
+              src={wallet.twitterAvatar || brand.mascotImagePath}
               alt={wallet.label}
               className="w-full h-full rounded-full object-cover bg-black"
             />

@@ -229,6 +229,9 @@ export interface WatchlistResponse {
 // Versioning Types
 export interface AgentVersion {
     id: string;
+    agentId?: string;
+    agentKey?: string;
+    agentName?: string;
     versionCode: string;
     versionName: string;
     description?: string;
@@ -275,6 +278,8 @@ export interface VersionComparison {
 }
 
 export interface CreateVersionRequest {
+    agentId?: string;
+    agentKey?: string;
     versionCode: string;
     versionName: string;
     description?: string;
@@ -295,12 +300,16 @@ export interface PositionsQueryParams {
 }
 
 export interface MetricsQueryParams {
+    agentId?: string;
+    agentKey?: string;
     startDate?: string;
     endDate?: string;
     bucket?: '1d' | '3h';
 }
 
 export interface CompareParams {
+    agentId?: string;
+    agentKey?: string;
     versionIds: string[];
     metric?: 'winRate' | 'totalPnl' | 'avgHoldTime' | 'avgMultiplier' | 'tradeCount';
     startDate?: string;
@@ -317,6 +326,30 @@ class DevprintApiClient {
 
     constructor(baseUrl: string = API_BASE_URL) {
         this.baseUrl = baseUrl;
+    }
+
+    private withAgentScope(
+        endpoint: string,
+        agentId?: string,
+        agentKey?: string
+    ): string {
+        if (!agentId && !agentKey) {
+            return endpoint;
+        }
+
+        const [pathname, query = ''] = endpoint.split('?');
+        const params = new URLSearchParams(query);
+
+        if (agentId) {
+            params.set('agent_id', agentId);
+        }
+
+        if (agentKey) {
+            params.set('agent_key', agentKey);
+        }
+
+        const nextQuery = params.toString();
+        return nextQuery ? `${pathname}?${nextQuery}` : pathname;
     }
 
     /**
@@ -465,15 +498,25 @@ class DevprintApiClient {
     /**
      * List all agent versions
      */
-    async listVersions(): Promise<AgentVersion[]> {
-        return this.request<AgentVersion[]>('/api/versions');
+    async listVersions(
+        agentId?: string,
+        agentKey?: string
+    ): Promise<AgentVersion[]> {
+        return this.request<AgentVersion[]>(
+            this.withAgentScope('/api/versions', agentId, agentKey)
+        );
     }
 
     /**
      * Get the currently active version
      */
-    async getActiveVersion(): Promise<AgentVersion | null> {
-        return this.request<AgentVersion | null>('/api/versions/active');
+    async getActiveVersion(
+        agentId?: string,
+        agentKey?: string
+    ): Promise<AgentVersion | null> {
+        return this.request<AgentVersion | null>(
+            this.withAgentScope('/api/versions/active', agentId, agentKey)
+        );
     }
 
     /**
@@ -481,19 +524,33 @@ class DevprintApiClient {
      */
     async createVersion(req: CreateVersionRequest): Promise<AgentVersion> {
         const snakeReq = transformKeysToSnake(req);
-        return this.request<AgentVersion>('/api/versions', {
+        return this.request<AgentVersion>(
+            this.withAgentScope('/api/versions', req.agentId, req.agentKey),
+            {
             method: 'POST',
             body: JSON.stringify(snakeReq),
-        });
+            }
+        );
     }
 
     /**
      * Activate a specific version
      */
-    async activateVersion(versionId: string): Promise<AgentVersion> {
-        return this.request<AgentVersion>(`/api/versions/${versionId}/activate`, {
-            method: 'PUT',
-        });
+    async activateVersion(
+        versionId: string,
+        agentId?: string,
+        agentKey?: string
+    ): Promise<AgentVersion> {
+        return this.request<AgentVersion>(
+            this.withAgentScope(
+                `/api/versions/${versionId}/activate`,
+                agentId,
+                agentKey
+            ),
+            {
+                method: 'PUT',
+            }
+        );
     }
 
     /**
@@ -541,9 +598,13 @@ class DevprintApiClient {
     async getVersionsSummary(
         versionIds: string[],
         startDate?: string,
-        endDate?: string
+        endDate?: string,
+        agentId?: string,
+        agentKey?: string
     ): Promise<VersionSummary[]> {
         const query = this.buildQueryString({
+            agentId,
+            agentKey,
             versionIds,
             startDate,
             endDate,

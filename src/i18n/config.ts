@@ -1,4 +1,4 @@
-// i18n configuration for SuperRouter
+// i18n configuration for the app shell
 export const locales = ['en', 'zh'] as const;
 export type Locale = (typeof locales)[number];
 

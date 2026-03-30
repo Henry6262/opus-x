@@ -8,6 +8,7 @@
 import { useState, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, Loader2 } from 'lucide-react';
+import type { AgentDefinition } from '@/lib/agents';
 import type { CreateVersionRequest } from '@/types/versioning';
 import type { TradingConfig } from '@/features/smart-trading/types';
 
@@ -16,6 +17,7 @@ interface CreateVersionDialogProps {
   onClose: () => void;
   onCreate: (req: CreateVersionRequest) => Promise<void>;
   currentConfig: TradingConfig | null;
+  agent?: AgentDefinition;
 }
 
 /**
@@ -39,6 +41,7 @@ export function CreateVersionDialog({
   onClose,
   onCreate,
   currentConfig,
+  agent,
 }: CreateVersionDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +73,8 @@ export function CreateVersionDialog({
       setLoading(true);
 
       const request: CreateVersionRequest = {
+        agentId: agent?.id,
+        agentKey: agent?.key,
         versionCode: formData.versionCode.trim(),
         versionName: formData.versionName.trim(),
         description: formData.description.trim() || undefined,
@@ -146,7 +151,7 @@ export function CreateVersionDialog({
                       Create New Version
                     </h3>
                     <p className="text-xs text-white/50">
-                      Snapshot current config
+                      Snapshot current config{agent ? ` for ${agent.displayName}` : ""}
                     </p>
                   </div>
                 </div>

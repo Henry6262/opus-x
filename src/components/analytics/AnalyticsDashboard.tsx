@@ -35,6 +35,7 @@ import {
 
 import { useVersions } from '@/hooks/useVersions';
 import { useVersionComparison } from '@/hooks/useVersionComparison';
+import { agentRegistry, defaultAgent, getAgentById } from '@/lib/agents';
 import type { MetricType, AgentVersion, VersionSummary, VersionMetrics } from '@/types/versioning';
 import { cn } from '@/lib/utils';
 import {
@@ -422,7 +423,7 @@ function VersionChart({ versions, selectedVersionId, metricsByVersion, selectedM
     });
 
     return result;
-  }, [displayVersions, metricsByVersion, selectedMetric]);
+  }, [displayVersions, metricsByVersion, selectedMetric, selectedVersionId]);
 
   // Build chart config
   const chartConfig = useMemo(() => {
@@ -541,12 +542,52 @@ function EmptyState() {
   );
 }
 
+function AgentSelector({
+  agentId,
+  onChange,
+}: {
+  agentId: string;
+  onChange: (agentId: string) => void;
+}) {
+  if (agentRegistry.length <= 1) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-[8px] font-semibold uppercase tracking-[0.25em] text-white/40 md:text-[9px]">
+        Agents
+      </span>
+      {agentRegistry.map((agent) => {
+        const isSelected = agent.id === agentId;
+        return (
+          <button
+            key={agent.id}
+            type="button"
+            onClick={() => onChange(agent.id)}
+            className={cn(
+              "rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition cursor-pointer",
+              "md:px-4 md:py-1.5 md:text-[11px]",
+              isSelected
+                ? "bg-[#3b82f6]/20 text-[#93c5fd] border border-[#3b82f6]/40 shadow-[0_0_16px_rgba(59,130,246,0.25)]"
+                : "bg-white/5 text-white/60 border border-transparent hover:bg-white/10 hover:text-white/80"
+            )}
+          >
+            {agent.shortLabel}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ============================================
 // MAIN DASHBOARD
 // ============================================
 
 export function AnalyticsDashboard() {
   // State
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(defaultAgent.id);
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('winRate');
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [bucket, setBucket] = useState<'1d' | '3h'>('3h');
@@ -556,29 +597,41 @@ export function AnalyticsDashboard() {
     end: new Date().toISOString().split('T')[0],
   });
 
+  const selectedAgent = useMemo(
+    () => getAgentById(selectedAgentId),
+    [selectedAgentId]
+  );
+
   // Data fetching
   const {
     versions,
     activeVersion,
     loading: versionsLoading,
     error: versionsError,
-  } = useVersions();
+  } = useVersions({ agent: selectedAgent });
 
   const {
     data: comparisonData,
     loading: comparisonLoading,
     reload: reloadComparison,
   } = useVersionComparison({
+    agent: selectedAgent,
     versionIds: versions.map((v) => v.id),
     selectedMetric,
     dateRange,
     bucket,
   });
 
+  useEffect(() => {
+    setSelectedVersionId(null);
+    setShowChangelog(false);
+  }, [selectedAgentId]);
+
   // Debug: Log all key values
   useEffect(() => {
     console.log('[AnalyticsDashboard] STATE:', {
       versionsCount: versions.length,
+      selectedAgentId,
       versionIds: versions.map((v) => ({ id: v.id, code: v.versionCode })),
       selectedVersionId,
       bucket,
@@ -586,7 +639,7 @@ export function AnalyticsDashboard() {
       comparisonLoading,
       hasComparisonData: !!comparisonData,
     });
-  }, [versions, selectedVersionId, bucket, dateRange, comparisonLoading, comparisonData]);
+  }, [versions, selectedAgentId, selectedVersionId, bucket, dateRange, comparisonLoading, comparisonData]);
 
   // Debug: Log chart data when it changes
   useEffect(() => {
@@ -650,8 +703,11 @@ export function AnalyticsDashboard() {
             <div>
               <h3 className="text-xl font-bold text-white flex items-center gap-3">
                 <Activity className="w-6 h-6 text-[#c4f70e]" />
-                Agent Metrics
+                {selectedAgent.displayName} Metrics
               </h3>
+              <p className="mt-1 text-xs uppercase tracking-[0.18em] text-white/35">
+                {selectedAgent.description}
+              </p>
             </div>
             <div className="flex items-center gap-4">
               <TimeframeSelector
@@ -672,7 +728,7 @@ export function AnalyticsDashboard() {
           <div className="flex flex-col gap-3 md:hidden">
             <h3 className="text-lg font-bold text-white flex items-center justify-center gap-2">
               <Activity className="w-5 h-5 text-[#c4f70e]" />
-              Agent Metrics
+              {selectedAgent.shortLabel} Metrics
             </h3>
             <div className="flex items-end justify-center gap-4">
               <TimeframeSelector
@@ -699,6 +755,10 @@ export function AnalyticsDashboard() {
               className="relative flex-1 rounded-2xl bg-white/[0.02] backdrop-blur-sm overflow-hidden md:w-[72%] md:border-l md:border-b md:border-white/10"
             >
               <div className="absolute left-4 top-3 z-10 flex flex-col gap-1.5">
+                <AgentSelector
+                  agentId={selectedAgentId}
+                  onChange={setSelectedAgentId}
+                />
                 <span className="text-[8px] font-semibold uppercase tracking-[0.25em] text-white/40 md:text-[9px]">
                   Versions
                 </span>

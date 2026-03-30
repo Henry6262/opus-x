@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { Copy, Wallet } from "lucide-react";
 import { CountUp } from "@/components/animations/CountUp";
+import { brand, brandSocial } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import type { DashboardStatsResponse, Position, TradingConfig } from "../types";
 
@@ -195,13 +196,13 @@ export function TraderProfileCard({
 
         {/* X/Twitter Handle */}
         <a
-          href="https://x.com/SuperRouterSol"
+          href={brand.twitterUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-[10px] md:text-xs font-mono text-white/70 hover:text-white transition-colors"
         >
           <XIcon className="w-3 h-3 text-white/60" />
-          <span>@SuperRouterSol</span>
+          <span>{brandSocial.twitterAt}</span>
         </a>
       </motion.div>
 

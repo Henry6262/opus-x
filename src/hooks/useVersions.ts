@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import type { AgentDefinition } from '@/lib/agents';
 import type { AgentVersion, CreateVersionRequest } from '@/types/versioning';
 import { versioningApi } from '@/lib/versioning-api';
 
@@ -17,6 +18,10 @@ interface UseVersionsReturn {
   createVersion: (req: CreateVersionRequest) => Promise<AgentVersion>;
   activateVersion: (versionId: string) => Promise<void>;
   reload: () => Promise<void>;
+}
+
+interface UseVersionsOptions {
+  agent?: AgentDefinition;
 }
 
 /**
@@ -38,7 +43,7 @@ interface UseVersionsReturn {
  * );
  * ```
  */
-export function useVersions(): UseVersionsReturn {
+export function useVersions({ agent }: UseVersionsOptions = {}): UseVersionsReturn {
   const [versions, setVersions] = useState<AgentVersion[]>([]);
   const [activeVersion, setActiveVersion] = useState<AgentVersion | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,8 +55,8 @@ export function useVersions(): UseVersionsReturn {
       setError(null);
 
       const [allVersions, active] = await Promise.all([
-        versioningApi.listVersions(),
-        versioningApi.getActiveVersion(),
+        versioningApi.listVersions(agent?.id, agent?.key),
+        versioningApi.getActiveVersion(agent?.id, agent?.key),
       ]);
 
       setVersions(allVersions);
@@ -62,7 +67,7 @@ export function useVersions(): UseVersionsReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [agent?.id, agent?.key]);
 
   useEffect(() => {
     loadVersions();
@@ -71,7 +76,11 @@ export function useVersions(): UseVersionsReturn {
   const createVersion = useCallback(async (req: CreateVersionRequest): Promise<AgentVersion> => {
     try {
       setError(null);
-      const newVersion = await versioningApi.createVersion(req);
+      const newVersion = await versioningApi.createVersion({
+        ...req,
+        agentId: req.agentId ?? agent?.id,
+        agentKey: req.agentKey ?? agent?.key,
+      });
 
       // Reload all versions to get updated state
       await loadVersions();
@@ -82,12 +91,12 @@ export function useVersions(): UseVersionsReturn {
       setError(err.message || 'Failed to create version');
       throw err;
     }
-  }, [loadVersions]);
+  }, [agent?.id, agent?.key, loadVersions]);
 
   const activateVersion = useCallback(async (versionId: string): Promise<void> => {
     try {
       setError(null);
-      await versioningApi.activateVersion(versionId);
+      await versioningApi.activateVersion(versionId, agent?.id, agent?.key);
 
       // Reload to update active status
       await loadVersions();
@@ -96,7 +105,7 @@ export function useVersions(): UseVersionsReturn {
       setError(err.message || 'Failed to activate version');
       throw err;
     }
-  }, [loadVersions]);
+  }, [agent?.id, agent?.key, loadVersions]);
 
   return {
     versions,

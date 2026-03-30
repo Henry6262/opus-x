@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { locales, type Locale } from "@/i18n/config";
+import { brand, brandSocial } from "@/lib/brand";
 import { Providers } from "@/providers/Providers";
 import "../globals.css";
 
@@ -26,8 +27,6 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-const siteUrl = "https://superrouter.fun";
-
 type Props = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
@@ -38,16 +37,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "metadata" });
 
   return {
-    metadataBase: new URL(siteUrl),
+    metadataBase: new URL(brand.siteUrl),
     title: {
       default: t("title"),
-      template: "%s | SuperRouter",
+      template: `%s | ${brand.shortName}`,
     },
     description: t("description"),
     keywords: t("keywords").split(", "),
-    authors: [{ name: "SuperRouter" }],
-    creator: "SuperRouter",
-    publisher: "SuperRouter",
+    authors: [{ name: brand.productName }],
+    creator: brand.productName,
+    publisher: brand.productName,
     robots: {
       index: true,
       follow: true,
@@ -77,12 +76,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         },
       ],
     },
-    manifest: "/site.webmanifest",
+    manifest: "/manifest.webmanifest",
     openGraph: {
       type: "website",
       locale: locale === "zh" ? "zh_CN" : "en_US",
-      url: siteUrl,
-      siteName: "SuperRouter",
+      url: brand.siteUrl,
+      siteName: brand.productName,
       title: t("title"),
       description: t("description"),
       images: [
@@ -90,7 +89,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           url: "/assets/x-banner.jpg",
           width: 1200,
           height: 630,
-          alt: "SuperRouter - AI Trading Intelligence",
+          alt: `${brand.productName} - AI Trading Intelligence`,
           type: "image/jpeg",
         },
       ],
@@ -100,14 +99,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: t("title"),
       description: t("description"),
       images: ["/assets/x-banner.jpg"],
-      creator: "@superrouter",
-      site: "@superrouter",
+      creator: brandSocial.twitterAt,
+      site: brandSocial.twitterAt,
     },
   };
 }
 
 export const viewport: Viewport = {
-  themeColor: "#68ac6e",
+  themeColor: brand.themeColor,
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,

@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Copy, Check } from "lucide-react";
+import { brand } from "@/lib/brand";
 
 // ============================================
 // Social Links Bar
@@ -13,7 +14,7 @@ import { Copy, Check } from "lucide-react";
 
 // Contract Address - Update this with actual CA
 const CONTRACT_ADDRESS = "48BbwbZHWc8QJBiuGJTQZD5aWZdP3i6xrDw5N9EHpump";
-const TWITTER_URL = "https://x.com/SuperRouterSol";
+const TWITTER_URL = brand.twitterUrl;
 const DEXSCREENER_URL = `https://dexscreener.com/solana/${CONTRACT_ADDRESS}`;
 
 // X (Twitter) Icon

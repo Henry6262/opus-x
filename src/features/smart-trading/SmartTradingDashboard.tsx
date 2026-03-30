@@ -9,6 +9,7 @@ import { HistoryPanel } from "./components/HistoryPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnalyticsDashboard } from "@/components/analytics/AnalyticsDashboard";
 import { SuperRouterCallsSection } from "@/features/super-router-calls";
+import { brand } from "@/lib/brand";
 import ShinyText from "@/components/ShinyText";
 
 // ============================================
@@ -18,7 +19,7 @@ import ShinyText from "@/components/ShinyText";
 const ANALYTICS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true";
 // SR Calls disabled — keeping components, just hiding from UI for now
 const SUPER_ROUTER_CALLS_ENABLED = false;
-const STORAGE_KEY = "superrouter-dashboard-tab";
+const STORAGE_KEY = "market-intel-dashboard-tab";
 
 // ============================================
 // Tab configuration
@@ -51,8 +52,8 @@ const TABS_CONFIG: TabConfig[] = [
     enabled: ANALYTICS_ENABLED,
   },
   {
-    value: "super-router-calls",
-    label: "SR Calls",
+    value: "premium-calls",
+    label: brand.premiumCallsLabel,
     mobileLabel: "Calls",
     color: "#eab308",
     shineColor: "#ffffff",
@@ -231,8 +232,8 @@ export function SmartTradingDashboard() {
       setActiveTab("analytics");
       return;
     }
-    if (savedTab === "super-router-calls" && SUPER_ROUTER_CALLS_ENABLED) {
-      setActiveTab("super-router-calls");
+    if (savedTab === "premium-calls" && SUPER_ROUTER_CALLS_ENABLED) {
+      setActiveTab("premium-calls");
       return;
     }
     if (savedTab === "trading") {
@@ -243,7 +244,7 @@ export function SmartTradingDashboard() {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (typeof window === "undefined") return;
-    if (value === "trading" || value === "analytics" || value === "super-router-calls") {
+    if (value === "trading" || value === "analytics" || value === "premium-calls") {
       window.localStorage.setItem(STORAGE_KEY, value);
     }
   };
@@ -258,7 +259,7 @@ export function SmartTradingDashboard() {
         <TabsList className="hidden">
           <TabsTrigger value="trading">Trading</TabsTrigger>
           {ANALYTICS_ENABLED && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
-          {SUPER_ROUTER_CALLS_ENABLED && <TabsTrigger value="super-router-calls">SR Calls</TabsTrigger>}
+          {SUPER_ROUTER_CALLS_ENABLED && <TabsTrigger value="premium-calls">{brand.premiumCallsLabel}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="trading" className="space-y-4">
@@ -294,7 +295,7 @@ export function SmartTradingDashboard() {
         )}
 
         {SUPER_ROUTER_CALLS_ENABLED && (
-          <TabsContent value="super-router-calls" className="space-y-4">
+          <TabsContent value="premium-calls" className="space-y-4">
             {/* Super Router Calls Content - WalletButton is inside TokenGateGuard */}
             <SuperRouterCallsSection />
           </TabsContent>
