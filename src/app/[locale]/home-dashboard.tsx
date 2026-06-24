@@ -18,6 +18,7 @@ import { MobileBottomBar } from "@/components/MobileBottomBar";
 import GradualBlur from "@/components/ui/GradualBlur";
 import { CompetitionSection, TrainingStatus } from "@/features/trading-competition";
 import GradientText from "@/components/GradientText";
+import { SuperRouterIntroModal } from "@/components/SuperRouterIntroModal";
 
 // Lazy load heavy components for better initial load performance
 const VibrCoder = lazy(() => import("@/components/VibrCoder").then(m => ({ default: m.VibrCoder })));
@@ -101,6 +102,7 @@ export function HomeDashboard() {
   return (
     <TerminalProvider>
       <SmartTradingProvider>
+        <SuperRouterIntroModal />
         <DashboardContent />
       </SmartTradingProvider>
     </TerminalProvider>
