@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X } from "lucide-react";
-import { BackgroundParticles } from "./BackgroundParticles";
 import ScrambleText from "./animations/ScrambleText";
-import GradientText from "./GradientText";
 
 const STORAGE_KEY = "superrouter-intro-seen";
 const AUTO_DISMISS_MS = 3000;
@@ -52,46 +50,32 @@ export function SuperRouterIntroModal() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-black"
+          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-[var(--void-black)]"
           aria-modal="true"
           role="dialog"
         >
-          {/* Animated particle network background */}
-          <div className="absolute inset-0 z-0">
-            <BackgroundParticles mood="executing" intensity={0.8} />
-          </div>
-
-          {/* Cinematic vignette & scanline overlay */}
-          <div className="absolute inset-0 z-[1] pointer-events-none">
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.95) 100%)",
-              }}
-            />
-            <div
-              className="absolute inset-0 opacity-[0.08]"
-              style={{
-                background:
-                  "repeating-linear-gradient(0deg, transparent 0px, rgba(0,255,106,0.03) 1px, transparent 2px)",
-              }}
-            />
-          </div>
-
-          {/* Radial glow behind character */}
+          {/* Soft brand glow behind character */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="absolute z-[2] w-[600px] h-[600px] rounded-full blur-[120px] bg-[#00ff6a]/20 pointer-events-none"
+            transition={{ duration: 1, ease: "easeOut" }}
+            className="absolute z-0 w-[500px] h-[500px] md:w-[700px] md:h-[700px] rounded-full blur-[140px] bg-[var(--brand-primary)]/10 pointer-events-none"
+          />
+
+          {/* Subtle vignette */}
+          <div
+            className="absolute inset-0 z-[1] pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.5) 70%, rgba(0,0,0,0.95) 100%)",
+            }}
           />
 
           {/* Main content */}
-          <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-4xl">
+          <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-3xl">
             {/* SuperRouter character */}
             <motion.div
-              initial={{ y: 20, opacity: 0, scale: 0.9 }}
+              initial={{ y: 20, opacity: 0, scale: 0.95 }}
               animate={{ y: 0, opacity: 1, scale: 1 }}
               transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
               className="relative mb-8"
@@ -100,46 +84,39 @@ export function SuperRouterIntroModal() {
                 src="/character/super-router.png"
                 alt="SuperRouter"
                 animate={{
-                  y: [0, -8, 0],
+                  y: [0, -6, 0],
                   filter: [
-                    "drop-shadow(0 0 30px rgba(0,255,106,0.3))",
-                    "drop-shadow(0 0 60px rgba(0,255,106,0.6))",
-                    "drop-shadow(0 0 30px rgba(0,255,106,0.3))",
+                    "drop-shadow(0 0 25px rgba(104,172,110,0.25))",
+                    "drop-shadow(0 0 45px rgba(104,172,110,0.45))",
+                    "drop-shadow(0 0 25px rgba(104,172,110,0.25))",
                   ],
                 }}
                 transition={{
-                  duration: 3,
+                  duration: 3.5,
                   repeat: Infinity,
                   ease: "easeInOut",
                 }}
-                className="w-36 h-36 md:w-56 md:h-56 object-contain"
+                className="w-32 h-32 md:w-48 md:h-48 object-contain"
               />
 
               {/* Orbital ring */}
               <motion.div
                 animate={{ rotate: 360 }}
-                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 m-auto w-48 h-48 md:w-72 md:h-72 rounded-full border border-[#00ff6a]/20 pointer-events-none"
+                transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0 m-auto w-44 h-44 md:w-64 md:h-64 rounded-full border border-[var(--brand-primary)]/20 pointer-events-none"
                 style={{ borderStyle: "dashed" }}
               />
             </motion.div>
 
             {/* Headline */}
-            <motion.div
+            <motion.h1
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
-              className="mb-4"
+              className="text-5xl md:text-7xl font-black tracking-tighter text-white mb-3"
             >
-              <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white">
-                <GradientText
-                  colors={["#00ff6a", "#14f195", "#9945ff", "#00ff6a"]}
-                  animationSpeed={3}
-                >
-                  SUPERROUTER
-                </GradientText>
-              </h1>
-            </motion.div>
+              SUPERROUTER
+            </motion.h1>
 
             {/* Storytelling tagline */}
             <motion.div
@@ -148,7 +125,7 @@ export function SuperRouterIntroModal() {
               transition={{ duration: 0.5, delay: 0.5 }}
               className="h-8 md:h-10 flex items-center justify-center"
             >
-              <span className="text-base md:text-xl text-white/90 font-mono tracking-wide">
+              <span className="text-base md:text-xl text-white/70 font-mono tracking-wide">
                 <ScrambleText
                   text="The autonomous trading agent is awakening..."
                   speed={35}
@@ -156,32 +133,26 @@ export function SuperRouterIntroModal() {
               </span>
             </motion.div>
 
-            {/* Status pills */}
+            {/* Status line */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.8 }}
-              className="mt-6 flex flex-wrap items-center justify-center gap-3"
+              transition={{ delay: 0.8 }}
+              className="mt-6 flex items-center gap-2"
             >
-              {["NEURAL NET: ONLINE", "SOLANA: CONNECTED", "AGENT: READY"].map(
-                (label, i) => (
-                  <motion.span
-                    key={label}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 1 + i * 0.15 }}
-                    className="px-3 py-1 text-[10px] md:text-xs font-mono font-semibold uppercase tracking-widest rounded-full border border-[#00ff6a]/30 bg-[#00ff6a]/10 text-[#00ff6a] shadow-[0_0_15px_rgba(0,255,106,0.15)]"
-                  >
-                    {label}
-                  </motion.span>
-                )
-              )}
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--brand-primary)] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--brand-primary)]" />
+              </span>
+              <span className="text-[11px] md:text-xs font-mono uppercase tracking-[0.2em] text-white/50">
+                Systems online
+              </span>
             </motion.div>
 
             {/* Progress bar */}
-            <div className="mt-10 w-64 md:w-80 h-[2px] bg-white/10 rounded-full overflow-hidden">
+            <div className="mt-10 w-56 md:w-72 h-[2px] bg-white/10 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-[#00ff6a] to-[#14f195] shadow-[0_0_10px_#00ff6a]"
+                className="h-full bg-[var(--brand-primary)]"
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
                 transition={{
@@ -194,20 +165,20 @@ export function SuperRouterIntroModal() {
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1.2 }}
-              className="mt-3 text-[10px] text-white/40 uppercase tracking-[0.2em] font-mono"
+              transition={{ delay: 1 }}
+              className="mt-3 text-[10px] text-white/30 uppercase tracking-[0.2em] font-mono"
             >
               Initializing experience
             </motion.p>
           </div>
 
-          {/* Skip / enter button */}
+          {/* Enter button */}
           <motion.button
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
+            transition={{ delay: 0.8 }}
             onClick={handleClose}
-            className="absolute bottom-8 z-10 px-6 py-2.5 text-xs font-mono font-semibold uppercase tracking-widest text-black bg-[#00ff6a] rounded-full hover:bg-[#14f195] transition-colors shadow-[0_0_25px_rgba(0,255,106,0.4)]"
+            className="absolute bottom-8 z-10 px-8 py-2.5 text-xs font-mono font-semibold uppercase tracking-widest text-[var(--void-black)] bg-[var(--brand-primary)] rounded-full hover:bg-[var(--brand-primary-light)] transition-colors"
           >
             Enter Dashboard
           </motion.button>
@@ -218,7 +189,7 @@ export function SuperRouterIntroModal() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
             onClick={handleClose}
-            className="absolute top-6 right-6 z-10 p-2 rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all"
+            className="absolute top-6 right-6 z-10 p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5 transition-all"
             aria-label="Close intro"
           >
             <X className="w-5 h-5" />
