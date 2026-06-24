@@ -216,6 +216,25 @@ function DashboardContent() {
 
       <main className={`cockpit-layout ai-mood ai-mood-${aiMood} pt-44 md:pt-20`}>
 
+        {/* ===== TOP SECTION: VIBR CODER VIDEO + TERMINAL ===== */}
+        <div className="hero-section relative">
+          <Suspense fallback={<VibrCoderSkeleton />}>
+            <VibrCoder
+              state={getVibrCoderState(aiMood)}
+              statusText={aiMood.toUpperCase()}
+              reason={reason}
+              pnl={pnl}
+              showWallet={false}
+            />
+          </Suspense>
+
+          <div className="hero-terminal">
+            <Suspense fallback={<TerminalSkeleton />}>
+              <Terminal />
+            </Suspense>
+          </div>
+        </div>
+
         {/* ===== MAIN SECTION: THE DASHBOARD ===== */}
         <div className="dashboard-panel">
           {/* Feature Content - deferred until scrolled into view for mobile perf */}
