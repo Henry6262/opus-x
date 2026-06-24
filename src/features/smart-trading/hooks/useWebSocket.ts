@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
+import { HARDCODED_MODE } from "@/lib/config";
 import type { MigrationFeedEvent } from "../types";
 
 // ============================================
@@ -61,6 +62,19 @@ function getWebSocketUrl(httpUrl: string, path: string): string {
 // ============================================
 
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
+  if (HARDCODED_MODE) {
+    return {
+      status: "connected",
+      clientId: "hardcoded",
+      on: () => () => {},
+      onAny: () => () => {},
+      connect: () => {},
+      disconnect: () => {},
+      emit: () => {},
+      lastEvent: null,
+    };
+  }
+
   const {
     url = process.env.NEXT_PUBLIC_DEVPRNT_WS_URL ||
     process.env.NEXT_PUBLIC_DEVPRNT_CORE_URL ||
@@ -287,6 +301,19 @@ function getOrCreateSocketState(path: string): SharedSocketState {
  * Different paths get different socket connections
  */
 export function useSharedWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
+  if (HARDCODED_MODE) {
+    return {
+      status: "connected",
+      clientId: "hardcoded",
+      on: () => () => {},
+      onAny: () => () => {},
+      connect: () => {},
+      disconnect: () => {},
+      emit: () => {},
+      lastEvent: null,
+    };
+  }
+
   const {
     url = process.env.NEXT_PUBLIC_DEVPRNT_WS_URL ||
     process.env.NEXT_PUBLIC_DEVPRNT_CORE_URL ||

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { useState, useEffect, useCallback } from "react";
+import { fetchDevprintApi } from "@/lib/devprnt";
 import { useSharedWebSocket } from "@/features/smart-trading/hooks/useWebSocket";
 import type { TrackerWallet, GodWalletBuy } from "../types";
 
@@ -157,20 +157,8 @@ export function useGodWallets(): UseGodWalletsResult {
       setError(null);
 
       // Fetch god wallets list
-      const walletsUrl = buildDevprntApiUrl("/api/wallets/god");
-      const walletsResponse = await fetch(walletsUrl.toString());
-
-      if (!walletsResponse.ok) {
-        throw new Error(`Failed to fetch god wallets: ${walletsResponse.status}`);
-      }
-
-      const walletsData: DevprintGodWalletsResponse = await walletsResponse.json();
-
-      if (!walletsData.success) {
-        throw new Error("API returned success: false");
-      }
-
-      const mappedWallets = walletsData.data.wallets.map(mapWallet);
+      const walletsData = await fetchDevprintApi<DevprintGodWalletsResponse["data"]>("/api/wallets/god");
+      const mappedWallets = walletsData.wallets.map(mapWallet);
       setGodWallets(mappedWallets);
 
       // Create a map of god wallets by ID for quick lookup
@@ -181,17 +169,13 @@ export function useGodWallets(): UseGodWalletsResult {
 
       // Fetch recent buys and filter for god wallets only
       try {
-        const buysUrl = buildDevprntApiUrl("/api/wallets/recent-buys");
-        const buysResponse = await fetch(buysUrl.toString());
+        const buysData = await fetchDevprintApi<DevprintRecentBuysResponse["data"]>("/api/wallets/recent-buys");
 
-        if (buysResponse.ok) {
-          const buysData: DevprintRecentBuysResponse = await buysResponse.json();
-
-          if (buysData.success && buysData.data) {
+        if (buysData) {
             // Filter for god wallet buys only (by matching wallet_id)
             const godWalletBuys: GodWalletBuy[] = [];
 
-            for (const buy of buysData.data) {
+            for (const buy of buysData) {
               if (buy.action !== "buy") continue;
 
               const wallet = godWalletMap.get(buy.wallet_id);
@@ -229,7 +213,6 @@ export function useGodWallets(): UseGodWalletsResult {
               return buy;
             }));
           }
-        }
       } catch (buyErr) {
         // Don't fail the whole fetch if recent buys fails
         console.error("[useGodWallets] Failed to fetch recent buys:", buyErr);

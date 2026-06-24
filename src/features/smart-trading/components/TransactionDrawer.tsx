@@ -21,7 +21,8 @@ import {
     Copy,
     Check,
 } from "lucide-react";
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { fetchDevprintApi } from "@/lib/devprnt";
+import { HARDCODED_MODE } from "@/lib/config";
 
 // ============================================
 // Types
@@ -336,12 +337,9 @@ export function TransactionDrawer({
         setIsLoadingTokenInfo(true);
         try {
             // Try to fetch from our holdings API which has this data
-            const holdingsUrl = buildDevprntApiUrl("/api/trading/holdings");
-            const holdingsResponse = await fetch(holdingsUrl.toString());
+            const holdings = await fetchDevprintApi<any[]>("/api/trading/holdings");
 
-            if (holdingsResponse.ok) {
-                const holdingsResult = await holdingsResponse.json();
-                const holdings = holdingsResult?.data || [];
+            if (holdings) {
                 const holding = holdings.find((h: any) => h.mint === tokenMint);
 
                 if (holding) {
@@ -396,24 +394,8 @@ export function TransactionDrawer({
             setIsLoading(true);
             setError(null);
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-
             // Fetch from analytics/history endpoint which has close_reason and proper exit types
-            const url = buildDevprntApiUrl("/api/analytics/history?limit=200");
-            const response = await fetch(url.toString(), { signal: controller.signal });
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch history (${response.status})`);
-            }
-
-            const result = await response.json();
-            if (result?.success === false) {
-                throw new Error(result.error || "Failed to load history");
-            }
-
-            const historyItems = result?.data || [];
+            const historyItems = await fetchDevprintApi<any[]>("/api/analytics/history?limit=200");
 
             // Find the position - PRIORITIZE positionId over mint
             // (There can be multiple positions for the same token/mint)
@@ -432,18 +414,13 @@ export function TransactionDrawer({
             // If not found in history, try fetching from positions endpoint (for open positions)
             if (!position && (tokenMint || positionId)) {
                 try {
-                    const positionsUrl = buildDevprntApiUrl("/api/trading/positions");
-                    const positionsResponse = await fetch(positionsUrl.toString(), { signal: controller.signal });
-                    if (positionsResponse.ok) {
-                        const positionsResult = await positionsResponse.json();
-                        const positions = positionsResult?.data || [];
-                        position = positions.find((item: any) =>
-                            // First try exact positionId match
-                            (positionId && item.id === positionId) ||
-                            // Fall back to mint match only if no positionId provided
-                            (!positionId && tokenMint && item.mint === tokenMint)
-                        );
-                    }
+                    const positions = await fetchDevprintApi<any[]>("/api/trading/positions");
+                    position = positions.find((item: any) =>
+                        // First try exact positionId match
+                        (positionId && item.id === positionId) ||
+                        // Fall back to mint match only if no positionId provided
+                        (!positionId && tokenMint && item.mint === tokenMint)
+                    );
                 } catch (err) {
                     console.warn("[TransactionDrawer] Failed to fetch from positions endpoint:", err);
                 }
@@ -503,7 +480,7 @@ export function TransactionDrawer({
                         status: "confirmed",
                     });
                 });
-            } else if (position.status === "closed" && tokenMint && tokenMint.length > 0) {
+            } else if (position.status === "closed" && tokenMint && tokenMint.length > 0 && !HARDCODED_MODE) {
                 // FALLBACK: If position is closed but no sell_transactions, fetch from backend API
                 // The backend has access to Helius and can look up the actual sell transaction
                 // Only call if tokenMint is a valid mint address (not a position ID)

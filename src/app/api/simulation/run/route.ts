@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { DEVPRNT_CORE_URL } from "@/lib/config";
+import { getServerDevprintCoreUrl } from "@/lib/config";
 
 interface SimulationRunRequest {
   tweet_text?: string;
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing tweet_text or author" }, { status: 400 });
     }
 
-    const response = await fetch(`${DEVPRNT_CORE_URL.replace(/\/$/, "")}/api/simulation/run`, {
+    const response = await fetch(`${getServerDevprintCoreUrl().replace(/\/$/, "")}/api/simulation/run`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({

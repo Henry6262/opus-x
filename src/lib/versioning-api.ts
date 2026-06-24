@@ -12,6 +12,7 @@ import type {
   CreateVersionRequest,
   MetricType,
 } from '@/types/versioning';
+import { HARDCODED_MODE } from './config';
 
 // ============================================
 // CONFIGURATION
@@ -127,6 +128,7 @@ class ProductionVersioningAPI {
   }
 
   async listVersions(agentId?: string, agentKey?: string): Promise<AgentVersion[]> {
+    if (HARDCODED_MODE) return [];
     const data = await this.fetch<any[]>(
       this.withAgentScope('/api/versions', agentId, agentKey)
     );
@@ -134,6 +136,7 @@ class ProductionVersioningAPI {
   }
 
   async getActiveVersion(agentId?: string, agentKey?: string): Promise<AgentVersion | null> {
+    if (HARDCODED_MODE) return null;
     const data = await this.fetch<any | null>(
       this.withAgentScope('/api/versions/active', agentId, agentKey)
     );
@@ -141,6 +144,9 @@ class ProductionVersioningAPI {
   }
 
   async createVersion(req: CreateVersionRequest): Promise<AgentVersion> {
+    if (HARDCODED_MODE) {
+      throw new Error('Version creation is disabled in hardcoded mode');
+    }
     const data = await this.fetch<any>(
       this.withAgentScope('/api/versions', req.agentId, req.agentKey),
       {
@@ -156,6 +162,9 @@ class ProductionVersioningAPI {
     agentId?: string,
     agentKey?: string
   ): Promise<AgentVersion> {
+    if (HARDCODED_MODE) {
+      throw new Error('Version activation is disabled in hardcoded mode');
+    }
     const data = await this.fetch<any>(
       this.withAgentScope(`/api/versions/${versionId}/activate`, agentId, agentKey),
       {
@@ -171,6 +180,7 @@ class ProductionVersioningAPI {
     endDate?: string,
     bucket?: '1d' | '3h',
   ): Promise<VersionMetrics[]> {
+    if (HARDCODED_MODE) return [];
     const params = new URLSearchParams();
     if (startDate) params.set('start_date', startDate);
     if (endDate) params.set('end_date', endDate);
@@ -201,6 +211,9 @@ class ProductionVersioningAPI {
     agentId?: string,
     agentKey?: string,
   ): Promise<VersionComparisonData> {
+    if (HARDCODED_MODE) {
+      return { versions: [], metricsByVersion: {}, summary: {} };
+    }
     // Backend doesn't have compare endpoint yet - do client-side comparison
     const versions = await this.listVersions(agentId, agentKey);
     const filteredVersions = versions.filter(v => versionIds.includes(v.id));

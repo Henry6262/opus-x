@@ -11,7 +11,7 @@ import {
     ChevronUp,
     ExternalLink,
 } from "lucide-react";
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { fetchDevprintApi } from "@/lib/devprnt";
 
 // ============================================
 // Types - Matching devprnt enriched API
@@ -129,17 +129,20 @@ export function TransactionsPanel({ maxTransactions = 15 }: TransactionsPanelPro
         setIsLoading(true);
         setError(null);
         try {
-            const url = buildDevprntApiUrl(`/api/trading/transactions?limit=${maxTransactions}`);
-            const response = await fetch(url.toString());
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const result = await response.json();
+            const data = await fetchDevprintApi<
+                EnrichedTransaction[] | { items?: EnrichedTransaction[]; data?: EnrichedTransaction[] }
+            >(`/api/trading/transactions?limit=${maxTransactions}`);
 
-            // Handle both formats: { data: [...] } or { data: { items: [...] } }
+            // Handle both formats: raw array or { items: [...] / data: [...] }
             let items: EnrichedTransaction[] = [];
-            if (Array.isArray(result.data)) {
-                items = result.data;
-            } else if (result.data && Array.isArray(result.data.items)) {
-                items = result.data.items;
+            if (Array.isArray(data)) {
+                items = data;
+            } else if (data) {
+                if (Array.isArray(data.items)) {
+                    items = data.items;
+                } else if (Array.isArray(data.data)) {
+                    items = data.data;
+                }
             }
 
             setTransactions(items);

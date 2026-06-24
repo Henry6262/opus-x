@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Wallet, RefreshCw, ExternalLink, TrendingUp, TrendingDown } from "lucide-react";
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { fetchDevprintApi } from "@/lib/devprnt";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 
@@ -147,22 +147,7 @@ export function OnChainHoldingsPanel({ walletAddress, minValueUsd = 0.1 }: OnCha
       setIsLoading(true);
       // Note: /api/trading/holdings doesn't accept wallet parameter - it returns holdings for the configured trading wallet
       // This panel shows the same portfolio data as PortfolioHoldingsPanel
-      const url = buildDevprntApiUrl("/api/trading/holdings");
-      const response = await fetch(url.toString());
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      let result: any = null;
-      try {
-        result = await response.json();
-      } catch (parseErr) {
-        throw new Error("Unexpected response while loading holdings");
-      }
-
-      if (result && result.success === false) {
-        throw new Error(friendlyError(result.error));
-      }
-
-      const rawData: OnChainHolding[] = (result?.data as OnChainHolding[]) || [];
+      const rawData = await fetchDevprintApi<OnChainHolding[]>("/api/trading/holdings");
 
       // Filter open and partially_closed positions
       const data = rawData.filter(

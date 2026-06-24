@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { fetchDevprintApi } from "@/lib/devprnt";
 
 // Matches backend WalletEntryPoint struct
 export interface WalletEntryPoint {
@@ -19,12 +19,6 @@ interface UseWalletEntriesResult {
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-}
-
-interface ApiResponse {
-  success: boolean;
-  data: WalletEntryPoint[];
-  error?: string;
 }
 
 /**
@@ -46,20 +40,8 @@ export function useWalletEntries(mint: string | null): UseWalletEntriesResult {
       setIsLoading(true);
       setError(null);
 
-      const url = buildDevprntApiUrl(`/api/wallets/token/${mint}/entries`);
-      const response = await fetch(url.toString());
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch entries: ${response.status}`);
-      }
-
-      const data: ApiResponse = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || "API returned success: false");
-      }
-
-      setEntries(data.data || []);
+      const data = await fetchDevprintApi<WalletEntryPoint[]>(`/api/wallets/token/${mint}/entries`);
+      setEntries(data || []);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch wallet entries";
       setError(message);
@@ -99,11 +81,8 @@ export function useMultipleWalletEntries(mints: string[]): Map<string, WalletEnt
       const results = await Promise.all(
         mints.map(async (mint) => {
           try {
-            const url = buildDevprntApiUrl(`/api/wallets/token/${mint}/entries`);
-            const response = await fetch(url.toString());
-            if (!response.ok) return { mint, entries: [] };
-            const data: ApiResponse = await response.json();
-            return { mint, entries: data.success ? data.data : [] };
+            const entries = await fetchDevprintApi<WalletEntryPoint[]>(`/api/wallets/token/${mint}/entries`);
+            return { mint, entries: entries || [] };
           } catch {
             return { mint, entries: [] };
           }

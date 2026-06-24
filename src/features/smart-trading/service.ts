@@ -1,4 +1,4 @@
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { fetchDevprintApi } from "@/lib/devprnt";
 
 // Only log in development for performance
 const isDev = process.env.NODE_ENV === "development";
@@ -214,31 +214,8 @@ async function fetchDevprint<T>(
   path: string,
   options?: RequestInit
 ): Promise<T> {
-  const url = buildDevprntApiUrl(path);
-
-  if (isDev) console.log(`[fetchDevprint] ${options?.method || "GET"} ${url.toString()}`);
-
-  const response = await fetch(url.toString(), {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: "Request failed" }));
-    throw new Error(error.message || error.error || `API error: ${response.status}`);
-  }
-
-  const result = await response.json();
-
-  // Devprint wraps responses in { success, data, error }
-  if (result.success === false) {
-    throw new Error(result.error || "API returned success: false");
-  }
-
-  return result.data ?? result;
+  if (isDev) console.log(`[fetchDevprint] ${options?.method || "GET"} ${path}`);
+  return fetchDevprintApi<T>(path, options);
 }
 
 // ============================================
@@ -787,18 +764,8 @@ export const smartTradingService = {
     const page = params?.page || 1;
     const offset = (page - 1) * limit;
 
-    const url = buildDevprntApiUrl("/api/tokens");
-    url.searchParams.set("limit", String(limit));
-    url.searchParams.set("offset", String(offset));
-    url.searchParams.set("order", "desc");
-    url.searchParams.set("include_tweets", "true"); // Include social metrics
-
-    const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.json();
+    const path = `/api/tokens?limit=${limit}&offset=${offset}&order=desc&include_tweets=true`;
+    const result = await fetchDevprint<{ data?: DevprintToken[]; count?: number }>(path);
     const tokens: DevprintToken[] = result.data || [];
     const total = result.count || tokens.length;
 
@@ -844,18 +811,8 @@ export const smartTradingService = {
 
   async getRankedMigrations(limit?: number): Promise<RankedMigrationsResponse> {
     const fetchLimit = limit || 50;
-    const url = buildDevprntApiUrl("/api/tokens");
-    url.searchParams.set("limit", String(fetchLimit));
-    url.searchParams.set("offset", "0");
-    url.searchParams.set("order", "desc");
-    url.searchParams.set("include_tweets", "true"); // Include social metrics
-
-    const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.json();
+    const path = `/api/tokens?limit=${fetchLimit}&offset=0&order=desc&include_tweets=true`;
+    const result = await fetchDevprint<{ data?: DevprintToken[] }>(path);
     const tokens: DevprintToken[] = result.data || [];
 
     const items = tokens.map((token, index) => mapTokenToMigration(token, index, tokens.length));
@@ -872,15 +829,8 @@ export const smartTradingService = {
   },
 
   async getMigration(tokenMint: string): Promise<Migration> {
-    const url = buildDevprntApiUrl(`/api/tokens/${tokenMint}`);
-    const response = await fetch(url.toString());
-
-    if (!response.ok) {
-      throw new Error(`Token ${tokenMint} not found`);
-    }
-
-    const result = await response.json();
-    const token: DevprintToken = result.data;
+    const result = await fetchDevprint<DevprintToken>(`/api/tokens/${tokenMint}`);
+    const token: DevprintToken = result;
 
     return {
       id: token.mint,
@@ -923,13 +873,10 @@ export const smartTradingService = {
   },
 
   async getMigrationFeedStats(): Promise<MigrationFeedStats> {
-    const url = buildDevprntApiUrl("/api/tokens");
-    url.searchParams.set("limit", "1");
-    url.searchParams.set("offset", "0");
-
-    const response = await fetch(url.toString());
-    const result = await response.json();
-    const count = result.count || 0;
+    const result = await fetchDevprint<{ count?: number; data?: unknown[] }>(
+      "/api/tokens?limit=1&offset=0"
+    );
+    const count = result.count || (Array.isArray(result.data) ? result.data.length : 0);
 
     return {
       totalActive: count,

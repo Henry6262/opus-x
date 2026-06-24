@@ -7,7 +7,7 @@ import { X, TrendingUp, TrendingDown, Clock, Layers, ChevronUp, ChevronDown, Arr
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { CountUp } from "@/components/animations";
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { fetchDevprintApi } from "@/lib/devprnt";
 import type { PortfolioWalletProps, TimeFilter, PortfolioStats, Position as UiPosition, ChartHistoryEntry } from "./types";
 import { useDashboardStats, usePositions, useSmartTradingConfig } from "@/features/smart-trading";
 import { useSharedWebSocket } from "@/features/smart-trading/hooks/useWebSocket";
@@ -303,14 +303,7 @@ export function PortfolioWallet({ className }: PortfolioWalletProps) {
     setIsLoadingHoldingsApi(true);
     setHoldingsApiError(null);
     try {
-      const url = buildDevprntApiUrl("/api/trading/holdings");
-      const response = await fetch(url.toString());
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const result = await response.json();
-      if (result?.success === false) {
-        throw new Error(result.error || "Failed to load holdings");
-      }
-      const rawData = (result?.data as OnChainHolding[]) || [];
+      const rawData = await fetchDevprintApi<OnChainHolding[]>("/api/trading/holdings");
 
       // Filter open AND partially_closed positions (handles both spellings like PortfolioHoldingsPanel)
       const data = rawData.filter(

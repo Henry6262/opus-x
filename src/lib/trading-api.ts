@@ -6,6 +6,8 @@
  */
 
 import type { TradingPosition } from '@/types/trading';
+import { HARDCODED_MODE } from './config';
+import { fetchDevprintApi } from './devprnt';
 
 // ============================================
 // CONFIGURATION
@@ -47,6 +49,11 @@ export interface BackendTradingStats {
 
 class TradingAPI {
   private async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    if (HARDCODED_MODE) {
+      const data = await fetchDevprintApi<unknown>(endpoint);
+      return data as T;
+    }
+
     const url = `${API_BASE_URL}${endpoint}`;
 
     const response = await fetch(url, {

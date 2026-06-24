@@ -5,7 +5,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { Wallet, Copy, Loader2, Clock, Brain, CheckCircle, ArrowUpRight, ArrowDownRight, Target, Check } from "lucide-react";
 import { CountUp } from "@/components/animations/CountUp";
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { fetchDevprintApi } from "@/lib/devprnt";
 import { useSharedWebSocket } from "../hooks/useWebSocket";
 import { TransactionDrawer } from "./TransactionDrawer";
 import { AiReasoningDrawer } from "./AiReasoningDrawer";
@@ -821,19 +821,7 @@ export function PortfolioHoldingsPanel({ maxVisibleItems = 3 }: PortfolioHolding
         isFetchingRef.current = true;
         try {
             setIsLoading(true);
-            const url = buildDevprntApiUrl("/api/trading/holdings");
-            const response = await fetch(url.toString());
-
-            if (!response.ok) {
-                throw new Error(`Backend unavailable (${response.status})`);
-            }
-
-            const result = await response.json();
-            if (result?.success === false) {
-                throw new Error(result.error || "Failed to load holdings");
-            }
-
-            const rawData = (result?.data as OnChainHolding[]) || [];
+            const rawData = await fetchDevprintApi<OnChainHolding[]>("/api/trading/holdings");
 
             // Filter open AND partially_closed positions (both have quantity) and sort by PnL
             const data: OnChainHolding[] = rawData

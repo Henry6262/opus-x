@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createChart, CandlestickSeries, CandlestickData, UTCTimestamp, type IChartApi, type ISeriesApi, createSeriesMarkers, type SeriesMarker, LineSeries, type LineData } from "lightweight-charts";
 import { Loader2 } from "lucide-react";
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { fetchDevprintApi } from "@/lib/devprnt";
 
 interface WalletEntry {
   timestamp: number;
@@ -52,13 +52,9 @@ export function WalletEntryChart({ mint, height = 200, showTooltip = true }: Wal
   useEffect(() => {
     const fetchEntries = async () => {
       try {
-        const url = buildDevprntApiUrl(`/api/wallets/token/${mint}/entries`);
-        const response = await fetch(url.toString());
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.data) {
-            setEntries(data.data);
-          }
+        const entries = await fetchDevprintApi<WalletEntry[]>(`/api/wallets/token/${mint}/entries`);
+        if (entries) {
+          setEntries(entries);
         }
       } catch (err) {
         console.error("[WalletEntryChart] Failed to fetch entries:", err);

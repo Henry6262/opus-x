@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { fetchDevprintApi } from "@/lib/devprnt";
 
 /**
  * A single price history data point
@@ -138,23 +138,13 @@ export function useTokenPriceHistory(
     setError(null);
 
     try {
-      const url = buildDevprntApiUrl(`/api/tokens/${mint}/price-history?duration=${durationMinutes}`);
-      const response = await fetch(url.toString(), {
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch price history: ${response.status}`);
-      }
-
-      const data: PriceHistoryApiResponse = await response.json();
-
-      if (!data.success) {
-        throw new Error("API returned success: false");
-      }
+      const data = await fetchDevprintApi<PriceHistoryApiResponse["data"]>(
+        `/api/tokens/${mint}/price-history?duration=${durationMinutes}`,
+        { signal: abortControllerRef.current.signal }
+      );
 
       // Map API response to our types
-      const mappedHistory: PriceHistoryPoint[] = data.data.points.map((point) => ({
+      const mappedHistory: PriceHistoryPoint[] = data.points.map((point) => ({
         recordedAt: point.recorded_at,
         timestamp: new Date(point.recorded_at).getTime(),
         priceUsd: point.price_usd,
@@ -168,8 +158,8 @@ export function useTokenPriceHistory(
 
       const result: UseTokenPriceHistoryResult = {
         history: mappedHistory,
-        currentPrice: data.data.current_price,
-        priceChangePct: data.data.price_change_pct,
+        currentPrice: data.current_price,
+        priceChangePct: data.price_change_pct,
         isLoading: false,
         error: null,
         refetch: fetchHistory,
@@ -182,8 +172,8 @@ export function useTokenPriceHistory(
       });
 
       setHistory(mappedHistory);
-      setCurrentPrice(data.data.current_price);
-      setPriceChangePct(data.data.price_change_pct);
+      setCurrentPrice(data.current_price);
+      setPriceChangePct(data.price_change_pct);
       setError(null);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
@@ -268,34 +258,11 @@ export function useMultipleTokenPriceHistories(
           }
 
           try {
-            const url = buildDevprntApiUrl(`/api/tokens/${mint}/price-history?duration=${durationMinutes}`);
-            const response = await fetch(url.toString());
+            const data = await fetchDevprintApi<PriceHistoryApiResponse["data"]>(
+              `/api/tokens/${mint}/price-history?duration=${durationMinutes}`
+            );
 
-            if (!response.ok) {
-              return [mint, {
-                history: [] as PriceHistoryPoint[],
-                currentPrice: null,
-                priceChangePct: null,
-                isLoading: false,
-                error: `Failed: ${response.status}`,
-                refetch: async () => {},
-              } satisfies UseTokenPriceHistoryResult] as const;
-            }
-
-            const data: PriceHistoryApiResponse = await response.json();
-
-            if (!data.success) {
-              return [mint, {
-                history: [] as PriceHistoryPoint[],
-                currentPrice: null,
-                priceChangePct: null,
-                isLoading: false,
-                error: "API error",
-                refetch: async () => {},
-              } satisfies UseTokenPriceHistoryResult] as const;
-            }
-
-            const mappedHistory: PriceHistoryPoint[] = data.data.points.map((point) => ({
+            const mappedHistory: PriceHistoryPoint[] = data.points.map((point) => ({
               recordedAt: point.recorded_at,
               timestamp: new Date(point.recorded_at).getTime(),
               priceUsd: point.price_usd,
@@ -308,8 +275,8 @@ export function useMultipleTokenPriceHistories(
 
             const result: UseTokenPriceHistoryResult = {
               history: mappedHistory,
-              currentPrice: data.data.current_price,
-              priceChangePct: data.data.price_change_pct,
+              currentPrice: data.current_price,
+              priceChangePct: data.price_change_pct,
               isLoading: false,
               error: null,
               refetch: async () => {},

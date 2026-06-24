@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { HARDCODED_MODE } from "@/lib/config";
+import { HARDCODED_TOKENS } from "@/lib/hardcoded";
 
 /**
  * GET /api/trading-competition/token-data?mint=<token_mint>
@@ -14,6 +15,27 @@ export async function GET(request: NextRequest) {
         { success: false, error: "mint parameter is required" },
         { status: 400 }
       );
+    }
+
+    // In hardcoded mode, return mock token data directly.
+    if (HARDCODED_MODE) {
+      const token = HARDCODED_TOKENS.find((t) => t.mint === mint) || HARDCODED_TOKENS[0];
+      const tokenData = {
+        mint: token.mint,
+        symbol: token.symbol,
+        name: token.name,
+        image_url: token.image_url ?? null,
+        price_usd: token.price_usd ?? 0,
+        market_cap: token.market_cap ?? 0,
+        liquidity: token.liquidity ?? 0,
+        volume_24h: token.volume_24h ?? 0,
+        price_change_24h: 0,
+        total_supply: null as number | null,
+      };
+      return NextResponse.json({
+        success: true,
+        data: { token: tokenData, twitter: null },
+      });
     }
 
     // Fetch from DexScreener for market data + metadata
@@ -42,11 +64,11 @@ export async function GET(request: NextRequest) {
     // Also try to fetch tweet/community data from Ponzinomics (optional)
     let twitterData = null;
     try {
-      const ponzApi = process.env.NEXT_PUBLIC_PONZINOMICS_API_URL;
+      const ponzApi = process.env.PONZINOMICS_API_URL || process.env.NEXT_PUBLIC_PONZINOMICS_API_URL;
       const ponzKey = process.env.PONZINOMICS_API_KEY;
       if (ponzApi && ponzKey) {
         const twitterRes = await fetch(
-          `${ponzApi}/api/twitter/token/${mint}`,
+          `${ponzApi.replace(/\/$/, "")}/api/twitter/token/${mint}`,
           {
             headers: { "x-api-key": ponzKey },
             next: { revalidate: 60 },

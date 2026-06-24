@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { fetchDevprintApi } from "@/lib/devprnt";
 import type { TrackerWallet } from "../types";
 
 interface UseTrackerWalletsResult {
@@ -11,24 +11,21 @@ interface UseTrackerWalletsResult {
   refetch: () => Promise<void>;
 }
 
-interface DevprintWalletResponse {
-  success: boolean;
-  data: {
-    wallets: Array<{
-      id: string;
-      address: string;
-      label: string | null;
-      pfp_url: string | null;
-      twitter_handle: string | null;
-      trust_score: number;
-      is_god_wallet: boolean;
-      is_active: boolean;
-    }>;
-    total: number;
-  };
+interface DevprintWalletData {
+  wallets: Array<{
+    id: string;
+    address: string;
+    label: string | null;
+    pfp_url: string | null;
+    twitter_handle: string | null;
+    trust_score: number;
+    is_god_wallet: boolean;
+    is_active: boolean;
+  }>;
+  total: number;
 }
 
-function mapWallet(wallet: DevprintWalletResponse["data"]["wallets"][0]): TrackerWallet {
+function mapWallet(wallet: DevprintWalletData["wallets"][0]): TrackerWallet {
   return {
     id: wallet.id,
     address: wallet.address,
@@ -51,20 +48,8 @@ export function useTrackerWallets(): UseTrackerWalletsResult {
       setIsLoading(true);
       setError(null);
 
-      const url = buildDevprntApiUrl("/api/wallets/active");
-      const response = await fetch(url.toString());
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch wallets: ${response.status}`);
-      }
-
-      const data: DevprintWalletResponse = await response.json();
-
-      if (!data.success) {
-        throw new Error("API returned success: false");
-      }
-
-      const mappedWallets = data.data.wallets.map(mapWallet);
+      const data = await fetchDevprintApi<DevprintWalletData>("/api/wallets/active");
+      const mappedWallets = data.wallets.map(mapWallet);
       setWallets(mappedWallets);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch wallets";

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { HARDCODED_MODE } from "@/lib/config";
+import { HARDCODED_AGGREGATED_ENTRIES } from "@/lib/hardcoded";
 import { buildDevprntApiUrl } from "@/lib/devprnt";
 
 /**
@@ -18,10 +20,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (HARDCODED_MODE) {
+      return NextResponse.json({
+        success: true,
+        data: HARDCODED_AGGREGATED_ENTRIES,
+      });
+    }
+
     // Fetch aggregated wallet trades from DevPrint
-    const url = buildDevprntApiUrl(
-      `/api/wallets/token/${mint}/aggregated`
-    );
+    const url = buildDevprntApiUrl(`/api/wallets/token/${mint}/aggregated`);
     url.searchParams.set("wallet", wallet);
 
     const devRes = await fetch(url.toString(), {

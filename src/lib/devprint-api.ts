@@ -15,6 +15,9 @@
 // CONFIGURATION
 // ============================================
 
+import { HARDCODED_MODE } from './config';
+import { fetchDevprintApi } from './devprnt';
+
 const API_BASE_URL =
     process.env.NEXT_PUBLIC_DEVPRINT_API_URL ||
     'https://devprint-v2-production.up.railway.app';
@@ -359,6 +362,15 @@ class DevprintApiClient {
         endpoint: string,
         options: RequestInit = {}
     ): Promise<T> {
+        if (HARDCODED_MODE) {
+            if (isDev) {
+                console.log(`[DevprintAPI] hardcoded ${options.method || 'GET'} ${endpoint}`);
+            }
+            const data = await fetchDevprintApi<unknown>(endpoint);
+            // Transform snake_case keys to camelCase
+            return transformKeysToCamel<T>(data);
+        }
+
         const url = `${this.baseUrl}${endpoint}`;
 
         if (isDev) {

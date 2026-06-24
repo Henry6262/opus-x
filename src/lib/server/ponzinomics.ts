@@ -1,5 +1,6 @@
 export function getPonzinomicsApiBase() {
   return (
+    process.env.PONZINOMICS_API_URL ||
     process.env.NEXT_PUBLIC_PONZINOMICS_API_URL ||
     "https://ponzinomics-production.up.railway.app"
   );

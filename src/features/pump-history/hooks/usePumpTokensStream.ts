@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { PumpTokenWithTweet } from "../types";
 import { buildDevprntWsUrl } from "@/lib/devprnt";
+import { HARDCODED_MODE } from "@/lib/config";
 
 export interface TokenStreamEvent {
   type: "new_token" | "label_update" | "golden_created" | "connected";
@@ -28,6 +29,16 @@ export interface UsePumpTokensStreamReturn {
 export function usePumpTokensStream(
   options: UsePumpTokensStreamOptions = {}
 ): UsePumpTokensStreamReturn {
+  if (HARDCODED_MODE) {
+    return {
+      newTokens: [],
+      newTokenCount: 0,
+      showNewTokens: () => {},
+      isConnected: false,
+      clearNewTokens: () => {},
+    };
+  }
+
   const { enabled = true, onNewToken } = options;
 
   const [newTokens, setNewTokens] = useState<PumpTokenWithTweet[]>([]);

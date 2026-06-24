@@ -25,7 +25,7 @@ const TXN_BATCH_SIZE = 35;             // Subsequent fetches for transactions
 import { usePositions } from "../context";
 import type { Position } from "../types";
 import { TransactionDrawer } from "./TransactionDrawer";
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { fetchDevprintApi } from "@/lib/devprnt";
 
 // ============================================
 // Types
@@ -110,12 +110,12 @@ export function HistoryPanel({ maxItems = 50 }: HistoryPanelProps) {
 
         try {
             const limit = isInitial ? INITIAL_TXN_FETCH : TXN_BATCH_SIZE;
-            const url = buildDevprntApiUrl(`/api/trading/transactions?limit=${limit}&offset=${offset}`);
-            const response = await fetch(url.toString());
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const result = await response.json();
+            const data = await fetchDevprintApi<{
+                items: EnrichedTransaction[];
+                has_more: boolean;
+                total: number;
+            }>(`/api/trading/transactions?limit=${limit}&offset=${offset}`);
 
-            const data = result.data;
             if (data && typeof data === 'object') {
                 const { items, has_more, total } = data;
                 if (isInitial) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { fetchDevprintApi } from "@/lib/devprnt";
 import type { AggregatedWalletEntry, TrackerWallet, WalletTrade } from "../types";
 
 // Backend response shape - matches new /api/wallets/token/:mint/aggregated endpoint
@@ -158,25 +158,12 @@ export function useAggregatedWalletEntries(
       setIsLoading(true);
       setError(null);
 
-      const url = buildDevprntApiUrl(`/api/wallets/token/${mint}/aggregated`);
-      if (godWalletsOnly) {
-        url.searchParams.set("god_wallets_only", "true");
-      }
-
-      const response = await fetch(url.toString());
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch aggregated entries: ${response.status}`);
-      }
-
-      const data: ApiResponse = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || "API returned success: false");
-      }
+      const data = await fetchDevprintApi<ApiResponse["data"]>(
+        `/api/wallets/token/${mint}/aggregated${godWalletsOnly ? "?god_wallets_only=true" : ""}`
+      );
 
       // Extract wallets array from nested data structure
-      const wallets = data.data?.wallets || [];
+      const wallets = data?.wallets || [];
 
       // Debug: Log raw backend data to check what fields are populated
       if (wallets.length > 0) {
@@ -241,17 +228,11 @@ export function useMultipleAggregatedWalletEntries(
       const results = await Promise.all(
         mints.map(async (mint) => {
           try {
-            const url = buildDevprntApiUrl(`/api/wallets/token/${mint}/aggregated`);
-            if (godWalletsOnly) {
-              url.searchParams.set("god_wallets_only", "true");
-            }
-
-            const response = await fetch(url.toString());
-            if (!response.ok) return { mint, entries: [] };
-
-            const data: ApiResponse = await response.json();
+            const data = await fetchDevprintApi<ApiResponse["data"]>(
+              `/api/wallets/token/${mint}/aggregated${godWalletsOnly ? "?god_wallets_only=true" : ""}`
+            );
             // Extract wallets array from nested data structure
-            const wallets = data.success ? (data.data?.wallets || []) : [];
+            const wallets = data?.wallets || [];
             const entries = wallets.map(transformEntry);
             return { mint, entries };
           } catch {

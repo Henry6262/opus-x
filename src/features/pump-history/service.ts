@@ -1,4 +1,4 @@
-import { buildDevprntApiUrl } from "@/lib/devprnt";
+import { fetchDevprintApi } from "@/lib/devprnt";
 import type {
   FetchTokensParams,
   FetchTokensResult,
@@ -15,28 +15,9 @@ export async function fetchPumpTokens(
   } = params;
 
   try {
-    // Build devprint API URL
-    const url = buildDevprntApiUrl("/api/tokens");
-    url.searchParams.set("limit", String(limit));
-    url.searchParams.set("offset", String(offset));
-    url.searchParams.set("order", sortOrder);
-    url.searchParams.set("include_tweets", "true"); // Include social metrics
-
-    console.log(`[fetchPumpTokens] Fetching from devprint API: ${url.toString()}`);
-
-    const response = await fetch(url.toString());
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-
-    if (!result.success) {
-      throw new Error("API returned success: false");
-    }
-
-    const tokensData = result.data || [];
+    const tokensData = await fetchDevprintApi<any[]>(
+      `/api/tokens?limit=${limit}&offset=${offset}&order=${sortOrder}&include_tweets=true`
+    );
 
     // Map to PumpTokenWithTweet format (tweet and labels are null for now)
     const tokens: PumpTokenWithTweet[] = tokensData.map((token: any) => ({
@@ -45,11 +26,11 @@ export async function fetchPumpTokens(
       labels: [],
     }));
 
-    console.log(`[fetchPumpTokens] Received ${tokens.length} tokens from devprint API`);
+    console.log(`[fetchPumpTokens] Received ${tokens.length} tokens`);
 
     return {
       tokens,
-      total: result.count || tokens.length,
+      total: tokens.length,
       hasMore: tokens.length === limit, // If we got a full page, there might be more
     };
   } catch (error) {
