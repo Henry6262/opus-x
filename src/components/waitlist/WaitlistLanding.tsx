@@ -171,6 +171,17 @@ export function WaitlistLanding() {
             emotions. No sleep. Just alpha.
           </motion.p>
 
+          <motion.a
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.65 }}
+            href="/v1"
+            className="inline-flex items-center gap-2 mb-10 px-4 py-2 rounded-full border border-[var(--brand-primary)]/30 bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] text-xs font-mono uppercase tracking-widest hover:bg-[var(--brand-primary)]/20 transition-colors"
+          >
+            View V1 proof of work
+            <ArrowRight className="w-3 h-3" />
+          </motion.a>
+
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
