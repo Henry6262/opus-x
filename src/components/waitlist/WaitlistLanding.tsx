@@ -240,6 +240,68 @@ export function WaitlistLanding() {
             </p>
           </motion.div>
 
+          {/* Dashboard mockup preview */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.7 }}
+            className="mb-20"
+          >
+            <div className="relative rounded-2xl border border-white/10 bg-[#0a0a0a] p-2 shadow-2xl shadow-black/50 overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-8 bg-white/5 flex items-center px-3 gap-2 rounded-t-xl">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+                <div className="w-2.5 h-2.5 rounded-full bg-[var(--brand-primary)]/80" />
+                <span className="ml-2 text-[10px] font-mono text-white/30">superrouter.fun/en/dashboard</span>
+              </div>
+              <div className="pt-8 grid grid-cols-12 gap-3 p-4">
+                <div className="col-span-12 md:col-span-8 rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-mono uppercase tracking-widest text-white/40">PnL Performance</span>
+                    <span className="text-[var(--brand-primary)] text-xs font-bold">+12.4%</span>
+                  </div>
+                  <div className="flex items-end gap-1 h-24">
+                    {[40, 55, 48, 70, 62, 85, 78, 92, 88, 95, 90, 100].map((h, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 rounded-t-sm bg-[var(--brand-primary)]/40"
+                        style={{ height: `${h}%` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="col-span-12 md:col-span-4 rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                  <span className="text-xs font-mono uppercase tracking-widest text-white/40 block mb-4">Active positions</span>
+                  {[
+                    { token: "BONK", pct: 32 },
+                    { token: "FWOG", pct: 58 },
+                    { token: "PENGU", pct: 19 },
+                  ].map(({ token, pct }) => (
+                    <div key={token} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                      <span className="text-sm font-bold text-white">{token}</span>
+                      <span className="text-xs text-[var(--brand-primary)]">+{pct}%</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="col-span-12 rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-mono uppercase tracking-widest text-white/40">Live watchlist</span>
+                    <span className="w-2 h-2 rounded-full bg-[var(--brand-primary)] animate-pulse" />
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    {["$BONK", "$PEPE", "$WIF", "$MOODENG"].map((t) => (
+                      <div key={t} className="rounded-lg bg-white/5 py-2">
+                        <span className="text-xs text-white/60 block">{t}</span>
+                        <span className="text-xs text-[var(--brand-primary)]">Bullish</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
