@@ -4,7 +4,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 export const runtime = "edge";
 
 interface WaitlistPayload {
-  email: string;
+  email?: string;
   xHandle?: string;
   walletAddress?: string;
   interest?: string;
@@ -23,9 +23,17 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as WaitlistPayload;
     const { email, xHandle, walletAddress, interest } = body;
 
-    if (!email || !isValidEmail(email)) {
+    // Require at least one contact point
+    if (!email && !xHandle && !walletAddress) {
       return NextResponse.json(
-        { success: false, error: "A valid email is required." },
+        { success: false, error: "Please provide an email, X handle, or wallet address." },
+        { status: 400 }
+      );
+    }
+
+    if (email && !isValidEmail(email)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid email address." },
         { status: 400 }
       );
     }
@@ -48,16 +56,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error } = await supabase.from("waitlist_entries").upsert(
-      {
-        email: email.toLowerCase().trim(),
-        x_handle: xHandle?.trim() || null,
-        wallet_address: walletAddress?.trim() || null,
-        interest: interest?.trim() || null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "email" }
-    );
+    const { error } = await supabase.from("waitlist_entries").insert({
+      email: email?.toLowerCase().trim() || null,
+      x_handle: xHandle?.trim() || null,
+      wallet_address: walletAddress?.trim() || null,
+      interest: interest?.trim() || null,
+    });
 
     if (error) {
       console.error("[Waitlist] Supabase error:", error);

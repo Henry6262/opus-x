@@ -11,7 +11,6 @@ import {
   Check,
   Loader2,
   Twitter,
-  Mail,
   Wallet,
 } from "lucide-react";
 import ScrambleText from "../animations/ScrambleText";
@@ -25,7 +24,6 @@ const INTEREST_OPTIONS = [
 ];
 
 export function WaitlistLanding() {
-  const [email, setEmail] = useState("");
   const [xHandle, setXHandle] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [interest, setInterest] = useState("");
@@ -46,7 +44,6 @@ export function WaitlistLanding() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email,
           xHandle,
           walletAddress,
           interest,
@@ -304,10 +301,10 @@ export function WaitlistLanding() {
               Limited early access
             </span>
             <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white mb-4">
-              Be the first to know
+              Join the movement
             </h2>
             <p className="text-white/50">
-              Drop your details. We will reach out when early access goes live.
+              Drop your X handle and/or Solana wallet. We will reach out when early access goes live.
             </p>
           </motion.div>
 
@@ -347,21 +344,6 @@ export function WaitlistLanding() {
                   onSubmit={handleSubmit}
                   className="space-y-5"
                 >
-                  <div className="space-y-2">
-                    <label className="text-xs font-mono uppercase tracking-widest text-white/40 flex items-center gap-2">
-                      <Mail className="w-3 h-3" />
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-[var(--brand-primary)]/50 transition-colors"
-                    />
-                  </div>
-
                   <div className="space-y-2">
                     <label className="text-xs font-mono uppercase tracking-widest text-white/40 flex items-center gap-2">
                       <Twitter className="w-3 h-3" />
@@ -438,7 +420,7 @@ export function WaitlistLanding() {
                   </button>
 
                   <p className="text-[10px] text-white/30 text-center">
-                    No spam. Unsubscribe anytime. Wallet is optional and never shared.
+                    No spam. Wallet is optional and never shared.
                   </p>
                 </motion.form>
               )}

@@ -1,9 +1,9 @@
 {
   "metadata": {
-    "title": "SuperRouter | AI 交易智能",
+    "title": "SuperRouter | Solana 自主交易代理",
     "titleTemplate": "{title} | SuperRouter",
-    "description": "Solana 代币的实时 AI 交易智能。追踪 pump.fun 迁移、Twitter 情绪和市场信号。观看 Vibr Coder 工作。",
-    "keywords": "Solana, 交易, AI, pump.fun, 代币, 加密货币, DeFi, 迁移, Twitter, 情绪"
+    "description": "加入 SuperRouter 候补名单 — 专为 Solana 打造的自主 AI 交易代理。实时分析、自动执行、链上 alpha。",
+    "keywords": "Solana, 交易, AI, 代理, 自主, 代币, 加密货币, DeFi, alpha"
   },
   "common": {
     "loading": "加载中...",
